@@ -1,0 +1,148 @@
+import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/routes.dart';
+import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/storage/local_storage.dart';
+import 'package:buildflow/core/widgets/bf_button.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+/// Theme mode provider for light/dark toggle.
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+
+/// Local storage provider.
+final localStorageProvider = Provider<LocalStorageService>(
+  (ref) => LocalStorageService(),
+);
+
+/// Profile screen — role info, theme toggle, logout.
+class ProfileScreen extends ConsumerWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final auth = ref.watch(authProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final theme = Theme.of(context);
+    final ext = context.bfTheme;
+    final user = auth.user;
+    final isOwner = user?.role.isOwner ?? false;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.profileTitle)),
+      body: ListView(
+        padding: const EdgeInsets.all(AppTheme.spacing16),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppTheme.spacing24),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Text(
+                      (user?.name ?? '?').substring(0, 1).toUpperCase(),
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacing16),
+                  Text(user?.name ?? '', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: AppTheme.spacing4),
+                  Text(
+                    user?.email ?? '',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacing12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacing12,
+                      vertical: AppTheme.spacing4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isOwner
+                          ? theme.colorScheme.primaryContainer
+                          : ext.success.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isOwner ? l10n.roleOwner : l10n.roleForeman,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: isOwner
+                            ? theme.colorScheme.primary
+                            : ext.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+          Card(
+            child: SwitchListTile(
+              title: Text(l10n.darkTheme),
+              secondary: Icon(
+                themeMode == ThemeMode.dark
+                    ? Icons.dark_mode_rounded
+                    : Icons.light_mode_rounded,
+              ),
+              value: themeMode == ThemeMode.dark,
+              onChanged: (isDark) {
+                ref.read(themeModeProvider.notifier).state =
+                    isDark ? ThemeMode.dark : ThemeMode.light;
+              },
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing16),
+          Text(
+            l10n.appVersion('0.1.0'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppTheme.spacing24),
+          BfButton(
+            label: l10n.logout,
+            variant: BfButtonVariant.secondary,
+            icon: Icons.logout_rounded,
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(l10n.logout),
+                  content: Text(l10n.logoutConfirm),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(l10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text(l10n.logout),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed ?? false) {
+                await ref.read(authProvider.notifier).logout();
+                if (context.mounted) {
+                  context.go(Routes.login);
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}

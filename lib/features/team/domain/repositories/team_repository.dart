@@ -1,0 +1,15 @@
+import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/features/team/domain/entities/invite_code.dart';
+import 'package:buildflow/features/team/domain/entities/member.dart';
+
+/// Team repository contract.
+abstract class TeamRepository {
+  /// Get all members of the current user's company.
+  Future<Result<List<Member>>> getMembers();
+
+  /// Generate an invite code for a foreman.
+  Future<Result<InviteCode>> generateInviteCode();
+
+  /// Remove a member from the company (owner only).
+  Future<Result<void>> removeMember(String memberId);
+}

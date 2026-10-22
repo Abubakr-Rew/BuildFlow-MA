@@ -1,0 +1,402 @@
+{
+  "@@locale": "ru",
+
+  "appName": "BuildFlow",
+  "@appName": {"description": "Application name"},
+
+  "loginTitle": "Вход",
+  "@loginTitle": {"description": "Login screen title"},
+
+  "registerTitle": "Регистрация",
+  "@registerTitle": {"description": "Registration screen title"},
+
+  "email": "Электронная почта",
+  "@email": {"description": "Email field label"},
+
+  "password": "Пароль",
+  "@password": {"description": "Password field label"},
+
+  "fullName": "Имя и фамилия",
+  "@fullName": {"description": "Full name field label"},
+
+  "companyName": "Название компании",
+  "@companyName": {"description": "Company name field label"},
+
+  "loginButton": "Войти",
+  "@loginButton": {"description": "Login button text"},
+
+  "registerButton": "Создать аккаунт",
+  "@registerButton": {"description": "Register button text"},
+
+  "noAccount": "Нет аккаунта?",
+  "@noAccount": {"description": "Prompt to register"},
+
+  "hasAccount": "Уже есть аккаунт?",
+  "@hasAccount": {"description": "Prompt to login"},
+
+  "createCompany": "Создать компанию",
+  "@createCompany": {"description": "Create company subtitle"},
+
+  "emailHint": "example@mail.com",
+  "@emailHint": {"description": "Email hint text"},
+
+  "passwordHint": "Минимум 6 символов",
+  "@passwordHint": {"description": "Password hint text"},
+
+  "validationEmailRequired": "Введите электронную почту",
+  "@validationEmailRequired": {"description": "Email required validation"},
+
+  "validationEmailInvalid": "Некорректный адрес почты",
+  "@validationEmailInvalid": {"description": "Email invalid validation"},
+
+  "validationPasswordRequired": "Введите пароль",
+  "@validationPasswordRequired": {"description": "Password required validation"},
+
+  "validationPasswordShort": "Минимум 6 символов",
+  "@validationPasswordShort": {"description": "Password too short validation"},
+
+  "validationNameRequired": "Введите имя",
+  "@validationNameRequired": {"description": "Name required validation"},
+
+  "validationCompanyRequired": "Введите название компании",
+  "@validationCompanyRequired": {"description": "Company name required validation"},
+
+  "loginError": "Неверный email или пароль",
+  "@loginError": {"description": "Login error message"},
+
+  "registerError": "Ошибка регистрации",
+  "@registerError": {"description": "Registration error message"},
+
+  "logoutConfirm": "Вы уверены, что хотите выйти?",
+  "@logoutConfirm": {"description": "Logout confirmation"},
+
+  "navProjects": "Объекты",
+  "@navProjects": {"description": "Projects nav label"},
+
+  "navTeam": "Команда",
+  "@navTeam": {"description": "Team nav label"},
+
+  "navReports": "Отчёты",
+  "@navReports": {"description": "Reports nav label"},
+
+  "navNewReport": "Отчёт",
+  "@navNewReport": {"description": "New report nav label"},
+
+  "navProfile": "Профиль",
+  "@navProfile": {"description": "Profile nav label"},
+
+  "projectsTitle": "Строительные объекты",
+  "@projectsTitle": {"description": "Projects screen title"},
+
+  "newProject": "Новый объект",
+  "@newProject": {"description": "New project button"},
+
+  "editProject": "Редактировать",
+  "@editProject": {"description": "Edit project button"},
+
+  "projectName": "Название",
+  "@projectName": {"description": "Project name field label"},
+
+  "projectNameHint": "ЖК «Ала-Тоо»",
+  "@projectNameHint": {"description": "Project name hint"},
+
+  "projectAddress": "Адрес",
+  "@projectAddress": {"description": "Project address field label"},
+
+  "projectAddressHint": "ул. Боконбаева, 123",
+  "@projectAddressHint": {"description": "Project address hint"},
+
+  "projectStatus": "Статус",
+  "@projectStatus": {"description": "Project status label"},
+
+  "statusActive": "Активный",
+  "@statusActive": {"description": "Active project status"},
+
+  "statusPaused": "На паузе",
+  "@statusPaused": {"description": "Paused project status"},
+
+  "statusFinished": "Завершён",
+  "@statusFinished": {"description": "Finished project status"},
+
+  "noProjects": "Нет объектов",
+  "@noProjects": {"description": "No projects empty state title"},
+
+  "noProjectsHint": "Добавьте свой первый строительный объект",
+  "@noProjectsHint": {"description": "No projects empty state hint"},
+
+  "projectSaved": "Объект сохранён",
+  "@projectSaved": {"description": "Project saved snackbar"},
+
+  "assignedForemen": "Назначенные прорабы",
+  "@assignedForemen": {"description": "Assigned foremen section title"},
+
+  "validationProjectName": "Введите название объекта",
+  "@validationProjectName": {"description": "Project name validation"},
+
+  "validationProjectAddress": "Введите адрес",
+  "@validationProjectAddress": {"description": "Project address validation"},
+
+  "teamTitle": "Команда",
+  "@teamTitle": {"description": "Team screen title"},
+
+  "inviteForeman": "Пригласить прораба",
+  "@inviteForeman": {"description": "Invite foreman button"},
+
+  "inviteCodeTitle": "Код приглашения",
+  "@inviteCodeTitle": {"description": "Invite code dialog title"},
+
+  "inviteCodeHint": "Отправьте этот код прорабу",
+  "@inviteCodeHint": {"description": "Invite code dialog hint"},
+
+  "copyCode": "Скопировать",
+  "@copyCode": {"description": "Copy code button"},
+
+  "shareCode": "Поделиться",
+  "@shareCode": {"description": "Share code button"},
+
+  "codeCopied": "Код скопирован",
+  "@codeCopied": {"description": "Code copied snackbar"},
+
+  "noTeamMembers": "Нет участников",
+  "@noTeamMembers": {"description": "No team members empty state title"},
+
+  "noTeamMembersHint": "Пригласите прорабов в команду",
+  "@noTeamMembersHint": {"description": "No team members empty state hint"},
+
+  "assignToProject": "Назначить на объект",
+  "@assignToProject": {"description": "Assign to project button"},
+
+  "removeFromProject": "Убрать с объекта",
+  "@removeFromProject": {"description": "Remove from project button"},
+
+  "reportsTitle": "Отчёты",
+  "@reportsTitle": {"description": "Reports screen title"},
+
+  "newReportTitle": "Новый отчёт",
+  "@newReportTitle": {"description": "New report screen title"},
+
+  "selectProject": "Выберите объект",
+  "@selectProject": {"description": "Select project step label"},
+
+  "addPhotos": "Добавить фото",
+  "@addPhotos": {"description": "Add photos button"},
+
+  "takePhoto": "Камера",
+  "@takePhoto": {"description": "Take photo button"},
+
+  "fromGallery": "Галерея",
+  "@fromGallery": {"description": "From gallery button"},
+
+  "reportDescription": "Описание работ",
+  "@reportDescription": {"description": "Report description field label"},
+
+  "reportDescriptionHint": "Что было сделано сегодня?",
+  "@reportDescriptionHint": {"description": "Report description hint"},
+
+  "sendReport": "Отправить",
+  "@sendReport": {"description": "Send report button"},
+
+  "sending": "Отправка...",
+  "@sending": {"description": "Sending state text"},
+
+  "reportSent": "Отчёт отправлен!",
+  "@reportSent": {"description": "Report sent success message"},
+
+  "reportSentHint": "Владелец увидит ваш отчёт",
+  "@reportSentHint": {"description": "Report sent success hint"},
+
+  "noReports": "Нет отчётов",
+  "@noReports": {"description": "No reports empty state title"},
+
+  "noReportsHint": "Отчёты за этот объект появятся здесь",
+  "@noReportsHint": {"description": "No reports empty state hint"},
+
+  "noReportToday": "Нет отчёта",
+  "@noReportToday": {"description": "No report today badge"},
+
+  "draft": "Черновик",
+  "@draft": {"description": "Draft badge text"},
+
+  "draftsTitle": "Черновики",
+  "@draftsTitle": {"description": "Drafts section title"},
+
+  "retryUpload": "Повторить",
+  "@retryUpload": {"description": "Retry upload button"},
+
+  "deleteDraft": "Удалить черновик",
+  "@deleteDraft": {"description": "Delete draft button"},
+
+  "photosCount": "{count, plural, =1{1 фото} few{{count} фото} other{{count} фото}}",
+  "@photosCount": {
+    "description": "Number of photos",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "stepProject": "Объект",
+  "@stepProject": {"description": "Step 1 label"},
+
+  "stepPhotos": "Фото",
+  "@stepPhotos": {"description": "Step 2 label"},
+
+  "stepDescription": "Описание",
+  "@stepDescription": {"description": "Step 3 label"},
+
+  "stepSend": "Отправка",
+  "@stepSend": {"description": "Step 4 label"},
+
+  "maxPhotos": "Максимум 5 фото",
+  "@maxPhotos": {"description": "Max photos hint"},
+
+  "photoRequired": "Добавьте хотя бы 1 фото",
+  "@photoRequired": {"description": "Photo required validation"},
+
+  "descriptionRequired": "Добавьте описание",
+  "@descriptionRequired": {"description": "Description required validation"},
+
+  "todayLabel": "Сегодня",
+  "@todayLabel": {"description": "Today date label"},
+
+  "yesterdayLabel": "Вчера",
+  "@yesterdayLabel": {"description": "Yesterday date label"},
+
+  "reportBy": "Отчёт от {name}",
+  "@reportBy": {
+    "description": "Report author attribution",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+
+  "photoOf": "Фото {current} из {total}",
+  "@photoOf": {
+    "description": "Photo counter in gallery",
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+
+  "profileTitle": "Профиль",
+  "@profileTitle": {"description": "Profile screen title"},
+
+  "roleOwner": "Владелец",
+  "@roleOwner": {"description": "Owner role label"},
+
+  "roleForeman": "Прораб",
+  "@roleForeman": {"description": "Foreman role label"},
+
+  "darkTheme": "Тёмная тема",
+  "@darkTheme": {"description": "Dark theme toggle"},
+
+  "logout": "Выйти",
+  "@logout": {"description": "Logout button"},
+
+  "appVersion": "Версия {version}",
+  "@appVersion": {
+    "description": "App version display",
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+
+  "retry": "Повторить",
+  "@retry": {"description": "Retry button"},
+
+  "cancel": "Отмена",
+  "@cancel": {"description": "Cancel button"},
+
+  "save": "Сохранить",
+  "@save": {"description": "Save button"},
+
+  "delete": "Удалить",
+  "@delete": {"description": "Delete button"},
+
+  "edit": "Редактировать",
+  "@edit": {"description": "Edit button"},
+
+  "close": "Закрыть",
+  "@close": {"description": "Close button"},
+
+  "done": "Готово",
+  "@done": {"description": "Done button"},
+
+  "next": "Далее",
+  "@next": {"description": "Next button"},
+
+  "back": "Назад",
+  "@back": {"description": "Back button"},
+
+  "loading": "Загрузка...",
+  "@loading": {"description": "Loading state"},
+
+  "errorGeneral": "Что-то пошло не так",
+  "@errorGeneral": {"description": "General error message"},
+
+  "errorNetwork": "Ошибка сети. Проверьте подключение",
+  "@errorNetwork": {"description": "Network error message"},
+
+  "errorServer": "Ошибка сервера",
+  "@errorServer": {"description": "Server error message"},
+
+  "offlineBanner": "Нет подключения к интернету",
+  "@offlineBanner": {"description": "Offline banner text"},
+
+  "confirm": "Подтвердить",
+  "@confirm": {"description": "Confirm button"},
+
+  "yes": "Да",
+  "@yes": {"description": "Yes button"},
+
+  "no": "Нет",
+  "@no": {"description": "No button"},
+
+  "today": "Сегодня",
+  "@today": {"description": "Today label for date grouping"},
+
+  "yesterday": "Вчера",
+  "@yesterday": {"description": "Yesterday label for date grouping"},
+
+  "noMembers": "Пока нет участников",
+  "@noMembers": {"description": "Empty state for team list"},
+
+  "addProject": "Добавить объект",
+  "@addProject": {"description": "Add project button"},
+
+  "required": "Обязательное поле",
+  "@required": {"description": "Required field validation"},
+
+  "foremenCount": "Прорабов",
+  "@foremenCount": {"description": "Foremen count label"},
+
+  "inviteCode": "Код приглашения",
+  "@inviteCode": {"description": "Invite code title"},
+
+  "copy": "Копировать",
+  "@copy": {"description": "Copy button tooltip"},
+
+  "reportText": "Описание работ",
+  "@reportText": {"description": "Report text field label"},
+
+  "reportTextHint": "Опишите, что было сделано сегодня...",
+  "@reportTextHint": {"description": "Report text hint"},
+
+  "photos": "Фотографии",
+  "@photos": {"description": "Photos section title"},
+
+  "addPhoto": "Добавить фото",
+  "@addPhoto": {"description": "Add photo button"},
+
+  "noActiveProjects": "Нет активных объектов",
+  "@noActiveProjects": {"description": "No active projects message"},
+
+  "selectProjectHint": "Выберите объект",
+  "@selectProjectHint": {"description": "Select project hint"},
+
+  "reportError": "Не удалось отправить отчёт",
+  "@reportError": {"description": "Report submission error"},
+
+  "newReport": "Новый отчёт",
+  "@newReport": {"description": "New report screen title"}
+}

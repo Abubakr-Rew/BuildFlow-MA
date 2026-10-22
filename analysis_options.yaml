@@ -1,0 +1,24 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - ".dart_tool/**"
+    - "lib/app/l10n/generated/**"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+  errors:
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+    sort_pub_dependencies: false
+    flutter_style_todos: false

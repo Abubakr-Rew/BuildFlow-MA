@@ -1,0 +1,56 @@
+name: buildflow
+description: "BuildFlow — Daily photo reports for construction sites"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.0
+
+  # Models
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
+
+  # Networking
+  dio: ^5.7.0
+
+  # Storage
+  flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.3.4
+
+  # Image handling
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.3.0
+  cached_network_image: ^3.4.1
+
+  # UI
+  google_fonts: ^6.2.1
+
+  # Utilities
+  intl: ^0.20.3
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  very_good_analysis: ^6.0.0
+  build_runner: ^2.4.14
+  freezed: ^4.0.0
+  json_serializable: ^6.9.0
+
+flutter:
+  generate: true
+  uses-material-design: true
