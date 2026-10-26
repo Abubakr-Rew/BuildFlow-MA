@@ -87,8 +87,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
     (из auth_provider.dart), чтобы список перезагружался при смене пользователя;
   - один элемент: `Provider.family<AsyncValue<X?>, String>`, выводится из списка (`projectByIdProvider`, `reportByIdProvider`);
   - после успешной мутации вызывать `ref.invalidateSelf()`.
-  - Исключения: auth — legacy `StateNotifierProvider<AuthNotifier, AuthState>`, `inviteCodeProvider` — `StateProvider`.
-    `themeModeProvider` — `StateProvider` в profile_provider.dart, его читает app.dart.
+  - синхронное состояние: `NotifierProvider` — `authProvider` (`AuthNotifier`; `AuthState` сам хранит статус,
+    загрузку и ошибку) и `themeModeProvider` в profile_provider.dart (его читает app.dart).
+  - Legacy `StateProvider` / `StateNotifierProvider` не использовать.
 - Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас:
   `Scaffold` + `AppBar(title: Text(l10n.…))`. Асинхронные данные:
   `.when(loading: LoadingShimmerList, error: ErrorState(onRetry: ref.invalidate), data: EmptyState, если пусто)`,

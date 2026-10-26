@@ -53,10 +53,15 @@ class AuthState {
 
 // ── Auth notifier ────────────────────────────────────────────
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._repo) : super(const AuthState());
+class AuthNotifier extends Notifier<AuthState> {
+  @override
+  AuthState build() {
+    // A different repository starts a fresh session state.
+    ref.watch(authRepositoryProvider);
+    return const AuthState();
+  }
 
-  final AuthRepository _repo;
+  AuthRepository get _repo => ref.read(authRepositoryProvider);
 
   Future<void> restoreSession() async {
     state = state.copyWith(isLoading: true);
@@ -159,8 +164,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
-  (ref) => AuthNotifier(ref.watch(authRepositoryProvider)),
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
 );
 
 /// The logged-in user. Lists depending on it reload when the user changes.

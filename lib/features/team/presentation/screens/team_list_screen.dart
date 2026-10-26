@@ -123,10 +123,7 @@ class TeamListScreen extends ConsumerWidget {
     if (!context.mounted) return;
 
     result.when(
-      success: (invite) {
-        ref.read(inviteCodeProvider.notifier).state = invite;
-        _showInviteCodeSheet(context, invite, role);
-      },
+      success: (invite) => _showInviteCodeSheet(context, invite, role),
       failure: (f) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(f.message)),

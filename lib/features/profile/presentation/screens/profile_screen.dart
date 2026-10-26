@@ -66,10 +66,9 @@ class ProfileScreen extends ConsumerWidget {
                     : Icons.light_mode_rounded,
               ),
               value: themeMode == ThemeMode.dark,
-              onChanged: (isDark) {
-                ref.read(themeModeProvider.notifier).state =
-                    isDark ? ThemeMode.dark : ThemeMode.light;
-              },
+              onChanged: (isDark) => ref
+                  .read(themeModeProvider.notifier)
+                  .setMode(isDark ? ThemeMode.dark : ThemeMode.light),
             ),
           ),
           const SizedBox(height: AppTheme.spacing16),

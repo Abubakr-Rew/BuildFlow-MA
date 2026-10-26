@@ -3,7 +3,6 @@ import 'package:buildflow/features/auth/presentation/providers/auth_provider.dar
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/team/data/api_team_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_repository.dart';
-import 'package:buildflow/features/team/domain/entities/invite_code.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/domain/repositories/team_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,7 +55,3 @@ class MembersNotifier extends AsyncNotifier<List<Member>> {
     return true;
   }
 }
-
-/// Holds the latest generated invite code.
-final inviteCodeProvider =
-    StateProvider<InviteCode?>((ref) => null);
