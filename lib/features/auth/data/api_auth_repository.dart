@@ -3,8 +3,8 @@ import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
 
-/// API auth repository skeleton. Not wired — will be implemented when
-/// the backend is available.
+/// API auth repository skeleton. Selected when `kUseMockData` is false;
+/// every call fails until the backend is available.
 class ApiAuthRepository implements AuthRepository {
   @override
   User? get currentUser => null;

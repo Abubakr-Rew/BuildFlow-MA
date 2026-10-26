@@ -1,6 +1,8 @@
+import 'package:buildflow/core/config.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/projects/data/api_project_repository.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
@@ -8,7 +10,7 @@ import 'package:buildflow/features/projects/domain/repositories/project_reposito
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => FakeProjectRepository(),
+  (ref) => kUseMockData ? FakeProjectRepository() : ApiProjectRepository(),
 );
 
 /// The logged-in user. Lists depending on it reload when the user changes.

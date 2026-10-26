@@ -45,13 +45,14 @@ result.when(success: (p) => ..., failure: (f) => ...);       // у вызыва�
 чтобы попасть в `AsyncValue.error`. Мутации нотифайеров возвращают `Future<bool>`.
 
 **Репозитории и DI:**
-- auth: `authRepositoryProvider` бросает `UnimplementedError`, его переопределяет `ProviderScope` в
-  [app.dart](lib/app/app.dart) значением `FakeAuthRepository(secureStorage: SecureStorageService())`.
-- projects / reports / team: `xxxRepositoryProvider` в `presentation/providers/<фича>_provider.dart`
-  возвращает `FakeXxxRepository()` напрямую.
-- `kUseMockData` в [config.dart](lib/core/config.dart) **объявлен, но нигде не читается**: переключения Fake/Api нет.
-  Если понадобится, его нужно добавить в эти 4 места.
-- Api-реализация есть только у auth (`ApiAuthRepository`), и это заглушка. Контракт: [docs/api-contract.md](docs/api-contract.md).
+- Реализацию выбирает только `xxxRepositoryProvider` в `presentation/providers/<фича>_provider.dart`
+  (`authRepositoryProvider` лежит в auth_provider.dart): `kUseMockData ? FakeXxxRepository() : ApiXxxRepository()`.
+  Флаг — в [config.dart](lib/core/config.dart). `ProviderScope` в app.dart без overrides.
+- `FakeAuthRepository` получает `SecureStorageService` через `secureStorageProvider`.
+- Новый репозиторий подключать так же: интерфейс в domain, `Fake*` и `Api*` в data, выбор в его провайдере.
+  В тестах подменять через `ProviderScope(overrides: [xxxRepositoryProvider.overrideWithValue(...)])`.
+- `Api*Repository` есть у всех четырёх фич, но это заглушки: все методы возвращают
+  `Err(ServerFailure(message: 'API not implemented'))`. Контракт: [docs/api-contract.md](docs/api-contract.md).
 - Fake-репозитории изолированы друг от друга, но используют общие ID (`user-owner-1`, `user-foreman-1`, `project-1`…).
   Есть искусственная задержка. Данные живут только в памяти и при перезапуске сбрасываются.
 
@@ -120,9 +121,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 ## Текущее состояние
 Готово на Fake-данных: вход и регистрация, сплэш, объекты (список, детали, статус, команда объекта), команда
 и коды приглашения, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема, три роли.
-Заглушки и пробелы: Api-репозитории (есть только `ApiAuthRepository`, и тот пустой), клиент Dio, переключение
-`kUseMockData`, сжатие фото (flutter_image_compress), загрузка сетевых фото (cached_network_image), черновики
-отчётов (`DraftReport` есть в репозитории, но UI нет), applicationId и подпись Android-релиза.
+Заглушки и пробелы: Api-репозитории (все четыре — заглушки), клиент Dio, сжатие фото (flutter_image_compress),
+загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),
+applicationId и подпись Android-релиза.
 Подробности и этапы — в [PROGRESS.md](PROGRESS.md); он отстаёт от кода, сверяйся с кодом.
 
 ## Правила работы

@@ -1,4 +1,6 @@
+import 'package:buildflow/core/config.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
+import 'package:buildflow/features/team/data/api_team_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_repository.dart';
 import 'package:buildflow/features/team/domain/entities/invite_code.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
@@ -6,7 +8,7 @@ import 'package:buildflow/features/team/domain/repositories/team_repository.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final teamRepositoryProvider = Provider<TeamRepository>(
-  (ref) => FakeTeamRepository(),
+  (ref) => kUseMockData ? FakeTeamRepository() : ApiTeamRepository(),
 );
 
 final membersProvider =

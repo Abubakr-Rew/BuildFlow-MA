@@ -1,11 +1,13 @@
+import 'package:buildflow/core/config.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
+import 'package:buildflow/features/reports/data/api_report_repository.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/repositories/report_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final reportRepositoryProvider = Provider<ReportRepository>(
-  (ref) => FakeReportRepository(),
+  (ref) => kUseMockData ? FakeReportRepository() : ApiReportRepository(),
 );
 
 /// Reports visible to the current user: everything for a director,
