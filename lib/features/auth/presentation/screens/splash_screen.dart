@@ -1,10 +1,9 @@
-import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-/// Splash screen — restores session then navigates.
+/// Splash screen — restores the session; the router's redirect then
+/// navigates away once the auth status is known.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -30,7 +29,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
     );
     _controller.forward();
-    _restoreSession();
+    // restoreSession() updates authProvider, which the router listens to;
+    // providers must not change while the widget tree is building.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restoreSession());
   }
 
   Future<void> _restoreSession() async {
@@ -41,8 +42,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           .timeout(const Duration(seconds: 8));
     } catch (_) {
       // If restoreSession itself throws or times out, force unauthenticated.
-      // Resetting the state (not just navigating) clears isLoading, and the
-      // listener in build() then navigates to login.
+      // Resetting the state clears isLoading, and the router's redirect
+      // then leaves the splash for login.
       if (mounted &&
           ref.read(authProvider).status == AuthStatus.initial) {
         ref.read(authProvider.notifier).forceUnauthenticated();
@@ -58,14 +59,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<AuthState>(authProvider, (prev, next) {
-      if (next.status == AuthStatus.authenticated) {
-        context.go(Routes.homeFor(next.user!.role));
-      } else if (next.status == AuthStatus.unauthenticated) {
-        context.go(Routes.login);
-      }
-    });
-
     final theme = Theme.of(context);
     return Scaffold(
       body: Center(

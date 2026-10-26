@@ -1,5 +1,4 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
-import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/storage/local_storage.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
@@ -7,7 +6,6 @@ import 'package:buildflow/features/auth/presentation/providers/auth_provider.dar
 import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 /// Theme mode provider for light/dark toggle.
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
@@ -114,10 +112,8 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               );
               if (confirmed ?? false) {
+                // The router's redirect then sends the user to login.
                 await ref.read(authProvider.notifier).logout();
-                if (context.mounted) {
-                  context.go(Routes.login);
-                }
               }
             },
           ),

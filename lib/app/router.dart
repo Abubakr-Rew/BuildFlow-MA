@@ -1,5 +1,6 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
+import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/screens/login_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/register_screen.dart';
@@ -19,10 +20,49 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 const _rolePrefixes = ['/owner', '/foreman', '/worker'];
 
+/// Where to send the user who is opening [path], or `null` to let them stay.
+///
+/// Pure function of the auth state so it can be unit-tested; the router's
+/// `redirect` calls it with the current [AuthState].
+String? authRedirect(AuthState auth, String path) {
+  final isSplash = path == Routes.splash;
+
+  // Session restore still running: hold everything on the splash screen.
+  if (auth.status == AuthStatus.initial) {
+    return isSplash ? null : Routes.splash;
+  }
+
+  final user = auth.user;
+  final isAuthPage = path == Routes.login || path == Routes.register;
+  if (user == null) return isAuthPage ? null : Routes.login;
+  if (isSplash || isAuthPage) return Routes.homeFor(user.role);
+
+  // Keep each role inside its own section.
+  final ownPrefix = Routes.prefixFor(user.role);
+  final isOtherRoleSection =
+      _rolePrefixes.any((p) => p != ownPrefix && path.startsWith(p));
+  if (isOtherRoleSection) return Routes.homeFor(user.role);
+
+  return null;
+}
+
+/// The app router. Built once; auth changes re-run [authRedirect] through
+/// `refreshListenable` instead of recreating the router.
 final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
+  // Fires only when the session status or the user changes, not on
+  // isLoading / errorMessage updates.
+  final initial = ref.read(authProvider);
+  final authChanges =
+      ValueNotifier<(AuthStatus, User?)>((initial.status, initial.user));
+  ref.listen<(AuthStatus, User?)>(
+    authProvider.select((s) => (s.status, s.user)),
+    (_, next) => authChanges.value = next,
+  );
+
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: Routes.splash,
+    refreshListenable: authChanges,
     routes: [
       GoRoute(
         path: Routes.splash,
@@ -72,25 +112,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         (Routes.workerProfile, const ProfileScreen()),
       ]),
     ],
-    redirect: (context, state) {
-      final user = ref.read(authProvider).user;
-      final path = state.uri.path;
-
-      if (path == Routes.splash) return null;
-
-      final isAuthPage = path == Routes.login || path == Routes.register;
-      if (user == null) return isAuthPage ? null : Routes.login;
-      if (isAuthPage) return Routes.homeFor(user.role);
-
-      // Keep each role inside its own section.
-      final ownPrefix = Routes.prefixFor(user.role);
-      final isOtherRoleSection = _rolePrefixes
-          .any((p) => p != ownPrefix && path.startsWith(p));
-      if (isOtherRoleSection) return Routes.homeFor(user.role);
-
-      return null;
-    },
+    redirect: (context, state) =>
+        authRedirect(ref.read(authProvider), state.uri.path),
   );
+
+  ref.onDispose(() {
+    router.dispose();
+    authChanges.dispose();
+  });
+  return router;
 });
 
 StatefulShellRoute _shell(

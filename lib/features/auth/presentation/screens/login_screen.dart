@@ -45,15 +45,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_submitting || !_formKey.currentState!.validate()) return;
 
     setState(() => _submitting = true);
-    final success = await ref.read(authProvider.notifier).login(
+    // On success the router's redirect opens the role's home screen.
+    await ref.read(authProvider.notifier).login(
           email: _emailController.text,
           password: _passwordController.text,
         );
     if (mounted) setState(() => _submitting = false);
-
-    if (success && mounted) {
-      context.go(Routes.homeFor(ref.read(authProvider).user!.role));
-    }
   }
 
   void _quickLogin(String email) {

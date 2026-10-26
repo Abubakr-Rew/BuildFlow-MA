@@ -39,17 +39,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_submitting || !_formKey.currentState!.validate()) return;
 
     setState(() => _submitting = true);
-    final success = await ref.read(authProvider.notifier).register(
+    // On success the router's redirect opens the director's home screen.
+    await ref.read(authProvider.notifier).register(
           email: _emailController.text,
           password: _passwordController.text,
           name: _nameController.text,
           companyName: _companyController.text,
         );
     if (mounted) setState(() => _submitting = false);
-
-    if (success && mounted) {
-      context.go(Routes.ownerProjects);
-    }
   }
 
   @override

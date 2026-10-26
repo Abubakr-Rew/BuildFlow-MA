@@ -62,8 +62,12 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   (`_RoleShell`). Owner: объекты, команда, отчёты, профиль. Foreman: объекты, новый отчёт, отчёты, профиль.
   Worker: объекты, отчёты, профиль.
 - Пути — в [routes.dart](lib/app/routes.dart): `/owner/*`, `/foreman/*`, `/worker/*`, плюс `Routes.homeFor(role)` и `prefixFor(role)`.
-- Роли проверяются в `redirect` в router.dart: нет пользователя → `/login`; страница входа → home роли;
-  префикс чужой роли → home роли.
+- Навигацию по авторизации делает только роутер. Чистая функция `authRedirect(AuthState, path)` в router.dart:
+  статус `initial` → остаёмся на сплэше; нет пользователя → `/login`; сплэш, login или register → home роли;
+  префикс чужой роли → home роли. Тесты лежат в `test/app/router_test.dart`.
+- `routerProvider` создаёт `GoRouter` один раз. `refreshListenable` срабатывает, когда в `authProvider` меняется
+  `(status, user)`. После login, register, logout и restoreSession **не вызывать `context.go`**: достаточно сменить
+  состояние в `AuthNotifier`.
 - `/projects/:id` и `/reports/:id` — роуты верхнего уровня вне shell, поэтому открываются поверх навигации.
   Открывать через `context.push(Routes.project(id))` / `Routes.report(id)`.
 - Видимость данных по ролям — в провайдерах, а не в роутере: `canSeeProject()` в project_provider.dart.
@@ -95,7 +99,13 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`, локальный путь и http),
   `DateFormatter` (ru), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории, `Result`, валидаторы, форматтер дат и
-  JSON-сущности. Виджет-тестов нет (`test/widget_test.dart` — заглушка).
+  JSON-сущности, `authRedirect` и роутер. Виджет-тесты есть только в `test/app/router_test.dart`: там поднимается
+  `MaterialApp.router` с `ThemeData(extensions: [BuildFlowThemeExtension.light])` без `AppTheme`, потому что
+  google_fonts тянет шрифты из сети. Поверхность 1080 px и `textScaler` 0.7: тестовый шрифт Ahem шире настоящего,
+  и без этого строки переполняются.
+  `test/widget_test.dart` — заглушка.
+- Не менять провайдеры синхронно в `initState` или `build`: на `authProvider` подписан роутер, и Riverpod падает
+  на assert. Откладывать через `addPostFrameCallback`, как в splash_screen.dart.
 
 ## Подводные камни
 - `explicit_to_json: true` включён глобально в [build.yaml](build.yaml): вложенные модели (`Report.photos`) сериализуются
@@ -104,8 +114,6 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - Демо-входы (пароль у всех `123456`): `owner@buildflow.kg`, `foreman1@`, `foreman2@`, `worker1@`, `worker2@buildflow.kg`.
 - Secure storage — только через `SecureStorageService`: в нём таймауты, потому что на Xiaomi/MIUI KeyStore может зависнуть.
   Напрямую `FlutterSecureStorage` не вызывать. Сплэш тоже страхуется таймаутом (`forceUnauthenticated`).
-- `redirect` читает `ref.read(authProvider)`, `refreshListenable` нет, поэтому при логине или логауте роутер сам
-  не перенаправляет. Экраны вызывают `context.go(...)` вручную (login, register, splash через `ref.listen`, profile).
 - `NewReportScreen` подставляет фото `fake:demo-<ts>`, если пользователь ничего не выбрал.
   Сжатие сейчас только через `imageQuality: 85` и `maxWidth/Height: 1920` в image_picker.
 - `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
