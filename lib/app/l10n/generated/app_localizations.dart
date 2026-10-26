@@ -490,6 +490,12 @@ abstract class AppLocalizations {
   /// **'Нет доступа к фото. Его можно включить в настройках приложения'**
   String get photoAccessDenied;
 
+  /// Snackbar action that opens the app's system settings
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки'**
+  String get openSettings;
+
   /// Report description field label
   ///
   /// In ru, this message translates to:

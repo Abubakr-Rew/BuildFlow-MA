@@ -6,21 +6,31 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final l10n = AppLocalizationsRu();
 
-  group('photoPickErrorText', () {
-    test('explains a refused camera permission', () {
+  group('describePhotoPickError', () {
+    test('explains a refused camera permission and offers settings', () {
       final error = PlatformException(code: 'camera_access_denied');
-      expect(photoPickErrorText(l10n, error), l10n.cameraAccessDenied);
+      expect(
+        describePhotoPickError(l10n, error),
+        (message: l10n.cameraAccessDenied, offerSettings: true),
+      );
     });
 
-    test('explains a refused photo library permission', () {
+    test('explains a refused photo library permission and offers settings', () {
       final error = PlatformException(code: 'photo_access_denied');
-      expect(photoPickErrorText(l10n, error), l10n.photoAccessDenied);
+      expect(
+        describePhotoPickError(l10n, error),
+        (message: l10n.photoAccessDenied, offerSettings: true),
+      );
     });
 
-    test('falls back to the generic text for other failures', () {
+    test('falls back to the generic text without settings', () {
       final noCamera = PlatformException(code: 'no_available_camera');
-      expect(photoPickErrorText(l10n, noCamera), l10n.photoPickError);
-      expect(photoPickErrorText(l10n, Exception('io')), l10n.photoPickError);
+      for (final error in [noCamera, Exception('io')]) {
+        expect(
+          describePhotoPickError(l10n, error),
+          (message: l10n.photoPickError, offerSettings: false),
+        );
+      }
     });
   });
 }

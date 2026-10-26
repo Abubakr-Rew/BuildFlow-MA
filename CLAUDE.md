@@ -20,7 +20,8 @@ flutter build apk --release                               # APK → build/app/ou
 
 ## Архитектура
 **Стек:** Flutter 3.47 / Dart ^3.13, flutter_riverpod 2.6, go_router 14, freezed 4 + json_serializable,
-flutter_secure_storage, shared_preferences, image_picker, google_fonts, intl, very_good_analysis.
+flutter_secure_storage, shared_preferences, image_picker, app_settings, google_fonts, intl, very_good_analysis.
+`app_settings` нужен только для того, чтобы открыть системные настройки приложения после отказа в разрешении.
 Подключены, но в `lib/` не используются: dio, flutter_image_compress, cached_network_image, uuid.
 
 ```
@@ -125,7 +126,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Сжатие сейчас только через `imageQuality: 85` и `maxWidth/Height: 1920` в image_picker.
   Отказ в разрешении image_picker присылает как `PlatformException(code: 'camera_access_denied')`. На Android
   бывает только этот код, потому что галерее разрешение не нужно; `photo_access_denied` приходит только на iOS.
-  Тексты ошибок выбирает `photoPickErrorText()` в new_report_screen.dart.
+  Текст ошибки выбирает `describePhotoPickError()` в new_report_screen.dart. При отказе в доступе снэкбар
+  предлагает действие «Настройки», которое вызывает `AppSettings.openAppSettings()`.
 - `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
   а роль всегда `foreman`.
 - Хардкод, который ещё надо вынести в l10n, а не копировать: «Что-то пошло не так» в `auth_provider.dart`.
@@ -134,6 +136,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   с разделителями (`'${l10n.foremenCount}: $n'`), но новые слова в такие строки не добавлять.
 - В `build.gradle.kts` стоит `minSdk = flutter.minSdkVersion` (в Flutter 3.47.5 это 24), хотя в коммите было `23`.
   flutter_secure_storage нужен ≥ 23, так что работает, но если сменить версию Flutter, проверь.
+- `flutter build apk` предупреждает, что `app_settings` и `flutter_image_compress_common` применяют Kotlin Gradle Plugin,
+  и будущие версии Flutter такие плагины собирать не будут. Перед обновлением Flutter проверь их новые версии.
 - AndroidManifest: только `INTERNET` и `CAMERA`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
 - `google_fonts` (Inter) без шрифтов в assets: по умолчанию он грузит их из сети.
 

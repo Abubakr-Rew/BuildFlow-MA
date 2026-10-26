@@ -1,3 +1,4 @@
+import 'package:app_settings/app_settings.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
@@ -13,15 +14,22 @@ import 'package:image_picker/image_picker.dart';
 
 const _maxPhotos = 5;
 
-/// Snackbar text for an image_picker failure: a refused permission gets
-/// its own hint (Android only reports the camera one), the rest a generic one.
+/// Long enough to read the access hint and reach the settings button.
+const _actionSnackBarDuration = Duration(seconds: 8);
+
+/// What to tell the user when image_picker fails. A refused permission
+/// (Android only reports the camera one) can be fixed in the app settings.
 @visibleForTesting
-String photoPickErrorText(AppLocalizations l10n, Object error) =>
+({String message, bool offerSettings}) describePhotoPickError(
+  AppLocalizations l10n,
+  Object error,
+) =>
     switch (error) {
       PlatformException(code: 'camera_access_denied') =>
-        l10n.cameraAccessDenied,
-      PlatformException(code: 'photo_access_denied') => l10n.photoAccessDenied,
-      _ => l10n.photoPickError,
+        (message: l10n.cameraAccessDenied, offerSettings: true),
+      PlatformException(code: 'photo_access_denied') =>
+        (message: l10n.photoAccessDenied, offerSettings: true),
+      _ => (message: l10n.photoPickError, offerSettings: false),
     };
 
 /// New report screen — select project, add text + photos, submit.
@@ -90,9 +98,15 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     }
   }
 
-  void _showSnackBar(String message) {
+  void _showSnackBar(String message, {SnackBarAction? action}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      action == null
+          ? SnackBar(content: Text(message))
+          : SnackBar(
+              content: Text(message),
+              action: action,
+              duration: _actionSnackBarDuration,
+            ),
     );
   }
 
@@ -135,7 +149,17 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     } catch (e) {
       // The exception text is for debugging, not for the foreman.
       debugPrint('Photo pick failed: $e');
-      if (mounted) _showSnackBar(photoPickErrorText(l10n, e));
+      if (!mounted) return;
+      final error = describePhotoPickError(l10n, e);
+      _showSnackBar(
+        error.message,
+        action: error.offerSettings
+            ? SnackBarAction(
+                label: l10n.openSettings,
+                onPressed: AppSettings.openAppSettings,
+              )
+            : null,
+      );
     }
   }
 

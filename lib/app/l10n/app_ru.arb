@@ -199,6 +199,9 @@
   "photoAccessDenied": "Нет доступа к фото. Его можно включить в настройках приложения",
   "@photoAccessDenied": {"description": "Snackbar when the user has refused photo library permission (iOS)"},
 
+  "openSettings": "Настройки",
+  "@openSettings": {"description": "Snackbar action that opens the app's system settings"},
+
   "reportDescription": "Описание работ",
   "@reportDescription": {"description": "Report description field label"},
 

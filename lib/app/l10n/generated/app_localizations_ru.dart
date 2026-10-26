@@ -210,6 +210,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Нет доступа к фото. Его можно включить в настройках приложения';
 
   @override
+  String get openSettings => 'Настройки';
+
+  @override
   String get reportDescription => 'Описание работ';
 
   @override
