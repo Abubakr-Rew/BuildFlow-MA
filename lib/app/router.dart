@@ -5,8 +5,10 @@ import 'package:buildflow/features/auth/presentation/screens/login_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/register_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/splash_screen.dart';
 import 'package:buildflow/features/profile/presentation/screens/profile_screen.dart';
+import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_list_screen.dart';
 import 'package:buildflow/features/reports/presentation/screens/new_report_screen.dart';
+import 'package:buildflow/features/reports/presentation/screens/report_detail_screen.dart';
 import 'package:buildflow/features/reports/presentation/screens/report_list_screen.dart';
 import 'package:buildflow/features/team/presentation/screens/team_list_screen.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +35,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.register,
         builder: (_, __) => const RegisterScreen(),
+      ),
+
+      // Shared detail screens
+      GoRoute(
+        path: Routes.projectDetail,
+        builder: (_, state) =>
+            ProjectDetailScreen(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: Routes.reportDetail,
+        builder: (_, state) =>
+            ReportDetailScreen(reportId: state.pathParameters['id']!),
       ),
 
       // Director shell

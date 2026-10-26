@@ -406,6 +406,42 @@ class AppLocalizationsRu extends AppLocalizations {
   String get newReport => 'Новый отчёт';
 
   @override
+  String get reportDetailTitle => 'Отчёт';
+
+  @override
+  String get reportNotFound => 'Отчёт не найден';
+
+  @override
+  String get projectNotFound => 'Объект не найден';
+
+  @override
+  String get projectTeam => 'Команда объекта';
+
+  @override
+  String get projectReports => 'Отчёты по объекту';
+
+  @override
+  String get editTeam => 'Изменить состав';
+
+  @override
+  String get foremen => 'Прорабы';
+
+  @override
+  String get workers => 'Строители';
+
+  @override
+  String get nobodyAssigned => 'Никто не назначен';
+
+  @override
+  String get noReportsForProject => 'По этому объекту ещё нет отчётов';
+
+  @override
+  String get statusChanged => 'Статус изменён';
+
+  @override
+  String get teamSaved => 'Состав объекта сохранён';
+
+  @override
   String get quickLogin => 'Быстрый вход (демо):';
 
   @override

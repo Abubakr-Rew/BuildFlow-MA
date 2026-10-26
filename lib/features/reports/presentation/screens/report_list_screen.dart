@@ -4,9 +4,9 @@ import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
-import 'package:buildflow/core/widgets/photo_thumbnail.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
+import 'package:buildflow/features/reports/presentation/widgets/report_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -72,7 +72,7 @@ class ReportListScreen extends ConsumerWidget {
                         padding: const EdgeInsets.only(
                           bottom: AppTheme.spacing12,
                         ),
-                        child: _ReportCard(report: report),
+                        child: ReportCard(report: report),
                       ),
                     ),
                   ],
@@ -111,105 +111,4 @@ class _DateGroup {
 
   final String dateLabel;
   final List<Report> reports;
-}
-
-class _ReportCard extends StatelessWidget {
-  const _ReportCard({required this.report});
-
-  final Report report;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: project name + time
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    report.projectName,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Text(
-                  DateFormatter.time(report.createdAt),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacing8),
-
-            // Author
-            Row(
-              children: [
-                Icon(
-                  Icons.person_outlined,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  report.authorName,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacing12),
-
-            // Report text
-            Text(
-              report.text,
-              style: theme.textTheme.bodyMedium,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-
-            // Photos
-            if (report.photos.isNotEmpty) ...[
-              const SizedBox(height: AppTheme.spacing12),
-              SizedBox(
-                height: 72,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: report.photos.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final photo = report.photos[index];
-                    return PhotoThumbnail(
-                      photoId: photo.id,
-                      url: photo.url,
-                      size: 72,
-                    );
-                  },
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 }

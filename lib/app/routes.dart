@@ -23,8 +23,12 @@ abstract final class Routes {
   static const workerReports = '/worker/reports';
   static const workerProfile = '/worker/profile';
 
-  // Shared detail routes
+  // Shared detail routes (full screen, above the bottom navigation)
+  static const projectDetail = '/projects/:id';
   static const reportDetail = '/reports/:id';
+
+  static String project(String id) => '/projects/$id';
+  static String report(String id) => '/reports/$id';
 
   /// Start page for a role after login.
   static String homeFor(UserRole role) => switch (role) {

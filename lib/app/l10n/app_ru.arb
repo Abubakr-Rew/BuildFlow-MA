@@ -403,6 +403,42 @@
   "newReport": "Новый отчёт",
   "@newReport": {"description": "New report screen title"},
 
+  "reportDetailTitle": "Отчёт",
+  "@reportDetailTitle": {"description": "Report detail screen title"},
+
+  "reportNotFound": "Отчёт не найден",
+  "@reportNotFound": {"description": "Report not found message"},
+
+  "projectNotFound": "Объект не найден",
+  "@projectNotFound": {"description": "Project not found message"},
+
+  "projectTeam": "Команда объекта",
+  "@projectTeam": {"description": "Project team section title"},
+
+  "projectReports": "Отчёты по объекту",
+  "@projectReports": {"description": "Project reports section title"},
+
+  "editTeam": "Изменить состав",
+  "@editTeam": {"description": "Edit project team button"},
+
+  "foremen": "Прорабы",
+  "@foremen": {"description": "Foremen group title"},
+
+  "workers": "Строители",
+  "@workers": {"description": "Workers group title"},
+
+  "nobodyAssigned": "Никто не назначен",
+  "@nobodyAssigned": {"description": "No members assigned to project"},
+
+  "noReportsForProject": "По этому объекту ещё нет отчётов",
+  "@noReportsForProject": {"description": "No reports for project"},
+
+  "statusChanged": "Статус изменён",
+  "@statusChanged": {"description": "Project status changed snackbar"},
+
+  "teamSaved": "Состав объекта сохранён",
+  "@teamSaved": {"description": "Project team saved snackbar"},
+
   "quickLogin": "Быстрый вход (демо):",
   "@quickLogin": {"description": "Demo quick login title"},
 

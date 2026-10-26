@@ -15,6 +15,21 @@ final reportsProvider =
   ReportsNotifier.new,
 );
 
+/// Reports of a single project, newest first.
+final projectReportsProvider =
+    Provider.family<AsyncValue<List<Report>>, String>(
+  (ref, projectId) => ref.watch(reportsProvider).whenData(
+        (list) => list.where((r) => r.projectId == projectId).toList(),
+      ),
+);
+
+/// A single visible report, or `null` if it doesn't exist / isn't visible.
+final reportByIdProvider = Provider.family<AsyncValue<Report?>, String>(
+  (ref, id) => ref.watch(reportsProvider).whenData(
+        (list) => list.where((r) => r.id == id).firstOrNull,
+      ),
+);
+
 class ReportsNotifier extends AsyncNotifier<List<Report>> {
   @override
   Future<List<Report>> build() async {

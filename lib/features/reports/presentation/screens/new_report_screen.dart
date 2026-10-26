@@ -14,7 +14,10 @@ const _maxPhotos = 5;
 
 /// New report screen — select project, add text + photos, submit.
 class NewReportScreen extends ConsumerStatefulWidget {
-  const NewReportScreen({super.key});
+  const NewReportScreen({this.initialProjectId, super.key});
+
+  /// Preselected project, e.g. when opened from a project page.
+  final String? initialProjectId;
 
   @override
   ConsumerState<NewReportScreen> createState() => _NewReportScreenState();
@@ -22,7 +25,7 @@ class NewReportScreen extends ConsumerStatefulWidget {
 
 class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   final _textController = TextEditingController();
-  String? _selectedProjectId;
+  late String? _selectedProjectId = widget.initialProjectId;
   final List<String> _photoPaths = [];
   bool _isSubmitting = false;
 
@@ -60,6 +63,11 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
     if (success) {
       _showSnackBar(AppLocalizations.of(context).reportSent);
+      // Opened on top of a project page — go back to it.
+      if (widget.initialProjectId != null && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+        return;
+      }
       _textController.clear();
       setState(() {
         _selectedProjectId = null;

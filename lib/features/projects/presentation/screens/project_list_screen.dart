@@ -1,4 +1,5 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
@@ -8,6 +9,7 @@ import 'package:buildflow/features/projects/presentation/providers/project_provi
 import 'package:buildflow/features/projects/presentation/widgets/project_status_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Project list — all projects for a director, assigned ones otherwise.
 class ProjectListScreen extends ConsumerWidget {
@@ -199,9 +201,7 @@ class _ProjectCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {
-          // Future: navigate to project detail
-        },
+        onTap: () => context.push(Routes.project(project.id)),
         child: Padding(
           padding: const EdgeInsets.all(AppTheme.spacing16),
           child: Column(

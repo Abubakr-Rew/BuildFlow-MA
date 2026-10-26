@@ -856,6 +856,78 @@ abstract class AppLocalizations {
   /// **'Новый отчёт'**
   String get newReport;
 
+  /// Report detail screen title
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчёт'**
+  String get reportDetailTitle;
+
+  /// Report not found message
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчёт не найден'**
+  String get reportNotFound;
+
+  /// Project not found message
+  ///
+  /// In ru, this message translates to:
+  /// **'Объект не найден'**
+  String get projectNotFound;
+
+  /// Project team section title
+  ///
+  /// In ru, this message translates to:
+  /// **'Команда объекта'**
+  String get projectTeam;
+
+  /// Project reports section title
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчёты по объекту'**
+  String get projectReports;
+
+  /// Edit project team button
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить состав'**
+  String get editTeam;
+
+  /// Foremen group title
+  ///
+  /// In ru, this message translates to:
+  /// **'Прорабы'**
+  String get foremen;
+
+  /// Workers group title
+  ///
+  /// In ru, this message translates to:
+  /// **'Строители'**
+  String get workers;
+
+  /// No members assigned to project
+  ///
+  /// In ru, this message translates to:
+  /// **'Никто не назначен'**
+  String get nobodyAssigned;
+
+  /// No reports for project
+  ///
+  /// In ru, this message translates to:
+  /// **'По этому объекту ещё нет отчётов'**
+  String get noReportsForProject;
+
+  /// Project status changed snackbar
+  ///
+  /// In ru, this message translates to:
+  /// **'Статус изменён'**
+  String get statusChanged;
+
+  /// Project team saved snackbar
+  ///
+  /// In ru, this message translates to:
+  /// **'Состав объекта сохранён'**
+  String get teamSaved;
+
   /// Demo quick login title
   ///
   /// In ru, this message translates to:
