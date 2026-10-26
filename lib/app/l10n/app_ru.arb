@@ -430,8 +430,13 @@
   "selectProjectHint": "Выберите объект",
   "@selectProjectHint": {"description": "Select project hint"},
 
-  "reportError": "Не удалось отправить отчёт",
-  "@reportError": {"description": "Report submission error"},
+  "reportError": "Отчёт не отправлен. {reason}",
+  "@reportError": {
+    "description": "Report submission error; reason is l10n.failureMessage(failure)",
+    "placeholders": {
+      "reason": {"type": "String"}
+    }
+  },
 
   "newReport": "Новый отчёт",
   "@newReport": {"description": "New report screen title"},
@@ -502,8 +507,5 @@
   "@workersCount": {"description": "Workers count label"},
 
   "reportsCount": "Отчётов",
-  "@reportsCount": {"description": "Reports count label"},
-
-  "actionFailed": "Не удалось выполнить действие",
-  "@actionFailed": {"description": "Generic action failure snackbar"}
+  "@reportsCount": {"description": "Reports count label"}
 }

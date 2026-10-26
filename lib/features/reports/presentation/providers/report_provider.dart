@@ -1,5 +1,8 @@
 import 'package:buildflow/core/config.dart';
+import 'package:buildflow/core/error/failures.dart';
+import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/reports/data/api_report_repository.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';
@@ -52,17 +55,33 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
     );
   }
 
-  Future<bool> submitReport({
+  Future<Result<Report>> submitReport({
     required String projectId,
     required String text,
     required List<String> photoPaths,
   }) async {
     final user = ref.read(currentUserProvider);
-    if (user == null) return false;
+    if (user == null) {
+      return const Err(
+        Failure(FailureCode.sessionExpired, message: 'No signed-in user'),
+      );
+    }
 
-    final projects = await ref.read(projectsProvider.future);
+    final List<Project> projects;
+    try {
+      projects = await ref.read(projectsProvider.future);
+    } on Failure catch (f) {
+      return Err(f);
+    }
     final project = projects.where((p) => p.id == projectId).firstOrNull;
-    if (project == null) return false;
+    if (project == null) {
+      return Err(
+        Failure(
+          FailureCode.notFound,
+          message: 'Project $projectId is not visible to ${user.id}',
+        ),
+      );
+    }
 
     final repo = ref.read(reportRepositoryProvider);
     final result = await repo.submitReport(
@@ -73,12 +92,7 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
       text: text,
       photoPaths: photoPaths,
     );
-    return result.when(
-      success: (_) {
-        ref.invalidateSelf();
-        return true;
-      },
-      failure: (_) => false,
-    );
+    if (result.isSuccess) ref.invalidateSelf();
+    return result;
   }
 }

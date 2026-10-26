@@ -159,10 +159,13 @@ class TeamListScreen extends ConsumerWidget {
     if (!(confirmed ?? false) || !context.mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await ref.read(membersProvider.notifier).removeMember(member);
-    messenger.showSnackBar(
-      SnackBar(content: Text(ok ? l10n.memberRemoved : l10n.actionFailed)),
+    final result =
+        await ref.read(membersProvider.notifier).removeMember(member);
+    final message = result.when(
+      success: (_) => l10n.memberRemoved,
+      failure: l10n.failureMessage,
     );
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _showInviteCodeSheet(

@@ -1,4 +1,5 @@
 import 'package:buildflow/core/config.dart';
+import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -49,37 +50,27 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     );
   }
 
-  Future<bool> createProject({
+  Future<Result<Project>> createProject({
     required String name,
     required String address,
   }) async {
     final repo = ref.read(projectRepositoryProvider);
     final result = await repo.createProject(name: name, address: address);
-    return result.when(
-      success: (_) {
-        ref.invalidateSelf();
-        return true;
-      },
-      failure: (_) => false,
-    );
+    if (result.isSuccess) ref.invalidateSelf();
+    return result;
   }
 
-  Future<bool> updateProject(Project project) async {
+  Future<Result<Project>> updateProject(Project project) async {
     final repo = ref.read(projectRepositoryProvider);
     final result = await repo.updateProject(project);
-    return result.when(
-      success: (_) {
-        ref.invalidateSelf();
-        return true;
-      },
-      failure: (_) => false,
-    );
+    if (result.isSuccess) ref.invalidateSelf();
+    return result;
   }
 
-  Future<bool> setStatus(Project project, ProjectStatus status) =>
+  Future<Result<Project>> setStatus(Project project, ProjectStatus status) =>
       updateProject(project.copyWith(status: status));
 
-  Future<bool> setTeam(
+  Future<Result<Project>> setTeam(
     Project project, {
     required List<String> foremanIds,
     required List<String> workerIds,

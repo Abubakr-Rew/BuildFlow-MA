@@ -2,6 +2,7 @@ import 'package:app_settings/app_settings.dart';
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/core/widgets/photo_thumbnail.dart';
@@ -73,7 +74,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
         ? ['fake:demo-${DateTime.now().millisecondsSinceEpoch}']
         : _photoPaths;
 
-    final success = await ref.read(reportsProvider.notifier).submitReport(
+    final result = await ref.read(reportsProvider.notifier).submitReport(
           projectId: _selectedProjectId!,
           text: _textController.text.trim(),
           photoPaths: photos,
@@ -81,21 +82,24 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
+    final l10n = AppLocalizations.of(context);
 
-    if (success) {
-      _showSnackBar(AppLocalizations.of(context).reportSent);
-      // Opened on top of a project page — go back to it.
-      if (widget.initialProjectId != null && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-        return;
-      }
-      _textController.clear();
-      setState(() {
-        _selectedProjectId = null;
-        _photoPaths.clear();
-      });
-    } else {
-      _showSnackBar(AppLocalizations.of(context).reportError);
+    switch (result) {
+      case Success():
+        _showSnackBar(l10n.reportSent);
+        // Opened on top of a project page — go back to it.
+        if (widget.initialProjectId != null && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          return;
+        }
+        _textController.clear();
+        setState(() {
+          _selectedProjectId = null;
+          _photoPaths.clear();
+        });
+      case Err(:final failure):
+        // The form keeps its text and photos, so the foreman can resend.
+        _showSnackBar(l10n.reportError(l10n.failureMessage(failure)));
     }
   }
 

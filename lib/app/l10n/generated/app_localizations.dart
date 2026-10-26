@@ -910,11 +910,11 @@ abstract class AppLocalizations {
   /// **'Выберите объект'**
   String get selectProjectHint;
 
-  /// Report submission error
+  /// Report submission error; reason is l10n.failureMessage(failure)
   ///
   /// In ru, this message translates to:
-  /// **'Не удалось отправить отчёт'**
-  String get reportError;
+  /// **'Отчёт не отправлен. {reason}'**
+  String reportError(String reason);
 
   /// New report screen title
   ///
@@ -1047,12 +1047,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Отчётов'**
   String get reportsCount;
-
-  /// Generic action failure snackbar
-  ///
-  /// In ru, this message translates to:
-  /// **'Не удалось выполнить действие'**
-  String get actionFailed;
 }
 
 class _AppLocalizationsDelegate

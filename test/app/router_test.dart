@@ -126,7 +126,7 @@ void main() {
           .read(authProvider.notifier)
           .login(email: email, password: '123456');
       await settle(tester);
-      expect(await done, isTrue);
+      expect((await done).isSuccess, isTrue);
     }
 
     Future<void> logout(WidgetTester tester) async {

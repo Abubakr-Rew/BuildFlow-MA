@@ -1,5 +1,6 @@
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
+import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:buildflow/features/auth/data/api_auth_repository.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
@@ -91,77 +92,44 @@ class AuthNotifier extends Notifier<AuthState> {
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 
-  Future<bool> login({
+  Future<Result<User>> login({
     required String email,
     required String password,
-  }) async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final result = await _repo.login(email: email, password: password);
-      return result.when<bool>(
-        success: (user) {
-          state = AuthState(
-            status: AuthStatus.authenticated,
-            user: user,
-          );
-          return true;
-        },
-        failure: (failure) {
-          state = state.copyWith(isLoading: false, failure: failure);
-          return false;
-        },
-      );
-    } catch (e, stackTrace) {
-      state = state.copyWith(
-        isLoading: false,
-        failure: Failure(
-          FailureCode.unknown,
-          message: '$e',
-          stackTrace: stackTrace,
-        ),
-      );
-      return false;
-    }
-  }
+  }) =>
+      _signIn(() => _repo.login(email: email, password: password));
 
-  Future<bool> register({
+  Future<Result<User>> register({
     required String email,
     required String password,
     required String name,
     required String companyName,
-  }) async {
-    state = state.copyWith(isLoading: true);
-    try {
-      final result = await _repo.register(
-        email: email,
-        password: password,
-        name: name,
-        companyName: companyName,
-      );
-      return result.when<bool>(
-        success: (user) {
-          state = AuthState(
-            status: AuthStatus.authenticated,
-            user: user,
-          );
-          return true;
-        },
-        failure: (failure) {
-          state = state.copyWith(isLoading: false, failure: failure);
-          return false;
-        },
-      );
-    } catch (e, stackTrace) {
-      state = state.copyWith(
-        isLoading: false,
-        failure: Failure(
-          FailureCode.unknown,
-          message: '$e',
-          stackTrace: stackTrace,
+  }) =>
+      _signIn(
+        () => _repo.register(
+          email: email,
+          password: password,
+          name: name,
+          companyName: companyName,
         ),
       );
-      return false;
+
+  /// Signs the user in if [request] succeeds; otherwise keeps the failure
+  /// in the state for the form. Never throws.
+  Future<Result<User>> _signIn(Future<Result<User>> Function() request) async {
+    state = state.copyWith(isLoading: true);
+    Result<User> result;
+    try {
+      result = await request();
+    } catch (e, stackTrace) {
+      result = Err(
+        Failure(FailureCode.unknown, message: '$e', stackTrace: stackTrace),
+      );
     }
+    state = result.when(
+      success: (user) => AuthState(status: AuthStatus.authenticated, user: user),
+      failure: (failure) => state.copyWith(isLoading: false, failure: failure),
+    );
+    return result;
   }
 
   Future<void> logout() async {

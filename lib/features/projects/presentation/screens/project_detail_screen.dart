@@ -95,11 +95,13 @@ class ProjectDetailScreen extends ConsumerWidget {
     if (status == project.status) return;
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final ok =
+    final result =
         await ref.read(projectsProvider.notifier).setStatus(project, status);
-    messenger.showSnackBar(
-      SnackBar(content: Text(ok ? l10n.statusChanged : l10n.actionFailed)),
+    final message = result.when(
+      success: (_) => l10n.statusChanged,
+      failure: l10n.failureMessage,
     );
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -317,17 +319,19 @@ class _EditTeamSheetState extends ConsumerState<_EditTeamSheet> {
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final ok = await ref.read(projectsProvider.notifier).setTeam(
+    final result = await ref.read(projectsProvider.notifier).setTeam(
           widget.project,
           foremanIds: _foremen.toList(),
           workerIds: _workers.toList(),
         );
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(
-      SnackBar(content: Text(ok ? l10n.teamSaved : l10n.actionFailed)),
+    final message = result.when(
+      success: (_) => l10n.teamSaved,
+      failure: l10n.failureMessage,
     );
-    if (ok) Navigator.pop(context);
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+    if (result.isSuccess) Navigator.pop(context);
   }
 
   @override

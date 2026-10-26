@@ -47,7 +47,11 @@ result.when(success: (p) => ..., failure: (f) => ...);                       // 
 Text(l10n.failureMessage(error))                                             // в UI: Failure или любое исключение
 ```
 Репозитории никогда не бросают исключений. В `AsyncNotifier.build()` Err превращается в `throw f`: `Failure`
-реализует `Exception` и так попадает в `AsyncValue.error`. Мутации нотифайеров возвращают `Future<bool>`.
+реализует `Exception` и так попадает в `AsyncValue.error`.
+Мутации нотифайеров возвращают `Future<Result<T>>` и не бросают исключений. `T` — созданный или обновлённый
+объект (`Result<Project>`, `Result<Report>`, `Result<User>`), либо `void`, если вернуть нечего. Экран показывает
+итог одним снэкбаром: `result.when(success: (_) => l10n.projectSaved, failure: l10n.failureMessage)`.
+Общих текстов вроде «Не удалось выполнить действие» нет: причину всегда даёт `failureMessage`.
 Текст ошибки в UI получать только через `l10n.failureMessage(error)` из
 [failure_messages.dart](lib/app/l10n/failure_messages.dart), никогда через `failure.message` или `error.toString()`.
 `AuthState.failure` показывается так же.
@@ -121,11 +125,13 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`, локальный путь и http),
   `DateFormatter` (ru), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
-  перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, сохранение темы, `describePhotoPickError`,
-  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер. Виджет-тесты есть только в `test/app/router_test.dart`: там поднимается
-  `MaterialApp.router` с `ThemeData(extensions: [BuildFlowThemeExtension.light])` без `AppTheme`, потому что
-  google_fonts тянет шрифты из сети. Поверхность 1080 px и `textScaler` 0.7: тестовый шрифт Ahem шире настоящего,
-  и без этого строки переполняются.
+  перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
+  репозитория доходит до экрана со своим кодом), сохранение темы, `describePhotoPickError`, валидаторы, форматтер дат
+  и JSON-сущности, `authRedirect` и роутер. Виджет-тесты: `test/app/router_test.dart` (`MaterialApp.router`) и экраны
+  через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart). Тема в них —
+  `ThemeData(extensions: [BuildFlowThemeExtension.light])` без `AppTheme`, потому что google_fonts тянет шрифты из сети.
+  Поверхность 1080 px и `textScaler` 0.7: тестовый шрифт Ahem шире настоящего, и без этого строки переполняются.
+  Fake-репозитории в виджет-тестах ждут до 0,8 с, поэтому после действий нужен `tester.pump(Duration(seconds: 1))`.
   `test/widget_test.dart` — заглушка.
 - Не менять провайдеры синхронно в `initState` или `build`: на `authProvider` подписан роутер, и Riverpod падает
   на assert. Откладывать через `addPostFrameCallback`, как в splash_screen.dart.

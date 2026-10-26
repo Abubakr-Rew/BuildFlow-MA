@@ -105,7 +105,7 @@ void main() {
       expect(state().isLoading, isTrue);
 
       repo.gate!.complete();
-      expect(await done, isTrue);
+      expect((await done).value, _user);
       expect(state().status, AuthStatus.authenticated);
       expect(state().user, _user);
       expect(state().isLoading, isFalse);
@@ -116,7 +116,8 @@ void main() {
       notifier().forceUnauthenticated();
       repo.result = const Err(Failure(FailureCode.invalidCredentials));
 
-      expect(await notifier().login(email: 'a@b.kg', password: 'x'), isFalse);
+      final result = await notifier().login(email: 'a@b.kg', password: 'x');
+      expect(result.failure.code, FailureCode.invalidCredentials);
       expect(state().status, AuthStatus.unauthenticated);
       expect(state().isLoading, isFalse);
       expect(state().failure?.code, FailureCode.invalidCredentials);
@@ -124,7 +125,8 @@ void main() {
 
     test('an exception from the repository becomes an unknown failure', () async {
       repo.error = Exception('boom');
-      expect(await notifier().login(email: 'a@b.kg', password: 'x'), isFalse);
+      final result = await notifier().login(email: 'a@b.kg', password: 'x');
+      expect(result.failure.code, FailureCode.unknown);
       expect(state().isLoading, isFalse);
       expect(state().failure?.code, FailureCode.unknown);
     });
@@ -143,13 +145,13 @@ void main() {
     });
 
     test('register signs the new owner in', () async {
-      final ok = await notifier().register(
+      final result = await notifier().register(
         email: 'a@b.kg',
         password: '123456',
         name: 'Owner',
         companyName: 'Co',
       );
-      expect(ok, isTrue);
+      expect(result.value, _user);
       expect(state().status, AuthStatus.authenticated);
     });
 

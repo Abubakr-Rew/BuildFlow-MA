@@ -435,7 +435,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get selectProjectHint => 'Выберите объект';
 
   @override
-  String get reportError => 'Не удалось отправить отчёт';
+  String reportError(String reason) {
+    return 'Отчёт не отправлен. $reason';
+  }
 
   @override
   String get newReport => 'Новый отчёт';
@@ -504,7 +506,4 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reportsCount => 'Отчётов';
-
-  @override
-  String get actionFailed => 'Не удалось выполнить действие';
 }

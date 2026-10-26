@@ -110,17 +110,19 @@ class _CreateProjectSheetState extends ConsumerState<_CreateProjectSheet> {
 
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final success = await ref.read(projectsProvider.notifier).createProject(
+    final result = await ref.read(projectsProvider.notifier).createProject(
           name: _nameController.text,
           address: _addressController.text,
         );
     if (!mounted) return;
     setState(() => _saving = false);
 
-    messenger.showSnackBar(
-      SnackBar(content: Text(success ? l10n.projectSaved : l10n.actionFailed)),
+    final message = result.when(
+      success: (_) => l10n.projectSaved,
+      failure: l10n.failureMessage,
     );
-    if (success) Navigator.pop(context);
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+    if (result.isSuccess) Navigator.pop(context);
   }
 
   @override
