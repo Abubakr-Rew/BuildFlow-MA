@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
@@ -6,13 +7,15 @@ class ErrorState extends StatelessWidget {
   const ErrorState({
     required this.message,
     required this.onRetry,
-    this.retryLabel = 'Повторить',
+    this.retryLabel,
     super.key,
   });
 
   final String message;
   final VoidCallback onRetry;
-  final String retryLabel;
+
+  /// Defaults to [AppLocalizations.retry].
+  final String? retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +51,7 @@ class ErrorState extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh, size: 20),
-              label: Text(retryLabel),
+              label: Text(retryLabel ?? AppLocalizations.of(context).retry),
             ),
           ],
         ),

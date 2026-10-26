@@ -121,9 +121,9 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        _showSnackBar('Не удалось выбрать фото: $e');
-      }
+      // The exception text is for debugging, not for the foreman.
+      debugPrint('Photo pick failed: $e');
+      if (mounted) _showSnackBar(l10n.photoPickError);
     }
   }
 

@@ -4,6 +4,9 @@
   "appName": "BuildFlow",
   "@appName": {"description": "Application name"},
 
+  "appTagline": "Фото-отчёты со стройки",
+  "@appTagline": {"description": "Tagline under the app name on the splash screen"},
+
   "loginTitle": "Вход",
   "@loginTitle": {"description": "Login screen title"},
 
@@ -186,6 +189,9 @@
 
   "fromGallery": "Галерея",
   "@fromGallery": {"description": "From gallery button"},
+
+  "photoPickError": "Не удалось выбрать фото",
+  "@photoPickError": {"description": "Snackbar when the camera or gallery fails"},
 
   "reportDescription": "Описание работ",
   "@reportDescription": {"description": "Report description field label"},

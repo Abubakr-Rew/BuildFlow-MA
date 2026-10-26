@@ -100,6 +100,12 @@ abstract class AppLocalizations {
   /// **'BuildFlow'**
   String get appName;
 
+  /// Tagline under the app name on the splash screen
+  ///
+  /// In ru, this message translates to:
+  /// **'Фото-отчёты со стройки'**
+  String get appTagline;
+
   /// Login screen title
   ///
   /// In ru, this message translates to:
@@ -465,6 +471,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Галерея'**
   String get fromGallery;
+
+  /// Snackbar when the camera or gallery fails
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось выбрать фото'**
+  String get photoPickError;
 
   /// Report description field label
   ///

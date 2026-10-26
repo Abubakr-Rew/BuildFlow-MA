@@ -125,9 +125,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Сжатие сейчас только через `imageQuality: 85` и `maxWidth/Height: 1920` в image_picker.
 - `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
   а роль всегда `foreman`.
-- Хардкод строк, который надо вынести в l10n, а не копировать: `auth_provider.dart` («Что-то пошло не так»),
-  `new_report_screen.dart` («Не удалось выбрать фото»), `splash_screen.dart`, подсказка демо-входов в `login_screen.dart`,
-  дефолтный `retryLabel` в `ErrorState`. Сообщения Failure в Fake-репозиториях тоже на русском и показываются в UI.
+- Хардкод, который ещё надо вынести в l10n, а не копировать: «Что-то пошло не так» в `auth_provider.dart`.
+  Сообщения Failure в Fake-репозиториях тоже на русском и показываются в UI.
+- Название приложения — `l10n.appName`, в том числе в `MaterialApp.onGenerateTitle`. Можно склеивать строки l10n
+  с разделителями (`'${l10n.foremenCount}: $n'`), но новые слова в такие строки не добавлять.
 - В `build.gradle.kts` стоит `minSdk = flutter.minSdkVersion` (в Flutter 3.47.5 это 24), хотя в коммите было `23`.
   flutter_secure_storage нужен ≥ 23, так что работает, но если сменить версию Flutter, проверь.
 - AndroidManifest: только `INTERNET` и `CAMERA`. `applicationId = com.example.buildflow`, release подписан debug-ключом.

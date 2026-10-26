@@ -13,6 +13,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appName => 'BuildFlow';
 
   @override
+  String get appTagline => 'Фото-отчёты со стройки';
+
+  @override
   String get loginTitle => 'Вход';
 
   @override
@@ -194,6 +197,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get fromGallery => 'Галерея';
+
+  @override
+  String get photoPickError => 'Не удалось выбрать фото';
 
   @override
   String get reportDescription => 'Описание работ';

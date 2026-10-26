@@ -95,7 +95,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     Text(l10n.loginTitle, style: theme.textTheme.headlineMedium),
                     const SizedBox(height: AppTheme.spacing8),
                     Text(
-                      'BuildFlow',
+                      l10n.appName,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -200,10 +200,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: AppTheme.spacing8),
                           Text(
-                            'Директор: owner@buildflow.kg\n'
-                            'Прораб: foreman1@buildflow.kg\n'
-                            'Строитель: worker1@buildflow.kg\n'
-                            'Пароль: $_demoPassword',
+                            [
+                              for (final (role, email) in _demoAccounts)
+                                '${role.label(l10n)}: $email',
+                              '${l10n.password}: $_demoPassword',
+                            ].join('\n'),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                               fontFamily: 'monospace',
