@@ -1,49 +1,60 @@
-/// Sealed failure hierarchy for type-safe error handling.
-sealed class Failure {
-  const Failure({required this.message, this.stackTrace});
+/// What went wrong, independent of how it is worded.
+///
+/// The UI turns a code into text (see `failure_messages.dart`); repositories
+/// and the server never supply user-facing text. Codes follow the cases in
+/// the fake repositories and docs/api-contract.md.
+enum FailureCode {
+  /// No internet connection or the request couldn't be sent.
+  network,
 
-  final String message;
+  /// The request took too long.
+  timeout,
+
+  /// The server failed or is unreachable (5xx, API not available).
+  server,
+
+  /// Wrong email or password (login, 401).
+  invalidCredentials,
+
+  /// An account with this email already exists (register, 409).
+  emailTaken,
+
+  /// The invite code doesn't exist or has expired (join, 404).
+  invalidInviteCode,
+
+  /// No valid session; the user has to log in again (401).
+  sessionExpired,
+
+  /// The user's role doesn't allow the action (403).
+  forbidden,
+
+  /// The project, report or member doesn't exist (404).
+  notFound,
+
+  /// The server rejected the submitted data (400).
+  validation,
+
+  /// Anything else.
+  unknown,
+}
+
+/// A failed operation. [code] decides what the user sees; [message] is for
+/// logs and debugging only and is never shown in the UI.
+///
+/// Implements [Exception] so `AsyncNotifier.build()` can throw it into
+/// `AsyncValue.error` as is.
+final class Failure implements Exception {
+  const Failure(this.code, {this.message, this.statusCode, this.stackTrace});
+
+  final FailureCode code;
+  final String? message;
+
+  /// HTTP status, when the failure came from the API.
+  final int? statusCode;
   final StackTrace? stackTrace;
 
   @override
-  String toString() => 'Failure: $message';
-}
-
-/// Network failures (timeout, connection, etc.)
-final class NetworkFailure extends Failure {
-  const NetworkFailure({required super.message, super.stackTrace});
-}
-
-/// Server returned an error response.
-final class ServerFailure extends Failure {
-  const ServerFailure({
-    required super.message,
-    super.stackTrace,
-    this.statusCode,
-  });
-
-  final int? statusCode;
-}
-
-/// Authentication-related failures.
-final class AuthFailure extends Failure {
-  const AuthFailure({required super.message, super.stackTrace});
-}
-
-/// Local storage failures.
-final class StorageFailure extends Failure {
-  const StorageFailure({required super.message, super.stackTrace});
-}
-
-/// Validation or business-logic failures.
-final class ValidationFailure extends Failure {
-  const ValidationFailure({required super.message, super.stackTrace});
-}
-
-/// An unexpected/unknown failure.
-final class UnknownFailure extends Failure {
-  const UnknownFailure({
-    super.message = 'An unknown error occurred',
-    super.stackTrace,
-  });
+  String toString() => message == null
+      ? 'Failure(${code.name})'
+      : 'Failure(${code.name}: $message)';
 }

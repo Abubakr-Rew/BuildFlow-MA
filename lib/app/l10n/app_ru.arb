@@ -64,12 +64,6 @@
   "validationCompanyRequired": "Введите название компании",
   "@validationCompanyRequired": {"description": "Company name required validation"},
 
-  "loginError": "Неверный email или пароль",
-  "@loginError": {"description": "Login error message"},
-
-  "registerError": "Ошибка регистрации",
-  "@registerError": {"description": "Registration error message"},
-
   "logoutConfirm": "Вы уверены, что хотите выйти?",
   "@logoutConfirm": {"description": "Logout confirmation"},
 
@@ -349,14 +343,38 @@
   "loading": "Загрузка...",
   "@loading": {"description": "Loading state"},
 
-  "errorGeneral": "Что-то пошло не так",
-  "@errorGeneral": {"description": "General error message"},
-
   "errorNetwork": "Ошибка сети. Проверьте подключение",
-  "@errorNetwork": {"description": "Network error message"},
+  "@errorNetwork": {"description": "FailureCode.network: no internet connection"},
 
-  "errorServer": "Ошибка сервера",
-  "@errorServer": {"description": "Server error message"},
+  "errorTimeout": "Сервер долго не отвечает. Попробуйте ещё раз",
+  "@errorTimeout": {"description": "FailureCode.timeout: the request took too long"},
+
+  "errorServer": "Сервер недоступен. Попробуйте позже",
+  "@errorServer": {"description": "FailureCode.server: server error or unreachable"},
+
+  "errorInvalidCredentials": "Неверный email или пароль",
+  "@errorInvalidCredentials": {"description": "FailureCode.invalidCredentials: wrong email or password"},
+
+  "errorEmailTaken": "Пользователь с таким email уже существует",
+  "@errorEmailTaken": {"description": "FailureCode.emailTaken: email already registered"},
+
+  "errorInvalidInviteCode": "Неверный код приглашения",
+  "@errorInvalidInviteCode": {"description": "FailureCode.invalidInviteCode: unknown or expired invite code"},
+
+  "errorSessionExpired": "Сессия истекла. Войдите снова",
+  "@errorSessionExpired": {"description": "FailureCode.sessionExpired: the user must log in again"},
+
+  "errorForbidden": "Недостаточно прав для этого действия",
+  "@errorForbidden": {"description": "FailureCode.forbidden: the role does not allow the action"},
+
+  "errorNotFound": "Данные не найдены. Возможно, их удалили",
+  "@errorNotFound": {"description": "FailureCode.notFound: project, report or member does not exist"},
+
+  "errorValidation": "Проверьте введённые данные",
+  "@errorValidation": {"description": "FailureCode.validation: the server rejected the data"},
+
+  "errorUnknown": "Что-то пошло не так",
+  "@errorUnknown": {"description": "FailureCode.unknown and unexpected exceptions"},
 
   "offlineBanner": "Нет подключения к интернету",
   "@offlineBanner": {"description": "Offline banner text"},

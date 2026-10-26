@@ -103,12 +103,19 @@ class FakeAuthRepository implements AuthRepository {
   }) async {
     await _simulateLatency();
     if (_shouldFail()) {
-      return const Err(NetworkFailure(message: 'Simulated network error'));
+      return const Err(
+        Failure(FailureCode.network, message: 'Simulated network error'),
+      );
     }
 
     final record = _users[email.trim().toLowerCase()];
     if (record == null || record.password != password) {
-      return const Err(AuthFailure(message: 'Неверный email или пароль'));
+      return const Err(
+        Failure(
+          FailureCode.invalidCredentials,
+          message: 'Wrong email or password',
+        ),
+      );
     }
 
     _currentUser = record.user;
@@ -126,13 +133,15 @@ class FakeAuthRepository implements AuthRepository {
   }) async {
     await _simulateLatency();
     if (_shouldFail()) {
-      return const Err(NetworkFailure(message: 'Simulated network error'));
+      return const Err(
+        Failure(FailureCode.network, message: 'Simulated network error'),
+      );
     }
 
     final lowerEmail = email.trim().toLowerCase();
     if (_users.containsKey(lowerEmail)) {
       return const Err(
-        AuthFailure(message: 'Пользователь с таким email уже существует'),
+        Failure(FailureCode.emailTaken, message: 'Email already registered'),
       );
     }
 
@@ -164,7 +173,10 @@ class FakeAuthRepository implements AuthRepository {
     await _simulateLatency();
     if (inviteCode.length < 6) {
       return const Err(
-        ValidationFailure(message: 'Неверный код приглашения'),
+        Failure(
+          FailureCode.invalidInviteCode,
+          message: 'Invite code shorter than 6 characters',
+        ),
       );
     }
 
@@ -194,7 +206,9 @@ class FakeAuthRepository implements AuthRepository {
           .readUserId()
           .timeout(const Duration(seconds: 5));
       if (userId == null) {
-        return const Err(AuthFailure(message: 'No session'));
+        return const Err(
+          Failure(FailureCode.sessionExpired, message: 'No stored session'),
+        );
       }
 
       for (final record in _users.values) {
@@ -204,16 +218,22 @@ class FakeAuthRepository implements AuthRepository {
         }
       }
 
-      return const Err(AuthFailure(message: 'Session expired'));
-    } catch (e) {
+      return const Err(
+        Failure(FailureCode.sessionExpired, message: 'Stored user not found'),
+      );
+    } catch (e, stackTrace) {
       // Timeout or flutter_secure_storage error — clear corrupted storage
       try {
         await secureStorage.clearAll().timeout(const Duration(seconds: 2));
       } catch (_) {
         // Ignore — storage may be completely broken
       }
-      return const Err(
-        AuthFailure(message: 'Failed to read session, please log in again'),
+      return Err(
+        Failure(
+          FailureCode.sessionExpired,
+          message: 'Failed to read session: ${e.runtimeType}',
+          stackTrace: stackTrace,
+        ),
       );
     }
   }

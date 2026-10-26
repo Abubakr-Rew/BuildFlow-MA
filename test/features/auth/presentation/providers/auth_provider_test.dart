@@ -93,7 +93,7 @@ void main() {
     });
 
     test('restoreSession without a session signs out', () async {
-      repo.result = const Err(AuthFailure(message: 'No session'));
+      repo.result = const Err(Failure(FailureCode.sessionExpired));
       await notifier().restoreSession();
       expect(state().status, AuthStatus.unauthenticated);
       expect(state().user, isNull);
@@ -109,24 +109,37 @@ void main() {
       expect(state().status, AuthStatus.authenticated);
       expect(state().user, _user);
       expect(state().isLoading, isFalse);
-      expect(state().errorMessage, isNull);
+      expect(state().failure, isNull);
     });
 
-    test('failed login keeps the user signed out with an error', () async {
+    test('failed login keeps the user signed out with the failure', () async {
       notifier().forceUnauthenticated();
-      repo.result = const Err(AuthFailure(message: 'Неверный email или пароль'));
+      repo.result = const Err(Failure(FailureCode.invalidCredentials));
 
       expect(await notifier().login(email: 'a@b.kg', password: 'x'), isFalse);
       expect(state().status, AuthStatus.unauthenticated);
       expect(state().isLoading, isFalse);
-      expect(state().errorMessage, 'Неверный email или пароль');
+      expect(state().failure?.code, FailureCode.invalidCredentials);
     });
 
-    test('an exception from the repository becomes an error', () async {
+    test('an exception from the repository becomes an unknown failure', () async {
       repo.error = Exception('boom');
       expect(await notifier().login(email: 'a@b.kg', password: 'x'), isFalse);
       expect(state().isLoading, isFalse);
-      expect(state().errorMessage, isNotNull);
+      expect(state().failure?.code, FailureCode.unknown);
+    });
+
+    test('the next attempt clears the previous failure', () async {
+      repo.result = const Err(Failure(FailureCode.network));
+      await notifier().login(email: 'a@b.kg', password: 'x');
+
+      repo
+        ..result = const Success(_user)
+        ..gate = Completer<void>();
+      final done = notifier().login(email: 'a@b.kg', password: '123456');
+      expect(state().failure, isNull);
+      repo.gate!.complete();
+      await done;
     });
 
     test('register signs the new owner in', () async {

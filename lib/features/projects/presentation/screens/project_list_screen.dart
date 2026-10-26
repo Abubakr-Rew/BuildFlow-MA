@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
@@ -38,7 +39,7 @@ class ProjectListScreen extends ConsumerWidget {
         child: projects.when(
           loading: () => const LoadingShimmerList(),
           error: (error, _) => ErrorState(
-            message: error.toString(),
+            message: l10n.failureMessage(error),
             onRetry: () => ref.invalidate(projectsProvider),
             retryLabel: l10n.retry,
           ),

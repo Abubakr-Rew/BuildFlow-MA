@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/utils/date_formatter.dart';
@@ -26,7 +27,7 @@ class ReportListScreen extends ConsumerWidget {
         child: reports.when(
           loading: () => const LoadingShimmerList(),
           error: (error, _) => ErrorState(
-            message: error.toString(),
+            message: l10n.failureMessage(error),
             onRetry: () => ref.invalidate(reportsProvider),
             retryLabel: l10n.retry,
           ),

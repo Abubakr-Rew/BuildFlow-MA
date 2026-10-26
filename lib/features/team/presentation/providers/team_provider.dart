@@ -26,7 +26,7 @@ class MembersNotifier extends AsyncNotifier<List<Member>> {
     final result = await repo.getMembers();
     return result.when(
       success: (members) => members,
-      failure: (f) => throw Exception(f.message),
+      failure: (f) => throw f,
     );
   }
 

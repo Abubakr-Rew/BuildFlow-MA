@@ -118,7 +118,9 @@ class FakeReportRepository implements ReportRepository {
     await _simulateLatency();
     final report = _reports.where((r) => r.id == id).firstOrNull;
     if (report == null) {
-      return const Err(StorageFailure(message: 'Отчёт не найден'));
+      return Err(
+        Failure(FailureCode.notFound, message: 'Report $id not found'),
+      );
     }
     return Success(report);
   }

@@ -17,7 +17,7 @@ sealed class Result<T> {
     return switch (this) {
       Success(:final data) => data,
       Err(:final failure) => throw StateError(
-          'Cannot get value from Err: ${failure.message}',
+          'Cannot get value from Err: $failure',
         ),
     };
   }

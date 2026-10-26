@@ -11,7 +11,7 @@ void main() {
     });
 
     test('Err isFailure returns true', () {
-      const result = Err<int>(NetworkFailure(message: 'offline'));
+      const result = Err<int>(Failure(FailureCode.network, message: 'offline'));
       expect(result.isFailure, isTrue);
       expect(result.isSuccess, isFalse);
     });
@@ -22,7 +22,7 @@ void main() {
     });
 
     test('Err.value throws StateError', () {
-      const result = Err<String>(AuthFailure(message: 'denied'));
+      const result = Err<String>(Failure(FailureCode.forbidden, message: 'denied'));
       expect(() => result.value, throwsStateError);
     });
 
@@ -32,9 +32,9 @@ void main() {
     });
 
     test('Err.failure returns the failure', () {
-      const result = Err<int>(StorageFailure(message: 'disk full'));
-      expect(result.failure, isA<StorageFailure>());
-      expect(result.failure.message, 'disk full');
+      const result = Err<int>(Failure(FailureCode.notFound, message: 'gone'));
+      expect(result.failure.code, FailureCode.notFound);
+      expect(result.failure.message, 'gone');
     });
 
     test('map transforms Success value', () {
@@ -45,7 +45,7 @@ void main() {
     });
 
     test('map passes through Err unchanged', () {
-      const Result<int> result = Err(NetworkFailure(message: 'fail'));
+      const Result<int> result = Err(Failure(FailureCode.network, message: 'fail'));
       final mapped = result.map((v) => v * 2);
       expect(mapped.isFailure, isTrue);
       expect(mapped.failure.message, 'fail');
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('when calls failure handler for Err', () {
-      const Result<int> result = Err(AuthFailure(message: 'nope'));
+      const Result<int> result = Err(Failure(FailureCode.unknown, message: 'nope'));
       final output = result.when(
         success: (data) => 'got $data',
         failure: (f) => 'failed: ${f.message}',
@@ -71,29 +71,29 @@ void main() {
   });
 
   group('Failure', () {
-    test('NetworkFailure has correct message', () {
-      const f = NetworkFailure(message: 'timeout');
-      expect(f.message, 'timeout');
+    test('carries the code, debug message and status', () {
+      const f = Failure(FailureCode.server, message: 'boom', statusCode: 503);
+      expect(f.code, FailureCode.server);
+      expect(f.message, 'boom');
+      expect(f.statusCode, 503);
     });
 
-    test('AuthFailure has correct message', () {
-      const f = AuthFailure(message: 'invalid credentials');
-      expect(f.message, 'invalid credentials');
+    test('message is optional', () {
+      const f = Failure(FailureCode.timeout);
+      expect(f.message, isNull);
+      expect(f.toString(), 'Failure(timeout)');
     });
 
-    test('ServerFailure has correct message', () {
-      const f = ServerFailure(message: '500');
-      expect(f.message, '500');
+    test('toString names the code and message for logs', () {
+      const f = Failure(FailureCode.notFound, message: 'Project p-1 not found');
+      expect(f.toString(), 'Failure(notFound: Project p-1 not found)');
     });
 
-    test('StorageFailure has correct message', () {
-      const f = StorageFailure(message: 'not found');
-      expect(f.message, 'not found');
-    });
-
-    test('ValidationFailure has correct message', () {
-      const f = ValidationFailure(message: 'required');
-      expect(f.message, 'required');
+    test('can be thrown into AsyncValue.error as an Exception', () {
+      expect(
+        () => throw const Failure(FailureCode.unknown),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 }

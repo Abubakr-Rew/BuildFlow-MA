@@ -1,3 +1,4 @@
+import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/storage/secure_storage.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,7 +48,7 @@ void main() {
         email: 'owner@buildflow.kg',
         password: 'wrong',
       );
-      expect(result.isFailure, isTrue);
+      expect(result.failure.code, FailureCode.invalidCredentials);
       expect(repo.currentUser, isNull);
     });
 
@@ -56,7 +57,7 @@ void main() {
         email: 'unknown@test.com',
         password: '123456',
       );
-      expect(result.isFailure, isTrue);
+      expect(result.failure.code, FailureCode.invalidCredentials);
     });
 
     test('register creates a new owner account', () async {
@@ -78,7 +79,28 @@ void main() {
         name: 'Dupe',
         companyName: 'Dupe Co',
       );
-      expect(result.isFailure, isTrue);
+      expect(result.failure.code, FailureCode.emailTaken);
+    });
+
+    test('joinWithInviteCode rejects an invalid code', () async {
+      final result = await repo.joinWithInviteCode(
+        email: 'new@company.kg',
+        password: '123456',
+        name: 'Foreman',
+        inviteCode: 'ABC',
+      );
+      expect(result.failure.code, FailureCode.invalidInviteCode);
+      expect(repo.currentUser, isNull);
+    });
+
+    test('joinWithInviteCode signs in with a valid code', () async {
+      final result = await repo.joinWithInviteCode(
+        email: 'new@company.kg',
+        password: '123456',
+        name: 'Foreman',
+        inviteCode: 'ABC123',
+      );
+      expect(result.isSuccess, isTrue);
     });
 
     test('logout clears user and storage', () async {
@@ -103,7 +125,15 @@ void main() {
 
     test('restoreSession fails without prior login', () async {
       final result = await repo.restoreSession();
-      expect(result.isFailure, isTrue);
+      expect(result.failure.code, FailureCode.sessionExpired);
+    });
+
+    test('failure messages are for logs, not Russian UI text', () async {
+      final result = await repo.login(
+        email: 'owner@buildflow.kg',
+        password: 'wrong',
+      );
+      expect(result.failure.message, isNot(matches(RegExp('[А-Яа-яЁё]'))));
     });
   });
 }

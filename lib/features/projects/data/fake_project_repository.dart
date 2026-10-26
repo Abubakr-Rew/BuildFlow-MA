@@ -55,6 +55,9 @@ class FakeProjectRepository implements ProjectRepository {
     await Future<void>.delayed(Duration(milliseconds: ms));
   }
 
+  static Failure _notFound(String projectId) =>
+      Failure(FailureCode.notFound, message: 'Project $projectId not found');
+
   @override
   Future<Result<List<Project>>> getProjects() async {
     await _simulateLatency();
@@ -69,7 +72,7 @@ class FakeProjectRepository implements ProjectRepository {
     await _simulateLatency();
     final project = _projects.where((p) => p.id == id).firstOrNull;
     if (project == null) {
-      return const Err(StorageFailure(message: 'Объект не найден'));
+      return Err(_notFound(id));
     }
     return Success(project);
   }
@@ -96,7 +99,7 @@ class FakeProjectRepository implements ProjectRepository {
     await _simulateLatency();
     final index = _projects.indexWhere((p) => p.id == project.id);
     if (index == -1) {
-      return const Err(StorageFailure(message: 'Объект не найден'));
+      return Err(_notFound(project.id));
     }
     _projects[index] = project;
     return Success(project);
@@ -110,7 +113,7 @@ class FakeProjectRepository implements ProjectRepository {
     await _simulateLatency();
     final index = _projects.indexWhere((p) => p.id == projectId);
     if (index == -1) {
-      return const Err(StorageFailure(message: 'Объект не найден'));
+      return Err(_notFound(projectId));
     }
     final project = _projects[index];
     if (project.foremanIds.contains(foremanId)) {
@@ -131,7 +134,7 @@ class FakeProjectRepository implements ProjectRepository {
     await _simulateLatency();
     final index = _projects.indexWhere((p) => p.id == projectId);
     if (index == -1) {
-      return const Err(StorageFailure(message: 'Объект не найден'));
+      return Err(_notFound(projectId));
     }
     final project = _projects[index];
     final updated = project.copyWith(

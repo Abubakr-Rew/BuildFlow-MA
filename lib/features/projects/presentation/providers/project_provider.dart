@@ -45,7 +45,7 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     return result.when(
       success: (projects) =>
           projects.where((p) => canSeeProject(user, p)).toList(),
-      failure: (f) => throw Exception(f.message),
+      failure: (f) => throw f,
     );
   }
 

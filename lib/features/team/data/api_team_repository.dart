@@ -11,21 +11,21 @@ class ApiTeamRepository implements TeamRepository {
   Future<Result<List<Member>>> getMembers() async {
     // TODO: Implement with Dio
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<InviteCode>> generateInviteCode() async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<void>> removeMember(String memberId) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 }

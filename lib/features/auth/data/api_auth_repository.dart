@@ -16,7 +16,7 @@ class ApiAuthRepository implements AuthRepository {
   }) async {
     // TODO: Implement with Dio
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
@@ -28,7 +28,7 @@ class ApiAuthRepository implements AuthRepository {
     required String companyName,
   }) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
@@ -40,21 +40,21 @@ class ApiAuthRepository implements AuthRepository {
     required String inviteCode,
   }) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<User>> restoreSession() async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<void>> logout() async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 }

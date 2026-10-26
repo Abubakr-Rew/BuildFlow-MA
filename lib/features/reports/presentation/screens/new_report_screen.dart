@@ -1,4 +1,5 @@
 import 'package:app_settings/app_settings.dart';
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
@@ -181,7 +182,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
             const SizedBox(height: AppTheme.spacing8),
             projects.when(
               loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text(e.toString()),
+              error: (e, _) => Text(l10n.failureMessage(e)),
               data: (list) {
                 final activeProjects =
                     list.where((p) => p.status.isActive).toList();

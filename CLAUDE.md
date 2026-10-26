@@ -35,16 +35,29 @@ lib/features/<фича>/data/          Fake*Repository, Api*Repository
 Фичи: `auth`, `projects`, `reports`, `team`, `profile` (у profile есть только `presentation/`).
 
 **Ошибки — `Result<T>`** ([lib/core/error/result.dart](lib/core/error/result.dart)): sealed `Success(data)` / `Err(failure)`.
-Failure — sealed, см. [failures.dart](lib/core/error/failures.dart): `NetworkFailure`, `ServerFailure(statusCode)`,
-`AuthFailure`, `StorageFailure`, `ValidationFailure`, `UnknownFailure`.
+`Failure` ([failures.dart](lib/core/error/failures.dart)) — один класс. Что увидит пользователь, решает `code`
+(enum `FailureCode`). `message` нужен только для логов и отладки и в UI не показывается. Есть ещё `statusCode`
+и `stackTrace`. Коды: `network`, `timeout`, `server`, `invalidCredentials`, `emailTaken`, `invalidInviteCode`,
+`sessionExpired`, `forbidden`, `notFound`, `validation`, `unknown`. Соответствие HTTP-ответам — в docs/api-contract.md.
 ```dart
-Future<Result<Project>> createProject(...);                  // интерфейс репозитория
-return const Err(ValidationFailure(message: 'Неверный код')); // ошибка
+Future<Result<Project>> createProject(...);                                  // интерфейс репозитория
+return Err(Failure(FailureCode.notFound, message: 'Project $id not found')); // ошибка
 return Success(project);
-result.when(success: (p) => ..., failure: (f) => ...);       // у вызывающего
+result.when(success: (p) => ..., failure: (f) => ...);                       // у вызывающего
+Text(l10n.failureMessage(error))                                             // в UI: Failure или любое исключение
 ```
-Репозитории никогда не бросают исключений. В `AsyncNotifier.build()` Err превращается в `throw Exception(f.message)`,
-чтобы попасть в `AsyncValue.error`. Мутации нотифайеров возвращают `Future<bool>`.
+Репозитории никогда не бросают исключений. В `AsyncNotifier.build()` Err превращается в `throw f`: `Failure`
+реализует `Exception` и так попадает в `AsyncValue.error`. Мутации нотифайеров возвращают `Future<bool>`.
+Текст ошибки в UI получать только через `l10n.failureMessage(error)` из
+[failure_messages.dart](lib/app/l10n/failure_messages.dart), никогда через `failure.message` или `error.toString()`.
+`AuthState.failure` показывается так же.
+
+**Новый тип ошибки:**
+1. Добавить значение в `FailureCode` (failures.dart) с doc-комментарием: когда возникает и какому HTTP-ответу соответствует.
+2. Добавить ключ `error<Code>` в app_ru.arb (`FailureCode.emailTaken` → `errorEmailTaken`) и запустить `flutter gen-l10n`.
+3. Добавить ветку в `switch` в failure_messages.dart. Switch исчерпывающий, без ветки код не скомпилируется.
+4. Добавить строку в `expected` в test/app/l10n/failure_messages_test.dart, иначе упадёт тест на полноту.
+5. Если код приходит от API — добавить строку в таблицу «Коды ошибок клиента» в docs/api-contract.md.
 
 **Репозитории и DI:**
 - Реализацию выбирает только `xxxRepositoryProvider` в `presentation/providers/<фича>_provider.dart`
@@ -57,7 +70,7 @@ result.when(success: (p) => ..., failure: (f) => ...);       // у вызыва�
 - Новый репозиторий подключать так же: интерфейс в domain, `Fake*` и `Api*` в data, выбор в его провайдере.
   В тестах подменять через `ProviderScope(overrides: [xxxRepositoryProvider.overrideWithValue(...)])`.
 - `Api*Repository` есть у всех четырёх фич, но это заглушки: все методы возвращают
-  `Err(ServerFailure(message: 'API not implemented'))`. Контракт: [docs/api-contract.md](docs/api-contract.md).
+  `Err(Failure(FailureCode.server, message: 'API not implemented'))`. Контракт: [docs/api-contract.md](docs/api-contract.md).
 - Fake-репозитории изолированы друг от друга, но используют общие ID (`user-owner-1`, `user-foreman-1`, `project-1`…).
   Есть искусственная задержка. Данные живут только в памяти и при перезапуске сбрасываются.
 
@@ -96,7 +109,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   - Legacy `StateProvider` / `StateNotifierProvider` не использовать.
 - Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас:
   `Scaffold` + `AppBar(title: Text(l10n.…))`. Асинхронные данные:
-  `.when(loading: LoadingShimmerList, error: ErrorState(onRetry: ref.invalidate), data: EmptyState, если пусто)`,
+  `.when(loading: LoadingShimmerList, error: ErrorState(message: l10n.failureMessage(error), onRetry: ref.invalidate),
+  data: EmptyState, если пусто)`,
   а список оборачивается в `RefreshIndicator(onRefresh: () => ref.refresh(x.future))`.
 - Отступы: `AppTheme.spacing4/8/12/16/24/32/48`, плюс `minTouchTarget` и `primaryActionHeight`.
   Цвета: `Theme.of(context).colorScheme`; success / warning / draft и радиусы — через `context.bfTheme`.
@@ -106,8 +120,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - Готовое из core, вместо того чтобы писать своё: `BfButton`, `BfCard`, `BfTextField`, `EmptyState`, `ErrorState`,
   `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`, локальный путь и http),
   `DateFormatter` (ru), `Validators`, `Haptics`.
-- Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории, `Result`, валидаторы, форматтер дат и
-  JSON-сущности, `authRedirect` и роутер. Виджет-тесты есть только в `test/app/router_test.dart`: там поднимается
+- Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
+  перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, сохранение темы, `describePhotoPickError`,
+  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер. Виджет-тесты есть только в `test/app/router_test.dart`: там поднимается
   `MaterialApp.router` с `ThemeData(extensions: [BuildFlowThemeExtension.light])` без `AppTheme`, потому что
   google_fonts тянет шрифты из сети. Поверхность 1080 px и `textScaler` 0.7: тестовый шрифт Ahem шире настоящего,
   и без этого строки переполняются.
@@ -130,8 +145,6 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   предлагает действие «Настройки», которое вызывает `AppSettings.openAppSettings()`.
 - `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
   а роль всегда `foreman`.
-- Хардкод, который ещё надо вынести в l10n, а не копировать: «Что-то пошло не так» в `auth_provider.dart`.
-  Сообщения Failure в Fake-репозиториях тоже на русском и показываются в UI.
 - Название приложения — `l10n.appName`, в том числе в `MaterialApp.onGenerateTitle`. Можно склеивать строки l10n
   с разделителями (`'${l10n.foremenCount}: $n'`), но новые слова в такие строки не добавлять.
 - В `build.gradle.kts` стоит `minSdk = flutter.minSdkVersion` (в Flutter 3.47.5 это 24), хотя в коммите было `23`.

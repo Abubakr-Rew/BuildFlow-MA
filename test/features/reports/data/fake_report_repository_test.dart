@@ -1,3 +1,4 @@
+import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';
 import 'package:buildflow/features/reports/domain/entities/draft_report.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,7 +40,7 @@ void main() {
 
     test('getReport fails for unknown id', () async {
       final result = await repo.getReport('nonexistent');
-      expect(result.isFailure, isTrue);
+      expect(result.failure.code, FailureCode.notFound);
     });
 
     test('submitReport adds a new report', () async {

@@ -96,7 +96,9 @@ class FakeTeamRepository implements TeamRepository {
     await _simulateLatency();
     final index = _members.indexWhere((m) => m.id == memberId);
     if (index == -1) {
-      return const Err(StorageFailure(message: 'Участник не найден'));
+      return Err(
+        Failure(FailureCode.notFound, message: 'Member $memberId not found'),
+      );
     }
     _members.removeAt(index);
     return const Success(null);

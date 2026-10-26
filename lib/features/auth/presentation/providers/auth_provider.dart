@@ -1,4 +1,5 @@
 import 'package:buildflow/core/config.dart';
+import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:buildflow/features/auth/data/api_auth_repository.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
@@ -24,13 +25,16 @@ class AuthState {
     this.status = AuthStatus.initial,
     this.user,
     this.isLoading = false,
-    this.errorMessage,
+    this.failure,
   });
 
   final AuthStatus status;
   final User? user;
   final bool isLoading;
-  final String? errorMessage;
+
+  /// Why the last login or registration failed; shown through
+  /// `l10n.failureMessage`. Cleared by the next state change.
+  final Failure? failure;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get isOwner => user?.role == UserRole.owner;
@@ -40,13 +44,13 @@ class AuthState {
     AuthStatus? status,
     User? user,
     bool? isLoading,
-    String? errorMessage,
+    Failure? failure,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
+      failure: failure,
     );
   }
 }
@@ -103,17 +107,18 @@ class AuthNotifier extends Notifier<AuthState> {
           return true;
         },
         failure: (failure) {
-          state = state.copyWith(
-            isLoading: false,
-            errorMessage: failure.message,
-          );
+          state = state.copyWith(isLoading: false, failure: failure);
           return false;
         },
       );
-    } catch (_) {
+    } catch (e, stackTrace) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Что-то пошло не так',
+        failure: Failure(
+          FailureCode.unknown,
+          message: '$e',
+          stackTrace: stackTrace,
+        ),
       );
       return false;
     }
@@ -142,17 +147,18 @@ class AuthNotifier extends Notifier<AuthState> {
           return true;
         },
         failure: (failure) {
-          state = state.copyWith(
-            isLoading: false,
-            errorMessage: failure.message,
-          );
+          state = state.copyWith(isLoading: false, failure: failure);
           return false;
         },
       );
-    } catch (_) {
+    } catch (e, stackTrace) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Что-то пошло не так',
+        failure: Failure(
+          FailureCode.unknown,
+          message: '$e',
+          stackTrace: stackTrace,
+        ),
       );
       return false;
     }

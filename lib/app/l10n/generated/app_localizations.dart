@@ -220,18 +220,6 @@ abstract class AppLocalizations {
   /// **'Введите название компании'**
   String get validationCompanyRequired;
 
-  /// Login error message
-  ///
-  /// In ru, this message translates to:
-  /// **'Неверный email или пароль'**
-  String get loginError;
-
-  /// Registration error message
-  ///
-  /// In ru, this message translates to:
-  /// **'Ошибка регистрации'**
-  String get registerError;
-
   /// Logout confirmation
   ///
   /// In ru, this message translates to:
@@ -748,23 +736,71 @@ abstract class AppLocalizations {
   /// **'Загрузка...'**
   String get loading;
 
-  /// General error message
-  ///
-  /// In ru, this message translates to:
-  /// **'Что-то пошло не так'**
-  String get errorGeneral;
-
-  /// Network error message
+  /// FailureCode.network: no internet connection
   ///
   /// In ru, this message translates to:
   /// **'Ошибка сети. Проверьте подключение'**
   String get errorNetwork;
 
-  /// Server error message
+  /// FailureCode.timeout: the request took too long
   ///
   /// In ru, this message translates to:
-  /// **'Ошибка сервера'**
+  /// **'Сервер долго не отвечает. Попробуйте ещё раз'**
+  String get errorTimeout;
+
+  /// FailureCode.server: server error or unreachable
+  ///
+  /// In ru, this message translates to:
+  /// **'Сервер недоступен. Попробуйте позже'**
   String get errorServer;
+
+  /// FailureCode.invalidCredentials: wrong email or password
+  ///
+  /// In ru, this message translates to:
+  /// **'Неверный email или пароль'**
+  String get errorInvalidCredentials;
+
+  /// FailureCode.emailTaken: email already registered
+  ///
+  /// In ru, this message translates to:
+  /// **'Пользователь с таким email уже существует'**
+  String get errorEmailTaken;
+
+  /// FailureCode.invalidInviteCode: unknown or expired invite code
+  ///
+  /// In ru, this message translates to:
+  /// **'Неверный код приглашения'**
+  String get errorInvalidInviteCode;
+
+  /// FailureCode.sessionExpired: the user must log in again
+  ///
+  /// In ru, this message translates to:
+  /// **'Сессия истекла. Войдите снова'**
+  String get errorSessionExpired;
+
+  /// FailureCode.forbidden: the role does not allow the action
+  ///
+  /// In ru, this message translates to:
+  /// **'Недостаточно прав для этого действия'**
+  String get errorForbidden;
+
+  /// FailureCode.notFound: project, report or member does not exist
+  ///
+  /// In ru, this message translates to:
+  /// **'Данные не найдены. Возможно, их удалили'**
+  String get errorNotFound;
+
+  /// FailureCode.validation: the server rejected the data
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте введённые данные'**
+  String get errorValidation;
+
+  /// FailureCode.unknown and unexpected exceptions
+  ///
+  /// In ru, this message translates to:
+  /// **'Что-то пошло не так'**
+  String get errorUnknown;
 
   /// Offline banner text
   ///

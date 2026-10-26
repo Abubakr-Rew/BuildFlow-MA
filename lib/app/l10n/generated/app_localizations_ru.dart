@@ -73,12 +73,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get validationCompanyRequired => 'Введите название компании';
 
   @override
-  String get loginError => 'Неверный email или пароль';
-
-  @override
-  String get registerError => 'Ошибка регистрации';
-
-  @override
   String get logoutConfirm => 'Вы уверены, что хотите выйти?';
 
   @override
@@ -354,13 +348,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get loading => 'Загрузка...';
 
   @override
-  String get errorGeneral => 'Что-то пошло не так';
-
-  @override
   String get errorNetwork => 'Ошибка сети. Проверьте подключение';
 
   @override
-  String get errorServer => 'Ошибка сервера';
+  String get errorTimeout => 'Сервер долго не отвечает. Попробуйте ещё раз';
+
+  @override
+  String get errorServer => 'Сервер недоступен. Попробуйте позже';
+
+  @override
+  String get errorInvalidCredentials => 'Неверный email или пароль';
+
+  @override
+  String get errorEmailTaken => 'Пользователь с таким email уже существует';
+
+  @override
+  String get errorInvalidInviteCode => 'Неверный код приглашения';
+
+  @override
+  String get errorSessionExpired => 'Сессия истекла. Войдите снова';
+
+  @override
+  String get errorForbidden => 'Недостаточно прав для этого действия';
+
+  @override
+  String get errorNotFound => 'Данные не найдены. Возможно, их удалили';
+
+  @override
+  String get errorValidation => 'Проверьте введённые данные';
+
+  @override
+  String get errorUnknown => 'Что-то пошло не так';
 
   @override
   String get offlineBanner => 'Нет подключения к интернету';

@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
@@ -45,7 +46,7 @@ class TeamListScreen extends ConsumerWidget {
         child: members.when(
           loading: () => const LoadingShimmerList(),
           error: (error, _) => ErrorState(
-            message: error.toString(),
+            message: l10n.failureMessage(error),
             onRetry: () => ref.invalidate(membersProvider),
             retryLabel: l10n.retry,
           ),
@@ -126,7 +127,7 @@ class TeamListScreen extends ConsumerWidget {
       success: (invite) => _showInviteCodeSheet(context, invite, role),
       failure: (f) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(f.message)),
+          SnackBar(content: Text(l10n.failureMessage(f))),
         );
       },
     );

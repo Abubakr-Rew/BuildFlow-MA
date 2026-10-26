@@ -11,21 +11,21 @@ class ApiReportRepository implements ReportRepository {
   Future<Result<List<Report>>> getReports() async {
     // TODO: Implement with Dio
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<List<Report>>> getReportsByProject(String projectId) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<Report>> getReport(String id) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
@@ -39,28 +39,28 @@ class ApiReportRepository implements ReportRepository {
     required List<String> photoPaths,
   }) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<DraftReport>> saveDraft(DraftReport draft) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<List<DraftReport>>> getDrafts() async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<void>> deleteDraft(String draftId) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 }

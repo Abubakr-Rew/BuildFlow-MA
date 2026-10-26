@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
@@ -28,7 +29,7 @@ class ReportDetailScreen extends ConsumerWidget {
       body: report.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorState(
-          message: error.toString(),
+          message: l10n.failureMessage(error),
           onRetry: () => ref.invalidate(reportsProvider),
           retryLabel: l10n.retry,
         ),

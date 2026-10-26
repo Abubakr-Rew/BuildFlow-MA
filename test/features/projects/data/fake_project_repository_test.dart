@@ -1,3 +1,4 @@
+import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +25,22 @@ void main() {
 
     test('getProject fails for unknown id', () async {
       final result = await repo.getProject('nonexistent');
-      expect(result.isFailure, isTrue);
+      expect(result.failure.code, FailureCode.notFound);
+    });
+
+    test('changes to an unknown project fail with notFound', () async {
+      final existing = (await repo.getProject('project-1')).value;
+      final ghost = existing.copyWith(id: 'nonexistent');
+
+      final results = [
+        await repo.updateProject(ghost),
+        await repo.assignForeman(projectId: 'nonexistent', foremanId: 'f'),
+        await repo.removeForeman(projectId: 'nonexistent', foremanId: 'f'),
+      ];
+      for (final result in results) {
+        expect(result.failure.code, FailureCode.notFound);
+        expect(result.failure.message, contains('nonexistent'));
+      }
     });
 
     test('createProject adds a new project', () async {

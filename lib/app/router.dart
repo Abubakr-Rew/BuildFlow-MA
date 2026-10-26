@@ -50,7 +50,7 @@ String? authRedirect(AuthState auth, String path) {
 /// `refreshListenable` instead of recreating the router.
 final routerProvider = Provider<GoRouter>((ref) {
   // Fires only when the session status or the user changes, not on
-  // isLoading / errorMessage updates.
+  // isLoading / failure updates.
   final initial = ref.read(authProvider);
   final authChanges =
       ValueNotifier<(AuthStatus, User?)>((initial.status, initial.user));

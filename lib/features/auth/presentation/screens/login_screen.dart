@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
@@ -139,10 +140,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         shortMsg: l10n.validationPasswordShort,
                       ),
                     ),
-                    if (auth.errorMessage != null) ...[
+                    if (auth.failure case final failure?) ...[
                       const SizedBox(height: AppTheme.spacing12),
                       Text(
-                        auth.errorMessage!,
+                        l10n.failureMessage(failure),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.error,
                         ),

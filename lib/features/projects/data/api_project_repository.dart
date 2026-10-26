@@ -10,14 +10,14 @@ class ApiProjectRepository implements ProjectRepository {
   Future<Result<List<Project>>> getProjects() async {
     // TODO: Implement with Dio
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<Project>> getProject(String id) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
@@ -27,14 +27,14 @@ class ApiProjectRepository implements ProjectRepository {
     required String address,
   }) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
   @override
   Future<Result<Project>> updateProject(Project project) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
@@ -44,7 +44,7 @@ class ApiProjectRepository implements ProjectRepository {
     required String foremanId,
   }) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 
@@ -54,7 +54,7 @@ class ApiProjectRepository implements ProjectRepository {
     required String foremanId,
   }) async {
     return const Err(
-      ServerFailure(message: 'API not implemented'),
+      Failure(FailureCode.server, message: 'API not implemented'),
     );
   }
 }

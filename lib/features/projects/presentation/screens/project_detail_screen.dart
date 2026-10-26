@@ -1,3 +1,4 @@
+import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
@@ -71,7 +72,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       body: project.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorState(
-          message: error.toString(),
+          message: l10n.failureMessage(error),
           onRetry: () => ref.invalidate(projectsProvider),
           retryLabel: l10n.retry,
         ),
@@ -214,7 +215,7 @@ class _ProjectBody extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
             ],
-            error: (error, _) => [Text(error.toString())],
+            error: (error, _) => [Text(l10n.failureMessage(error))],
             data: (list) => list.isEmpty
                 ? [
                     Padding(

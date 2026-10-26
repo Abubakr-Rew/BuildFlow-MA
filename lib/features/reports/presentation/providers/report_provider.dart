@@ -48,7 +48,7 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
       success: (reports) => reports
           .where((r) => visibleProjectIds.contains(r.projectId))
           .toList(),
-      failure: (f) => throw Exception(f.message),
+      failure: (f) => throw f,
     );
   }
 
