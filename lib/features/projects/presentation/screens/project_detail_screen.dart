@@ -3,6 +3,7 @@ import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';

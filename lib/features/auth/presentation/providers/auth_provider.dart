@@ -162,3 +162,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>(
   (ref) => AuthNotifier(ref.watch(authRepositoryProvider)),
 );
+
+/// The logged-in user. Lists depending on it reload when the user changes.
+final currentUserProvider = Provider<User?>(
+  (ref) => ref.watch(authProvider.select((s) => s.user)),
+);

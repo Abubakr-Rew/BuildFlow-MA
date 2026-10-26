@@ -13,11 +13,6 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
   (ref) => kUseMockData ? FakeProjectRepository() : ApiProjectRepository(),
 );
 
-/// The logged-in user. Lists depending on it reload when the user changes.
-final currentUserProvider = Provider<User?>(
-  (ref) => ref.watch(authProvider.select((s) => s.user)),
-);
-
 /// Whether [user] can see [project]: directors see everything,
 /// foremen and workers only the projects they are assigned to.
 bool canSeeProject(User user, Project project) => switch (user.role) {

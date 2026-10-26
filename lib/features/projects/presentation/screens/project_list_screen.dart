@@ -4,6 +4,7 @@ import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/projects/presentation/widgets/project_status_badge.dart';

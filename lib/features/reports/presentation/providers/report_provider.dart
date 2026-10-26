@@ -1,4 +1,5 @@
 import 'package:buildflow/core/config.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/reports/data/api_report_repository.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';

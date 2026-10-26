@@ -4,6 +4,7 @@ import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/team/domain/entities/invite_code.dart';

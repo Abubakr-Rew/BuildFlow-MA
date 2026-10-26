@@ -83,8 +83,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Перечисления — обычные Dart enum с геттерами (`status.isActive`, `role.isOwner`).
 - Провайдеры — top-level `final` в `presentation/providers/<фича>_provider.dart`, не в файлах экранов и виджетов.
   Провайдеры core-сервисов — в `lib/core/<модуль>/`, `routerProvider` — в router.dart:
-  - список: `AsyncNotifierProvider<XxxNotifier, List<X>>`; в `build()` вызывать `ref.watch(currentUserProvider)`,
-    чтобы список перезагружался при смене пользователя;
+  - список: `AsyncNotifierProvider<XxxNotifier, List<X>>`; в `build()` вызывать `ref.watch(currentUserProvider)`
+    (из auth_provider.dart), чтобы список перезагружался при смене пользователя;
   - один элемент: `Provider.family<AsyncValue<X?>, String>`, выводится из списка (`projectByIdProvider`, `reportByIdProvider`);
   - после успешной мутации вызывать `ref.invalidateSelf()`.
   - Исключения: auth — legacy `StateNotifierProvider<AuthNotifier, AuthState>`, `inviteCodeProvider` — `StateProvider`.
