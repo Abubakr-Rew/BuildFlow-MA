@@ -7,10 +7,22 @@ import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 const _maxPhotos = 5;
+
+/// Snackbar text for an image_picker failure: a refused permission gets
+/// its own hint (Android only reports the camera one), the rest a generic one.
+@visibleForTesting
+String photoPickErrorText(AppLocalizations l10n, Object error) =>
+    switch (error) {
+      PlatformException(code: 'camera_access_denied') =>
+        l10n.cameraAccessDenied,
+      PlatformException(code: 'photo_access_denied') => l10n.photoAccessDenied,
+      _ => l10n.photoPickError,
+    };
 
 /// New report screen — select project, add text + photos, submit.
 class NewReportScreen extends ConsumerStatefulWidget {
@@ -123,7 +135,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     } catch (e) {
       // The exception text is for debugging, not for the foreman.
       debugPrint('Photo pick failed: $e');
-      if (mounted) _showSnackBar(l10n.photoPickError);
+      if (mounted) _showSnackBar(photoPickErrorText(l10n, e));
     }
   }
 

@@ -478,6 +478,18 @@ abstract class AppLocalizations {
   /// **'Не удалось выбрать фото'**
   String get photoPickError;
 
+  /// Snackbar when the user has refused camera permission
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет доступа к камере. Его можно включить в настройках приложения'**
+  String get cameraAccessDenied;
+
+  /// Snackbar when the user has refused photo library permission (iOS)
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет доступа к фото. Его можно включить в настройках приложения'**
+  String get photoAccessDenied;
+
   /// Report description field label
   ///
   /// In ru, this message translates to:

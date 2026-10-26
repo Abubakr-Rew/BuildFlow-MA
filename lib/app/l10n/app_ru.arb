@@ -193,6 +193,12 @@
   "photoPickError": "Не удалось выбрать фото",
   "@photoPickError": {"description": "Snackbar when the camera or gallery fails"},
 
+  "cameraAccessDenied": "Нет доступа к камере. Его можно включить в настройках приложения",
+  "@cameraAccessDenied": {"description": "Snackbar when the user has refused camera permission"},
+
+  "photoAccessDenied": "Нет доступа к фото. Его можно включить в настройках приложения",
+  "@photoAccessDenied": {"description": "Snackbar when the user has refused photo library permission (iOS)"},
+
   "reportDescription": "Описание работ",
   "@reportDescription": {"description": "Report description field label"},
 

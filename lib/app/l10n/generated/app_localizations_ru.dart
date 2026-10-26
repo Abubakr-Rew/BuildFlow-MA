@@ -202,6 +202,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get photoPickError => 'Не удалось выбрать фото';
 
   @override
+  String get cameraAccessDenied =>
+      'Нет доступа к камере. Его можно включить в настройках приложения';
+
+  @override
+  String get photoAccessDenied =>
+      'Нет доступа к фото. Его можно включить в настройках приложения';
+
+  @override
   String get reportDescription => 'Описание работ';
 
   @override

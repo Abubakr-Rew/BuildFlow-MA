@@ -123,6 +123,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Напрямую `FlutterSecureStorage` не вызывать. Сплэш тоже страхуется таймаутом (`forceUnauthenticated`).
 - `NewReportScreen` подставляет фото `fake:demo-<ts>`, если пользователь ничего не выбрал.
   Сжатие сейчас только через `imageQuality: 85` и `maxWidth/Height: 1920` в image_picker.
+  Отказ в разрешении image_picker присылает как `PlatformException(code: 'camera_access_denied')`. На Android
+  бывает только этот код, потому что галерее разрешение не нужно; `photo_access_denied` приходит только на iOS.
+  Тексты ошибок выбирает `photoPickErrorText()` в new_report_screen.dart.
 - `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
   а роль всегда `foreman`.
 - Хардкод, который ещё надо вынести в l10n, а не копировать: «Что-то пошло не так» в `auth_provider.dart`.
