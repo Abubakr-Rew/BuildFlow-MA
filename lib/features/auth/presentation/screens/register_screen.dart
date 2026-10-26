@@ -24,6 +24,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -35,14 +36,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_submitting || !_formKey.currentState!.validate()) return;
 
+    setState(() => _submitting = true);
     final success = await ref.read(authProvider.notifier).register(
           email: _emailController.text,
           password: _passwordController.text,
           name: _nameController.text,
           companyName: _companyController.text,
         );
+    if (mounted) setState(() => _submitting = false);
 
     if (success && mounted) {
       context.go(Routes.ownerProjects);
@@ -168,7 +171,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     BfButton(
                       label: l10n.registerButton,
                       onPressed: _submit,
-                      isLoading: auth.isLoading,
+                      isLoading: _submitting,
                       icon: Icons.person_add_rounded,
                     ),
                     const SizedBox(height: AppTheme.spacing16),

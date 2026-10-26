@@ -40,13 +40,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           .restoreSession()
           .timeout(const Duration(seconds: 8));
     } catch (_) {
-      // If restoreSession itself throws or times out, force unauthenticated
-      if (mounted) {
-        // Manually check — if still in initial state, force to unauthenticated
-        final currentAuth = ref.read(authProvider);
-        if (currentAuth.status == AuthStatus.initial) {
-          context.go(Routes.login);
-        }
+      // If restoreSession itself throws or times out, force unauthenticated.
+      // Resetting the state (not just navigating) clears isLoading, and the
+      // listener in build() then navigates to login.
+      if (mounted &&
+          ref.read(authProvider).status == AuthStatus.initial) {
+        ref.read(authProvider.notifier).forceUnauthenticated();
       }
     }
   }

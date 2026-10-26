@@ -76,28 +76,41 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Drops any in-progress session restore and shows the login screen.
+  void forceUnauthenticated() {
+    state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
   Future<bool> login({
     required String email,
     required String password,
   }) async {
     state = state.copyWith(isLoading: true);
-    final result = await _repo.login(email: email, password: password);
-    return result.when(
-      success: (user) {
-        state = AuthState(
-          status: AuthStatus.authenticated,
-          user: user,
-        );
-        return true;
-      },
-      failure: (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message,
-        );
-        return false;
-      },
-    );
+    try {
+      final result = await _repo.login(email: email, password: password);
+      return result.when<bool>(
+        success: (user) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: user,
+          );
+          return true;
+        },
+        failure: (failure) {
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: failure.message,
+          );
+          return false;
+        },
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Что-то пошло не так',
+      );
+      return false;
+    }
   }
 
   Future<bool> register({
@@ -107,28 +120,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String companyName,
   }) async {
     state = state.copyWith(isLoading: true);
-    final result = await _repo.register(
-      email: email,
-      password: password,
-      name: name,
-      companyName: companyName,
-    );
-    return result.when(
-      success: (user) {
-        state = AuthState(
-          status: AuthStatus.authenticated,
-          user: user,
-        );
-        return true;
-      },
-      failure: (failure) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message,
-        );
-        return false;
-      },
-    );
+    try {
+      final result = await _repo.register(
+        email: email,
+        password: password,
+        name: name,
+        companyName: companyName,
+      );
+      return result.when<bool>(
+        success: (user) {
+          state = AuthState(
+            status: AuthStatus.authenticated,
+            user: user,
+          );
+          return true;
+        },
+        failure: (failure) {
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: failure.message,
+          );
+          return false;
+        },
+      );
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Что-то пошло не так',
+      );
+      return false;
+    }
   }
 
   Future<void> logout() async {

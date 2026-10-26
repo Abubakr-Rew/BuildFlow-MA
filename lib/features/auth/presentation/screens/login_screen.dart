@@ -22,6 +22,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -31,12 +32,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_submitting || !_formKey.currentState!.validate()) return;
 
+    setState(() => _submitting = true);
     final success = await ref.read(authProvider.notifier).login(
           email: _emailController.text,
           password: _passwordController.text,
         );
+    if (mounted) setState(() => _submitting = false);
 
     if (success && mounted) {
       final user = ref.read(authProvider).user!;
@@ -142,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     BfButton(
                       label: l10n.loginButton,
                       onPressed: _submit,
-                      isLoading: auth.isLoading,
+                      isLoading: _submitting,
                       icon: Icons.login_rounded,
                     ),
                     const SizedBox(height: AppTheme.spacing16),
