@@ -625,7 +625,7 @@ abstract class AppLocalizations {
   /// Owner role label
   ///
   /// In ru, this message translates to:
-  /// **'Владелец'**
+  /// **'Директор'**
   String get roleOwner;
 
   /// Foreman role label
@@ -633,6 +633,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Прораб'**
   String get roleForeman;
+
+  /// Worker role label
+  ///
+  /// In ru, this message translates to:
+  /// **'Строитель'**
+  String get roleWorker;
 
   /// Dark theme toggle
   ///
@@ -849,6 +855,36 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Новый отчёт'**
   String get newReport;
+
+  /// Demo quick login title
+  ///
+  /// In ru, this message translates to:
+  /// **'Быстрый вход (демо):'**
+  String get quickLogin;
+
+  /// No assigned projects hint
+  ///
+  /// In ru, this message translates to:
+  /// **'Вас пока не назначили ни на один объект'**
+  String get noAssignedProjects;
+
+  /// Workers count label
+  ///
+  /// In ru, this message translates to:
+  /// **'Строителей'**
+  String get workersCount;
+
+  /// Reports count label
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчётов'**
+  String get reportsCount;
+
+  /// Generic action failure snackbar
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось выполнить действие'**
+  String get actionFailed;
 }
 
 class _AppLocalizationsDelegate

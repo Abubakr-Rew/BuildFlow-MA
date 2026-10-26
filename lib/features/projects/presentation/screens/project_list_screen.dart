@@ -1,25 +1,23 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
-import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
-import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
+import 'package:buildflow/features/projects/presentation/widgets/project_status_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Project list screen for owner — shows all construction sites.
+/// Project list — all projects for a director, assigned ones otherwise.
 class ProjectListScreen extends ConsumerWidget {
-  const ProjectListScreen({this.isOwner = true, super.key});
-
-  final bool isOwner;
+  const ProjectListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final projects = ref.watch(projectsProvider);
+    final isOwner = ref.watch(currentUserProvider)?.role.isOwner ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -27,7 +25,7 @@ class ProjectListScreen extends ConsumerWidget {
       ),
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
-              onPressed: () => _showCreateDialog(context, ref),
+              onPressed: () => _showCreateSheet(context, ref),
               icon: const Icon(Icons.add),
               label: Text(l10n.addProject),
             )
@@ -46,21 +44,25 @@ class ProjectListScreen extends ConsumerWidget {
               return EmptyState(
                 icon: Icons.construction_outlined,
                 title: l10n.noProjects,
+                description:
+                    isOwner ? l10n.noProjectsHint : l10n.noAssignedProjects,
                 actionLabel: isOwner ? l10n.addProject : null,
-                onAction: isOwner
-                    ? () => _showCreateDialog(context, ref)
-                    : null,
+                onAction:
+                    isOwner ? () => _showCreateSheet(context, ref) : null,
               );
             }
             return ListView.separated(
-              padding: const EdgeInsets.all(AppTheme.spacing16),
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.spacing16,
+                AppTheme.spacing16,
+                AppTheme.spacing16,
+                96, // keep the last card above the FAB
+              ),
               itemCount: list.length,
               separatorBuilder: (_, __) =>
                   const SizedBox(height: AppTheme.spacing12),
-              itemBuilder: (context, index) => _ProjectCard(
-                project: list[index],
-                isOwner: isOwner,
-              ),
+              itemBuilder: (context, index) =>
+                  _ProjectCard(project: list[index]),
             );
           },
         ),
@@ -68,66 +70,113 @@ class ProjectListScreen extends ConsumerWidget {
     );
   }
 
-  void _showCreateDialog(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final nameController = TextEditingController();
-    final addressController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
+  void _showCreateSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
-          MediaQuery.of(ctx).viewInsets.bottom + 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(l10n.addProject,
-                  style: Theme.of(ctx).textTheme.titleLarge),
-              const SizedBox(height: AppTheme.spacing24),
-              TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.projectName,
-                  prefixIcon: const Icon(Icons.construction),
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? l10n.required : null,
+      builder: (_) => const _CreateProjectSheet(),
+    );
+  }
+}
+
+class _CreateProjectSheet extends ConsumerStatefulWidget {
+  const _CreateProjectSheet();
+
+  @override
+  ConsumerState<_CreateProjectSheet> createState() =>
+      _CreateProjectSheetState();
+}
+
+class _CreateProjectSheetState extends ConsumerState<_CreateProjectSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _addressController = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_saving || !_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await ref.read(projectsProvider.notifier).createProject(
+          name: _nameController.text,
+          address: _addressController.text,
+        );
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    messenger.showSnackBar(
+      SnackBar(content: Text(success ? l10n.projectSaved : l10n.actionFailed)),
+    );
+    if (success) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        24,
+        24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(l10n.addProject, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppTheme.spacing24),
+            TextFormField(
+              controller: _nameController,
+              autofocus: true,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: l10n.projectName,
+                hintText: l10n.projectNameHint,
+                prefixIcon: const Icon(Icons.construction),
               ),
-              const SizedBox(height: AppTheme.spacing16),
-              TextFormField(
-                controller: addressController,
-                decoration: InputDecoration(
-                  labelText: l10n.projectAddress,
-                  prefixIcon: const Icon(Icons.location_on),
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? l10n.required : null,
+              validator: (v) => v == null || v.trim().isEmpty
+                  ? l10n.validationProjectName
+                  : null,
+            ),
+            const SizedBox(height: AppTheme.spacing16),
+            TextFormField(
+              controller: _addressController,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _save(),
+              decoration: InputDecoration(
+                labelText: l10n.projectAddress,
+                hintText: l10n.projectAddressHint,
+                prefixIcon: const Icon(Icons.location_on),
               ),
-              const SizedBox(height: AppTheme.spacing24),
-              FilledButton(
-                onPressed: () async {
-                  if (!formKey.currentState!.validate()) return;
-                  final success = await ref
-                      .read(projectsProvider.notifier)
-                      .createProject(
-                        name: nameController.text,
-                        address: addressController.text,
-                      );
-                  if (success && ctx.mounted) Navigator.pop(ctx);
-                },
-                child: Text(l10n.save),
-              ),
-            ],
-          ),
+              validator: (v) => v == null || v.trim().isEmpty
+                  ? l10n.validationProjectAddress
+                  : null,
+            ),
+            const SizedBox(height: AppTheme.spacing24),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.save),
+            ),
+          ],
         ),
       ),
     );
@@ -135,28 +184,17 @@ class ProjectListScreen extends ConsumerWidget {
 }
 
 class _ProjectCard extends StatelessWidget {
-  const _ProjectCard({required this.project, required this.isOwner});
+  const _ProjectCard({required this.project});
 
   final Project project;
-  final bool isOwner;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final ext = context.bfTheme;
     final l10n = AppLocalizations.of(context);
-
-    final statusColor = switch (project.status) {
-      ProjectStatus.active => ext.success,
-      ProjectStatus.paused => ext.warning,
-      ProjectStatus.finished => theme.colorScheme.outline,
-    };
-
-    final statusText = switch (project.status) {
-      ProjectStatus.active => l10n.statusActive,
-      ProjectStatus.paused => l10n.statusPaused,
-      ProjectStatus.finished => l10n.statusFinished,
-    };
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -179,23 +217,7 @@ class _ProjectCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  ProjectStatusBadge(status: project.status),
                 ],
               ),
               const SizedBox(height: AppTheme.spacing8),
@@ -217,25 +239,37 @@ class _ProjectCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (project.foremanIds.isNotEmpty) ...[
-                const SizedBox(height: AppTheme.spacing8),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.person_outlined,
-                      size: 16,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${l10n.foremenCount}: ${project.foremanIds.length}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              const SizedBox(height: AppTheme.spacing8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.engineering_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${l10n.foremenCount}: ${project.foremanIds.length}',
+                    style: muted,
+                  ),
+                  const SizedBox(width: AppTheme.spacing16),
+                  Icon(
+                    Icons.handyman_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${l10n.workersCount}: ${project.workerIds.length}',
+                    style: muted,
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
             ],
           ),
         ),

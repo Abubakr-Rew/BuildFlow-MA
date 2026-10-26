@@ -60,12 +60,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.status == AuthStatus.authenticated) {
-        final role = next.user!.role;
-        if (role.isOwner) {
-          context.go(Routes.ownerProjects);
-        } else {
-          context.go(Routes.foremanProjects);
-        }
+        context.go(Routes.homeFor(next.user!.role));
       } else if (next.status == AuthStatus.unauthenticated) {
         context.go(Routes.login);
       }

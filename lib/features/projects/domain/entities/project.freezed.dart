@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Project {
 
- String get id; String get name; String get address; ProjectStatus get status; String get companyId; List<String> get foremanIds;
+ String get id; String get name; String get address; ProjectStatus get status; String get companyId; List<String> get foremanIds; List<String> get workerIds;
 /// Create a copy of Project
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $ProjectCopyWith<Project> get copyWith => _$ProjectCopyWithImpl<Project>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Project;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Project&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.companyId, _this.companyId) || other.companyId == _this.companyId)&&const DeepCollectionEquality().equals(other.foremanIds, _this.foremanIds));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Project&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.address, _this.address) || other.address == _this.address)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.companyId, _this.companyId) || other.companyId == _this.companyId)&&const DeepCollectionEquality().equals(other.foremanIds, _this.foremanIds)&&const DeepCollectionEquality().equals(other.workerIds, _this.workerIds));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Project;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.address,_this.status,_this.companyId,const DeepCollectionEquality().hash(_this.foremanIds));
+  return Object.hash(runtimeType,_this.id,_this.name,_this.address,_this.status,_this.companyId,const DeepCollectionEquality().hash(_this.foremanIds),const DeepCollectionEquality().hash(_this.workerIds));
 }
 
 @override
 String toString() {
   final _this = this as Project;
-  return 'Project(id: ${_this.id}, name: ${_this.name}, address: ${_this.address}, status: ${_this.status}, companyId: ${_this.companyId}, foremanIds: ${_this.foremanIds})';
+  return 'Project(id: ${_this.id}, name: ${_this.name}, address: ${_this.address}, status: ${_this.status}, companyId: ${_this.companyId}, foremanIds: ${_this.foremanIds}, workerIds: ${_this.workerIds})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $ProjectCopyWith<$Res>  {
   factory $ProjectCopyWith(Project value, $Res Function(Project) _then) = _$ProjectCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String address, ProjectStatus status, String companyId, List<String> foremanIds
+ String id, String name, String address, ProjectStatus status, String companyId, List<String> foremanIds, List<String> workerIds
 });
 
 
@@ -71,7 +71,7 @@ class _$ProjectCopyWithImpl<$Res>
 
 /// Create a copy of Project
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? status = null,Object? companyId = null,Object? foremanIds = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? status = null,Object? companyId = null,Object? foremanIds = null,Object? workerIds = null,}) {
   return _then(Project(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -79,6 +79,7 @@ as String,address: null == address ? _self.address : address // ignore: cast_nul
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProjectStatus,companyId: null == companyId ? _self.companyId : companyId // ignore: cast_nullable_to_non_nullable
 as String,foremanIds: null == foremanIds ? _self.foremanIds : foremanIds // ignore: cast_nullable_to_non_nullable
+as List<String>,workerIds: null == workerIds ? _self.workerIds : workerIds // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }
@@ -164,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  ProjectStatus status,  String companyId,  List<String> foremanIds)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  ProjectStatus status,  String companyId,  List<String> foremanIds,  List<String> workerIds)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Project() when $default != null:
-return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_that.foremanIds);case _:
+return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_that.foremanIds,_that.workerIds);case _:
   return orElse();
 
 }
@@ -185,10 +186,10 @@ return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  ProjectStatus status,  String companyId,  List<String> foremanIds)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  ProjectStatus status,  String companyId,  List<String> foremanIds,  List<String> workerIds)  $default,) {final _that = this;
 switch (_that) {
 case _Project():
-return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_that.foremanIds);case _:
+return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_that.foremanIds,_that.workerIds);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +206,10 @@ return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  ProjectStatus status,  String companyId,  List<String> foremanIds)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  ProjectStatus status,  String companyId,  List<String> foremanIds,  List<String> workerIds)?  $default,) {final _that = this;
 switch (_that) {
 case _Project() when $default != null:
-return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_that.foremanIds);case _:
+return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_that.foremanIds,_that.workerIds);case _:
   return null;
 
 }
@@ -220,7 +221,7 @@ return $default(_that.id,_that.name,_that.address,_that.status,_that.companyId,_
 @JsonSerializable()
 
 class _Project implements Project {
-  const _Project({required this.id, required this.name, required this.address, required this.status, required this.companyId,  List<String> foremanIds = const []}): _foremanIds = foremanIds;
+  const _Project({required this.id, required this.name, required this.address, required this.status, required this.companyId,  List<String> foremanIds = const [],  List<String> workerIds = const []}): _foremanIds = foremanIds,_workerIds = workerIds;
   factory _Project.fromJson(Map<String, dynamic> json) => _$ProjectFromJson(json);
 
 @override final  String id;
@@ -233,6 +234,13 @@ class _Project implements Project {
   if (_foremanIds is EqualUnmodifiableListView) return _foremanIds;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_foremanIds);
+}
+
+ final  List<String> _workerIds;
+@override@JsonKey() List<String> get workerIds {
+  if (_workerIds is EqualUnmodifiableListView) return _workerIds;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_workerIds);
 }
 
 
@@ -249,18 +257,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Project&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.status, status) || other.status == status)&&(identical(other.companyId, companyId) || other.companyId == companyId)&&const DeepCollectionEquality().equals(other.foremanIds, _foremanIds));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Project&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.status, status) || other.status == status)&&(identical(other.companyId, companyId) || other.companyId == companyId)&&const DeepCollectionEquality().equals(other.foremanIds, _foremanIds)&&const DeepCollectionEquality().equals(other.workerIds, _workerIds));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,address,status,companyId,const DeepCollectionEquality().hash(_foremanIds));
+    return Object.hash(runtimeType,id,name,address,status,companyId,const DeepCollectionEquality().hash(_foremanIds),const DeepCollectionEquality().hash(_workerIds));
 }
 
 @override
 String toString() {
-    return 'Project(id: $id, name: $name, address: $address, status: $status, companyId: $companyId, foremanIds: $foremanIds)';
+    return 'Project(id: $id, name: $name, address: $address, status: $status, companyId: $companyId, foremanIds: $foremanIds, workerIds: $workerIds)';
 }
 
 
@@ -271,7 +279,7 @@ abstract mixin class _$ProjectCopyWith<$Res> implements $ProjectCopyWith<$Res> {
   factory _$ProjectCopyWith(_Project value, $Res Function(_Project) _then) = __$ProjectCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String address, ProjectStatus status, String companyId, List<String> foremanIds
+ String id, String name, String address, ProjectStatus status, String companyId, List<String> foremanIds, List<String> workerIds
 });
 
 
@@ -288,7 +296,7 @@ class __$ProjectCopyWithImpl<$Res>
 
 /// Create a copy of Project
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? status = null,Object? companyId = null,Object? foremanIds = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? status = null,Object? companyId = null,Object? foremanIds = null,Object? workerIds = null,}) {
   return _then(_Project(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -296,6 +304,7 @@ as String,address: null == address ? _self.address : address // ignore: cast_nul
 as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as ProjectStatus,companyId: null == companyId ? _self.companyId : companyId // ignore: cast_nullable_to_non_nullable
 as String,foremanIds: null == foremanIds ? _self._foremanIds : foremanIds // ignore: cast_nullable_to_non_nullable
+as List<String>,workerIds: null == workerIds ? _self._workerIds : workerIds // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }

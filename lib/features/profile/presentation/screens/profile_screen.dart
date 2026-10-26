@@ -1,10 +1,10 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
-import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/storage/local_storage.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,9 +27,7 @@ class ProfileScreen extends ConsumerWidget {
     final auth = ref.watch(authProvider);
     final themeMode = ref.watch(themeModeProvider);
     final theme = Theme.of(context);
-    final ext = context.bfTheme;
     final user = auth.user;
-    final isOwner = user?.role.isOwner ?? false;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
@@ -60,28 +58,10 @@ class ProfileScreen extends ConsumerWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: AppTheme.spacing12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacing12,
-                      vertical: AppTheme.spacing4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isOwner
-                          ? theme.colorScheme.primaryContainer
-                          : ext.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isOwner ? l10n.roleOwner : l10n.roleForeman,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: isOwner
-                            ? theme.colorScheme.primary
-                            : ext.success,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  if (user != null) ...[
+                    const SizedBox(height: AppTheme.spacing12),
+                    RoleBadge(role: user.role),
+                  ],
                 ],
               ),
             ),

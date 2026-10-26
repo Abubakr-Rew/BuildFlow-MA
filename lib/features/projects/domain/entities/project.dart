@@ -13,6 +13,7 @@ abstract class Project with _$Project {
     required ProjectStatus status,
     required String companyId,
     @Default([]) List<String> foremanIds,
+    @Default([]) List<String> workerIds,
   }) = _Project;
 
   factory Project.fromJson(Map<String, dynamic> json) =>

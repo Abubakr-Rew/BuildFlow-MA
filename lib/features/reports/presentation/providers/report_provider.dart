@@ -1,3 +1,4 @@
+import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/repositories/report_repository.dart';
@@ -7,6 +8,8 @@ final reportRepositoryProvider = Provider<ReportRepository>(
   (ref) => FakeReportRepository(),
 );
 
+/// Reports visible to the current user: everything for a director,
+/// otherwise only reports for the user's own projects.
 final reportsProvider =
     AsyncNotifierProvider<ReportsNotifier, List<Report>>(
   ReportsNotifier.new,
@@ -15,10 +18,18 @@ final reportsProvider =
 class ReportsNotifier extends AsyncNotifier<List<Report>> {
   @override
   Future<List<Report>> build() async {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) return const [];
+
+    final visibleProjectIds =
+        (await ref.watch(projectsProvider.future)).map((p) => p.id).toSet();
+
     final repo = ref.watch(reportRepositoryProvider);
     final result = await repo.getReports();
     return result.when(
-      success: (reports) => reports,
+      success: (reports) => reports
+          .where((r) => visibleProjectIds.contains(r.projectId))
+          .toList(),
       failure: (f) => throw Exception(f.message),
     );
   }

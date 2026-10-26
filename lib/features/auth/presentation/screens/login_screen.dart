@@ -4,10 +4,20 @@ import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/utils/validators.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
+import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+const _demoPassword = '123456';
+
+const _demoAccounts = [
+  (UserRole.owner, 'owner@buildflow.kg'),
+  (UserRole.foreman, 'foreman1@buildflow.kg'),
+  (UserRole.worker, 'worker1@buildflow.kg'),
+];
 
 /// Login screen — email + password, link to register.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -42,13 +52,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (mounted) setState(() => _submitting = false);
 
     if (success && mounted) {
-      final user = ref.read(authProvider).user!;
-      if (user.role.isOwner) {
-        context.go(Routes.ownerProjects);
-      } else {
-        context.go(Routes.foremanProjects);
-      }
+      context.go(Routes.homeFor(ref.read(authProvider).user!.role));
     }
+  }
+
+  void _quickLogin(String email) {
+    _emailController.text = email;
+    _passwordController.text = _demoPassword;
+    _submit();
   }
 
   @override
@@ -170,16 +181,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Демо-доступ:',
+                            l10n.quickLogin,
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: theme.colorScheme.primary,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: AppTheme.spacing8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final (role, email) in _demoAccounts)
+                                ActionChip(
+                                  avatar: Icon(role.icon, size: 18),
+                                  label: Text(role.label(l10n)),
+                                  onPressed: _submitting
+                                      ? null
+                                      : () => _quickLogin(email),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppTheme.spacing8),
                           Text(
-                            'Владелец: owner@buildflow.kg\n'
+                            'Директор: owner@buildflow.kg\n'
                             'Прораб: foreman1@buildflow.kg\n'
-                            'Пароль: 123456',
+                            'Строитель: worker1@buildflow.kg\n'
+                            'Пароль: $_demoPassword',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                               fontFamily: 'monospace',

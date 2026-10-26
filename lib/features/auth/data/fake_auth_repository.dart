@@ -58,6 +58,26 @@ class FakeAuthRepository implements AuthRepository {
       ),
       password: '123456',
     ),
+    'worker1@buildflow.kg': const FakeUserRecord(
+      user: User(
+        id: 'user-worker-1',
+        email: 'worker1@buildflow.kg',
+        name: 'Эрлан Токтосунов',
+        role: UserRole.worker,
+        companyId: _companyId,
+      ),
+      password: '123456',
+    ),
+    'worker2@buildflow.kg': const FakeUserRecord(
+      user: User(
+        id: 'user-worker-2',
+        email: 'worker2@buildflow.kg',
+        name: 'Нурлан Абдыраев',
+        role: UserRole.worker,
+        companyId: _companyId,
+      ),
+      password: '123456',
+    ),
   };
 
   Company get company => _company;
@@ -117,13 +137,14 @@ class FakeAuthRepository implements AuthRepository {
     }
 
     final userId = 'user-${DateTime.now().millisecondsSinceEpoch}';
-    final newCompanyId = 'company-${DateTime.now().millisecondsSinceEpoch}';
+    // Demo mode has a single seeded company, so new directors join it and
+    // immediately see its projects and reports.
     final user = User(
       id: userId,
       email: lowerEmail,
       name: name.trim(),
       role: UserRole.owner,
-      companyId: newCompanyId,
+      companyId: _companyId,
     );
 
     _users[lowerEmail] = FakeUserRecord(user: user, password: password);

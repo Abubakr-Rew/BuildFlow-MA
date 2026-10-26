@@ -41,6 +41,24 @@ class FakeTeamRepository implements TeamRepository {
       companyId: 'company-1',
       assignedProjectIds: ['project-2', 'project-3'],
     ),
+    const Member(
+      id: 'member-4',
+      userId: 'user-worker-1',
+      name: 'Эрлан Токтосунов',
+      email: 'worker1@buildflow.kg',
+      role: UserRole.worker,
+      companyId: 'company-1',
+      assignedProjectIds: ['project-1', 'project-2'],
+    ),
+    const Member(
+      id: 'member-5',
+      userId: 'user-worker-2',
+      name: 'Нурлан Абдыраев',
+      email: 'worker2@buildflow.kg',
+      role: UserRole.worker,
+      companyId: 'company-1',
+      assignedProjectIds: ['project-2', 'project-3'],
+    ),
   ];
 
   Future<void> _simulateLatency() async {

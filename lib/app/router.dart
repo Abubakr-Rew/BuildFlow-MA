@@ -15,6 +15,8 @@ import 'package:go_router/go_router.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+const _rolePrefixes = ['/owner', '/foreman', '/worker'];
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -33,165 +35,121 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const RegisterScreen(),
       ),
 
-      // Owner shell
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, child) =>
-            _RoleShell(role: _ShellRole.owner, child: child),
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.ownerProjects,
-                builder: (_, __) => const ProjectListScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.ownerTeam,
-                builder: (_, __) => const TeamListScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.ownerReports,
-                builder: (_, __) => const ReportListScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.ownerProfile,
-                builder: (_, __) => const ProfileScreen(),
-              ),
-            ],
-          ),
-        ],
-      ),
+      // Director shell
+      _shell(_ShellRole.owner, [
+        (Routes.ownerProjects, const ProjectListScreen()),
+        (Routes.ownerTeam, const TeamListScreen()),
+        (Routes.ownerReports, const ReportListScreen()),
+        (Routes.ownerProfile, const ProfileScreen()),
+      ]),
 
       // Foreman shell
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, child) =>
-            _RoleShell(role: _ShellRole.foreman, child: child),
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.foremanProjects,
-                builder: (_, __) =>
-                    const ProjectListScreen(isOwner: false),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.foremanNewReport,
-                builder: (_, __) => const NewReportScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: Routes.foremanProfile,
-                builder: (_, __) => const ProfileScreen(),
-              ),
-            ],
-          ),
-        ],
-      ),
+      _shell(_ShellRole.foreman, [
+        (Routes.foremanProjects, const ProjectListScreen()),
+        (Routes.foremanNewReport, const NewReportScreen()),
+        (Routes.foremanReports, const ReportListScreen()),
+        (Routes.foremanProfile, const ProfileScreen()),
+      ]),
+
+      // Worker shell
+      _shell(_ShellRole.worker, [
+        (Routes.workerProjects, const ProjectListScreen()),
+        (Routes.workerReports, const ReportListScreen()),
+        (Routes.workerProfile, const ProfileScreen()),
+      ]),
     ],
     redirect: (context, state) {
-      final auth = ref.read(authProvider);
-      final isAuth = auth.isAuthenticated;
+      final user = ref.read(authProvider).user;
       final path = state.uri.path;
 
       if (path == Routes.splash) return null;
 
-      if (!isAuth && path != Routes.login && path != Routes.register) {
-        return Routes.login;
-      }
+      final isAuthPage = path == Routes.login || path == Routes.register;
+      if (user == null) return isAuthPage ? null : Routes.login;
+      if (isAuthPage) return Routes.homeFor(user.role);
 
-      if (isAuth && (path == Routes.login || path == Routes.register)) {
-        return auth.isOwner ? Routes.ownerProjects : Routes.foremanProjects;
-      }
-
-      if (isAuth && auth.isForeman && path.startsWith('/owner')) {
-        return Routes.foremanProjects;
-      }
-      if (isAuth && auth.isOwner && path.startsWith('/foreman')) {
-        return Routes.ownerProjects;
-      }
+      // Keep each role inside its own section.
+      final ownPrefix = Routes.prefixFor(user.role);
+      final isOtherRoleSection = _rolePrefixes
+          .any((p) => p != ownPrefix && path.startsWith(p));
+      if (isOtherRoleSection) return Routes.homeFor(user.role);
 
       return null;
     },
   );
 });
 
+StatefulShellRoute _shell(
+  _ShellRole role,
+  List<(String, Widget)> tabs,
+) {
+  return StatefulShellRoute.indexedStack(
+    builder: (context, state, shell) => _RoleShell(role: role, shell: shell),
+    branches: [
+      for (final (path, screen) in tabs)
+        StatefulShellBranch(
+          routes: [GoRoute(path: path, builder: (_, __) => screen)],
+        ),
+    ],
+  );
+}
+
 // ── Shell scaffold with bottom navigation ─────────────────────
 
-enum _ShellRole { owner, foreman }
+enum _ShellRole { owner, foreman, worker }
 
 class _RoleShell extends ConsumerWidget {
-  const _RoleShell({required this.role, required this.child});
+  const _RoleShell({required this.role, required this.shell});
 
   final _ShellRole role;
-  final Widget child;
+  final StatefulNavigationShell shell;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final shell = StatefulNavigationShell.of(context);
+
+    final projects = NavigationDestination(
+      icon: const Icon(Icons.construction_outlined),
+      selectedIcon: const Icon(Icons.construction),
+      label: l10n.navProjects,
+    );
+    final reports = NavigationDestination(
+      icon: const Icon(Icons.article_outlined),
+      selectedIcon: const Icon(Icons.article),
+      label: l10n.navReports,
+    );
+    final profile = NavigationDestination(
+      icon: const Icon(Icons.person_outlined),
+      selectedIcon: const Icon(Icons.person),
+      label: l10n.navProfile,
+    );
 
     final destinations = switch (role) {
       _ShellRole.owner => [
-          NavigationDestination(
-            icon: const Icon(Icons.construction_outlined),
-            selectedIcon: const Icon(Icons.construction),
-            label: l10n.navProjects,
-          ),
+          projects,
           NavigationDestination(
             icon: const Icon(Icons.group_outlined),
             selectedIcon: const Icon(Icons.group),
             label: l10n.navTeam,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.article_outlined),
-            selectedIcon: const Icon(Icons.article),
-            label: l10n.navReports,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outlined),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.navProfile,
-          ),
+          reports,
+          profile,
         ],
       _ShellRole.foreman => [
-          NavigationDestination(
-            icon: const Icon(Icons.construction_outlined),
-            selectedIcon: const Icon(Icons.construction),
-            label: l10n.navProjects,
-          ),
+          projects,
           NavigationDestination(
             icon: const Icon(Icons.add_a_photo_outlined),
             selectedIcon: const Icon(Icons.add_a_photo),
             label: l10n.navNewReport,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outlined),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.navProfile,
-          ),
+          reports,
+          profile,
         ],
+      _ShellRole.worker => [projects, reports, profile],
     };
 
     return Scaffold(
-      body: child,
+      body: shell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
         onDestinationSelected: (i) => shell.goBranch(

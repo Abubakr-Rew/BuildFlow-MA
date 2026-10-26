@@ -281,11 +281,14 @@
   "profileTitle": "Профиль",
   "@profileTitle": {"description": "Profile screen title"},
 
-  "roleOwner": "Владелец",
+  "roleOwner": "Директор",
   "@roleOwner": {"description": "Owner role label"},
 
   "roleForeman": "Прораб",
   "@roleForeman": {"description": "Foreman role label"},
+
+  "roleWorker": "Строитель",
+  "@roleWorker": {"description": "Worker role label"},
 
   "darkTheme": "Тёмная тема",
   "@darkTheme": {"description": "Dark theme toggle"},
@@ -398,5 +401,20 @@
   "@reportError": {"description": "Report submission error"},
 
   "newReport": "Новый отчёт",
-  "@newReport": {"description": "New report screen title"}
+  "@newReport": {"description": "New report screen title"},
+
+  "quickLogin": "Быстрый вход (демо):",
+  "@quickLogin": {"description": "Demo quick login title"},
+
+  "noAssignedProjects": "Вас пока не назначили ни на один объект",
+  "@noAssignedProjects": {"description": "No assigned projects hint"},
+
+  "workersCount": "Строителей",
+  "@workersCount": {"description": "Workers count label"},
+
+  "reportsCount": "Отчётов",
+  "@reportsCount": {"description": "Reports count label"},
+
+  "actionFailed": "Не удалось выполнить действие",
+  "@actionFailed": {"description": "Generic action failure snackbar"}
 }

@@ -287,10 +287,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profileTitle => 'Профиль';
 
   @override
-  String get roleOwner => 'Владелец';
+  String get roleOwner => 'Директор';
 
   @override
   String get roleForeman => 'Прораб';
+
+  @override
+  String get roleWorker => 'Строитель';
 
   @override
   String get darkTheme => 'Тёмная тема';
@@ -401,4 +404,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get newReport => 'Новый отчёт';
+
+  @override
+  String get quickLogin => 'Быстрый вход (демо):';
+
+  @override
+  String get noAssignedProjects => 'Вас пока не назначили ни на один объект';
+
+  @override
+  String get workersCount => 'Строителей';
+
+  @override
+  String get reportsCount => 'Отчётов';
+
+  @override
+  String get actionFailed => 'Не удалось выполнить действие';
 }

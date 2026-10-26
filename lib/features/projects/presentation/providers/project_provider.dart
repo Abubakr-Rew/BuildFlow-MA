@@ -1,3 +1,6 @@
+import 'package:buildflow/features/auth/domain/entities/user.dart';
+import 'package:buildflow/features/auth/domain/entities/user_role.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/repositories/project_repository.dart';
@@ -7,6 +10,20 @@ final projectRepositoryProvider = Provider<ProjectRepository>(
   (ref) => FakeProjectRepository(),
 );
 
+/// The logged-in user. Lists depending on it reload when the user changes.
+final currentUserProvider = Provider<User?>(
+  (ref) => ref.watch(authProvider.select((s) => s.user)),
+);
+
+/// Whether [user] can see [project]: directors see everything,
+/// foremen and workers only the projects they are assigned to.
+bool canSeeProject(User user, Project project) => switch (user.role) {
+      UserRole.owner => true,
+      UserRole.foreman => project.foremanIds.contains(user.id),
+      UserRole.worker => project.workerIds.contains(user.id),
+    };
+
+/// Projects visible to the current user.
 final projectsProvider =
     AsyncNotifierProvider<ProjectsNotifier, List<Project>>(
   ProjectsNotifier.new,
@@ -15,10 +32,14 @@ final projectsProvider =
 class ProjectsNotifier extends AsyncNotifier<List<Project>> {
   @override
   Future<List<Project>> build() async {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) return const [];
+
     final repo = ref.watch(projectRepositoryProvider);
     final result = await repo.getProjects();
     return result.when(
-      success: (projects) => projects,
+      success: (projects) =>
+          projects.where((p) => canSeeProject(user, p)).toList(),
       failure: (f) => throw Exception(f.message),
     );
   }

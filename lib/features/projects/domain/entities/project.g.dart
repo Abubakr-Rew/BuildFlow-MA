@@ -17,6 +17,9 @@ _Project _$ProjectFromJson(Map<String, dynamic> json) => _Project(
           ?.map((e) => e as String)
           .toList() ??
       const [],
+  workerIds:
+      (json['workerIds'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const [],
 );
 
 Map<String, dynamic> _$ProjectToJson(_Project instance) => <String, dynamic>{
@@ -26,6 +29,7 @@ Map<String, dynamic> _$ProjectToJson(_Project instance) => <String, dynamic>{
   'status': _$ProjectStatusEnumMap[instance.status]!,
   'companyId': instance.companyId,
   'foremanIds': instance.foremanIds,
+  'workerIds': instance.workerIds,
 };
 
 const _$ProjectStatusEnumMap = {
