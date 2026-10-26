@@ -45,12 +45,16 @@ void main() {
     test('submitReport adds a new report', () async {
       final result = await repo.submitReport(
         projectId: 'project-1',
+        projectName: 'ЖК "Ала-Тоо Резиденс"',
+        authorId: 'user-foreman-1',
+        authorName: 'Бакыт Касымов',
         text: 'Тестовый отчёт',
         photoPaths: ['path1', 'path2'],
       );
       expect(result.isSuccess, isTrue);
       expect(result.value.text, 'Тестовый отчёт');
       expect(result.value.photos.length, 2);
+      expect(result.value.authorName, 'Бакыт Касымов');
 
       // Verify it appears first in list (newest)
       final all = await repo.getReports();

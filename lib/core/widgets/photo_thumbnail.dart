@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 
@@ -40,6 +41,14 @@ class PhotoThumbnail extends StatelessWidget {
   Widget _buildImage(BuildContext context) {
     if (url.startsWith('fake:')) {
       return _FakePlaceholder(seed: url, size: size);
+    }
+    // Photos taken on this device are stored as local file paths.
+    if (!url.startsWith('http')) {
+      return Image.file(
+        File(url),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _FakePlaceholder(seed: url, size: size),
+      );
     }
     // Real images will use CachedNetworkImage in the future
     return _FakePlaceholder(seed: url, size: size);

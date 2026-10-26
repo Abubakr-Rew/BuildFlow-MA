@@ -2,11 +2,15 @@ import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
+import 'package:buildflow/core/widgets/photo_thumbnail.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+
+const _maxPhotos = 5;
 
 /// New report screen — select project, add text + photos, submit.
 class NewReportScreen extends ConsumerStatefulWidget {
@@ -72,10 +76,47 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     );
   }
 
-  void _addFakePhoto() {
-    setState(() {
-      _photoPaths.add('fake:photo-${_photoPaths.length + 1}');
-    });
+  Future<void> _pickPhoto() async {
+    final l10n = AppLocalizations.of(context);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: Text(l10n.takePhoto),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: Text(l10n.fromGallery),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _photoPaths.add(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Не удалось выбрать фото: $e');
+      }
+    }
   }
 
   @override
@@ -126,8 +167,9 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
             Text(l10n.photos, style: theme.textTheme.titleMedium),
             const SizedBox(height: AppTheme.spacing8),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 ..._photoPaths.map((path) => _PhotoChip(
                       path: path,
@@ -135,12 +177,20 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                         () => _photoPaths.remove(path),
                       ),
                     )),
-                ActionChip(
-                  avatar: const Icon(Icons.add_a_photo, size: 18),
-                  label: Text(l10n.addPhoto),
-                  onPressed: _addFakePhoto,
-                ),
+                if (_photoPaths.length < _maxPhotos)
+                  ActionChip(
+                    avatar: const Icon(Icons.add_a_photo, size: 18),
+                    label: Text(l10n.addPhoto),
+                    onPressed: _pickPhoto,
+                  ),
               ],
+            ),
+            const SizedBox(height: AppTheme.spacing4),
+            Text(
+              l10n.maxPhotos,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: AppTheme.spacing32),
 
@@ -208,11 +258,31 @@ class _PhotoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: const Icon(Icons.image, size: 18),
-      label: Text('Фото ${path.split('-').last}'),
-      deleteIcon: const Icon(Icons.close, size: 16),
-      onDeleted: onRemove,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        PhotoThumbnail(photoId: 'new-$path', url: path, size: 72),
+        Positioned(
+          top: -8,
+          right: -8,
+          child: Material(
+            color: Theme.of(context).colorScheme.error,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onRemove,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.onError,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

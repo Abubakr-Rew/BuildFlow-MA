@@ -16,6 +16,9 @@ abstract class ReportRepository {
   /// Submit a new report (foreman only).
   Future<Result<Report>> submitReport({
     required String projectId,
+    required String projectName,
+    required String authorId,
+    required String authorName,
     required String text,
     required List<String> photoPaths,
   });

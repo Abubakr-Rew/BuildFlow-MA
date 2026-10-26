@@ -126,6 +126,9 @@ class FakeReportRepository implements ReportRepository {
   @override
   Future<Result<Report>> submitReport({
     required String projectId,
+    required String projectName,
+    required String authorId,
+    required String authorName,
     required String text,
     required List<String> photoPaths,
   }) async {
@@ -133,16 +136,17 @@ class FakeReportRepository implements ReportRepository {
     final report = Report(
       id: 'report-${DateTime.now().millisecondsSinceEpoch}',
       projectId: projectId,
-      projectName: 'Объект', // Simplified for demo
-      authorId: 'user-foreman-1',
-      authorName: 'Прораб',
+      projectName: projectName,
+      authorId: authorId,
+      authorName: authorName,
       text: text,
+      // Local file paths are kept as-is so the photos can be shown on device.
       photos: photoPaths
           .map(
             (path) => ReportPhoto(
               id: 'photo-${DateTime.now().millisecondsSinceEpoch}-'
-                  '${_random.nextInt(1000)}',
-              url: 'fake:uploaded-${_random.nextInt(100)}',
+                  '${_random.nextInt(100000)}',
+              url: path,
             ),
           )
           .toList(),

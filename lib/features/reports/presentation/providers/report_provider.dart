@@ -39,9 +39,19 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
     required String text,
     required List<String> photoPaths,
   }) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return false;
+
+    final projects = await ref.read(projectsProvider.future);
+    final project = projects.where((p) => p.id == projectId).firstOrNull;
+    if (project == null) return false;
+
     final repo = ref.read(reportRepositoryProvider);
     final result = await repo.submitReport(
       projectId: projectId,
+      projectName: project.name,
+      authorId: user.id,
+      authorName: user.name,
       text: text,
       photoPaths: photoPaths,
     );
