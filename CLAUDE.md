@@ -24,7 +24,8 @@ flutter_secure_storage, shared_preferences, image_picker, google_fonts, intl, ve
 Подключены, но в `lib/` не используются: dio, flutter_image_compress, cached_network_image, uuid.
 
 ```
-lib/app/       app.dart (ProviderScope + MaterialApp.router), router.dart, routes.dart, theme/, l10n/
+lib/main.dart  ProviderContainer, восстановление темы до первого кадра, runApp
+lib/app/       app.dart (MaterialApp.router), router.dart, routes.dart, theme/, l10n/
 lib/core/      config.dart, error/ (Result, Failure), storage/ (secure, local, storage_providers), utils/, widgets/
 lib/features/<фича>/data/          Fake*Repository, Api*Repository
                     domain/        entities/ (freezed), repositories/ (абстрактные интерфейсы)
@@ -47,7 +48,8 @@ result.when(success: (p) => ..., failure: (f) => ...);       // у вызыва�
 **Репозитории и DI:**
 - Реализацию выбирает только `xxxRepositoryProvider` в `presentation/providers/<фича>_provider.dart`
   (`authRepositoryProvider` лежит в auth_provider.dart): `kUseMockData ? FakeXxxRepository() : ApiXxxRepository()`.
-  Флаг — в [config.dart](lib/core/config.dart). `ProviderScope` в app.dart без overrides.
+  Флаг — в [config.dart](lib/core/config.dart). `ProviderContainer` создаётся в main.dart без overrides
+  и передаётся в `UncontrolledProviderScope`.
 - Сервисы хранилищ создаются только в [storage_providers.dart](lib/core/storage/storage_providers.dart):
   `secureStorageProvider` и `localStorageProvider`. `FakeAuthRepository` получает `SecureStorageService` через
   `secureStorageProvider`. Напрямую `SecureStorageService()` / `LocalStorageService()` не создавать (кроме тестов).
@@ -88,7 +90,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   - один элемент: `Provider.family<AsyncValue<X?>, String>`, выводится из списка (`projectByIdProvider`, `reportByIdProvider`);
   - после успешной мутации вызывать `ref.invalidateSelf()`.
   - синхронное состояние: `NotifierProvider` — `authProvider` (`AuthNotifier`; `AuthState` сам хранит статус,
-    загрузку и ошибку) и `themeModeProvider` в profile_provider.dart (его читает app.dart).
+    загрузку и ошибку) и `themeModeProvider` в profile_provider.dart (его читает app.dart). Тема сохраняется
+    через `localStorageProvider` (ключ `theme_mode`), `restore()` вызывается в main.dart до `runApp`.
   - Legacy `StateProvider` / `StateNotifierProvider` не использовать.
 - Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас:
   `Scaffold` + `AppBar(title: Text(l10n.…))`. Асинхронные данные:
@@ -132,7 +135,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 
 ## Текущее состояние
 Готово на Fake-данных: вход и регистрация, сплэш, объекты (список, детали, статус, команда объекта), команда
-и коды приглашения, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема, три роли.
+и коды приглашения, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
+(сохраняется между запусками), три роли.
 Заглушки и пробелы: Api-репозитории (все четыре — заглушки), клиент Dio, сжатие фото (flutter_image_compress),
 загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),
 applicationId и подпись Android-релиза.

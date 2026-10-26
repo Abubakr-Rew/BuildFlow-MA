@@ -5,20 +5,9 @@ import 'package:buildflow/features/profile/presentation/providers/profile_provid
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Root MaterialApp widget.
-class BuildFlowApp extends StatelessWidget {
+/// Root MaterialApp widget; main.dart provides its ProviderContainer.
+class BuildFlowApp extends ConsumerWidget {
   const BuildFlowApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const ProviderScope(
-      child: _BuildFlowAppInner(),
-    );
-  }
-}
-
-class _BuildFlowAppInner extends ConsumerWidget {
-  const _BuildFlowAppInner();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

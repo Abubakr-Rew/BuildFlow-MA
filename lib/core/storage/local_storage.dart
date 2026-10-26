@@ -53,6 +53,18 @@ class LocalStorageService {
     return prefs.remove(key);
   }
 
+  /// Store a string value.
+  Future<bool> saveString(String key, String value) async {
+    final prefs = await _preferences;
+    return prefs.setString(key, value);
+  }
+
+  /// Read a string value.
+  Future<String?> readString(String key) async {
+    final prefs = await _preferences;
+    return prefs.getString(key);
+  }
+
   /// Store a boolean value.
   Future<bool> saveBool(String key, {required bool value}) async {
     final prefs = await _preferences;
