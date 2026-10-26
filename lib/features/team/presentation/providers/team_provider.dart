@@ -27,6 +27,31 @@ class MembersNotifier extends AsyncNotifier<List<Member>> {
       failure: (f) => throw Exception(f.message),
     );
   }
+
+  /// Removes the member from the company and from every project.
+  Future<bool> removeMember(Member member) async {
+    final repo = ref.read(teamRepositoryProvider);
+    final result = await repo.removeMember(member.id);
+    if (result.isFailure) return false;
+
+    final projectsNotifier = ref.read(projectsProvider.notifier);
+    final projects = await ref.read(projectsProvider.future);
+    for (final project in projects) {
+      if (project.foremanIds.contains(member.userId) ||
+          project.workerIds.contains(member.userId)) {
+        await projectsNotifier.setTeam(
+          project,
+          foremanIds:
+              project.foremanIds.where((id) => id != member.userId).toList(),
+          workerIds:
+              project.workerIds.where((id) => id != member.userId).toList(),
+        );
+      }
+    }
+
+    ref.invalidateSelf();
+    return true;
+  }
 }
 
 /// Holds the latest generated invite code.

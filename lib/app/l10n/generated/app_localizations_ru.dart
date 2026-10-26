@@ -442,6 +442,23 @@ class AppLocalizationsRu extends AppLocalizations {
   String get teamSaved => 'Состав объекта сохранён';
 
   @override
+  String get inviteMember => 'Пригласить';
+
+  @override
+  String get inviteWho => 'Кого пригласить?';
+
+  @override
+  String get removeMember => 'Удалить из команды';
+
+  @override
+  String removeMemberConfirm(String name) {
+    return 'Удалить $name из команды?';
+  }
+
+  @override
+  String get memberRemoved => 'Участник удалён';
+
+  @override
   String get quickLogin => 'Быстрый вход (демо):';
 
   @override

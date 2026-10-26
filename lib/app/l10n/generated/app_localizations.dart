@@ -928,6 +928,36 @@ abstract class AppLocalizations {
   /// **'Состав объекта сохранён'**
   String get teamSaved;
 
+  /// Invite member button
+  ///
+  /// In ru, this message translates to:
+  /// **'Пригласить'**
+  String get inviteMember;
+
+  /// Invite role picker title
+  ///
+  /// In ru, this message translates to:
+  /// **'Кого пригласить?'**
+  String get inviteWho;
+
+  /// Remove member action
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить из команды'**
+  String get removeMember;
+
+  /// Remove member confirmation
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить {name} из команды?'**
+  String removeMemberConfirm(String name);
+
+  /// Member removed snackbar
+  ///
+  /// In ru, this message translates to:
+  /// **'Участник удалён'**
+  String get memberRemoved;
+
   /// Demo quick login title
   ///
   /// In ru, this message translates to:

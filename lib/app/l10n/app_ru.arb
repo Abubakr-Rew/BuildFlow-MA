@@ -439,6 +439,26 @@
   "teamSaved": "Состав объекта сохранён",
   "@teamSaved": {"description": "Project team saved snackbar"},
 
+  "inviteMember": "Пригласить",
+  "@inviteMember": {"description": "Invite member button"},
+
+  "inviteWho": "Кого пригласить?",
+  "@inviteWho": {"description": "Invite role picker title"},
+
+  "removeMember": "Удалить из команды",
+  "@removeMember": {"description": "Remove member action"},
+
+  "removeMemberConfirm": "Удалить {name} из команды?",
+  "@removeMemberConfirm": {
+    "description": "Remove member confirmation",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+
+  "memberRemoved": "Участник удалён",
+  "@memberRemoved": {"description": "Member removed snackbar"},
+
   "quickLogin": "Быстрый вход (демо):",
   "@quickLogin": {"description": "Demo quick login title"},
 
