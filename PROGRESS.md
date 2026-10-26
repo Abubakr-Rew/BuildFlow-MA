@@ -1,71 +1,87 @@
-# BuildFlow — PROGRESS
+# BuildFlow — прогресс
 
-## How to Run
+Обновлено: 2026-10-26. Правила работы и архитектура — в [CLAUDE.md](CLAUDE.md).
+
+## Как запустить
 ```bash
-flutter run          # on connected Xiaomi device
-flutter analyze      # check for errors
+flutter pub get
+flutter run          # на подключённом Xiaomi
+flutter analyze      # цель: "No issues found!"
+flutter test         # 130 тестов
 ```
 
-Demo credentials (FakeAuthRepository):
-- Owner: `owner@buildflow.kg` / `123456`
-- Foreman: `foreman1@buildflow.kg` / `123456`
+Демо-входы (FakeAuthRepository), пароль у всех `123456`:
+`owner@buildflow.kg` (директор), `foreman1@` / `foreman2@` (прорабы), `worker1@` / `worker2@buildflow.kg` (строители).
 
----
+## Текущее состояние
+Готово на Fake-данных:
+- вход, регистрация, сплэш с защитой от зависания KeyStore на MIUI;
+- три роли со своей навигацией;
+- объекты: список, детали, статус, состав;
+- команда и коды приглашения;
+- отчёты: камера или галерея, список по дням, детали; при отказе в доступе к камере снэкбар с переходом в настройки;
+- профиль и тема (сохраняется между запусками).
 
-## Stage 0 — Recon ✅
+Ошибки типизированы: `Failure` + `FailureCode`. В UI ошибка выводится только через `l10n.failureMessage`. Мутации возвращают `Result<T>`.
 
-### Critical Bug
-- **Infinite loading on splash screen** — `restoreSession()` calls `flutter_secure_storage.readUserId()` without timeout or try/catch. On Xiaomi and some Android devices this can hang indefinitely. The auth state stays `AuthStatus.initial` and the splash screen never navigates.
+Заглушки:
+- Api-репозитории (все четыре);
+- клиент Dio;
+- сжатие фото;
+- загрузка сетевых фото;
+- черновики отчётов (UI нет);
+- вход по коду приглашения (UI нет);
+- applicationId и подпись Android-релиза.
 
-### Issues Found (sorted by MVP importance)
+## Сделано 2026-10-26
+Функциональность и исправления:
+- `3315b91` fix(auth): guard secure storage and session restore against hangs
+- `b6d3b61` feat(auth): add worker role with role-based navigation and visibility
+- `ae4a9c5` feat(reports): pick real photos via image_picker
+- `490045d` feat: add project and report detail screens
+- `d48e6b2` feat(team): rework team screen with invites by role and member removal
+- `39f8fa4` chore: add app config flags and use Flutter default minSdk
+- `4a9839a` docs: add CLAUDE.md with project context for Claude Code
+- `720674f` fix(models): enable explicit_to_json for nested serialization
+- `c5ea798` refactor(di): select repository implementations via kUseMockData
+- `e9e3dfc` fix(router): react to auth changes via refreshListenable
+- `cf00fc4` chore: update .gitignore
+- `d6af151` chore: track pubspec.lock
 
-| # | Issue | Location | Severity |
-|---|-------|----------|----------|
-| 1 | No timeout/try-catch on secure storage reads at startup | `FakeAuthRepository.restoreSession()`, `SplashScreen._restoreSession()` | **BLOCKER** |
-| 2 | INTERNET permission missing in AndroidManifest.xml | `android/app/src/main/AndroidManifest.xml` | **HIGH** |
-| 3 | `minSdk = flutter.minSdkVersion` (defaults to 21) — flutter_secure_storage needs >= 23 | `android/app/build.gradle.kts` | **HIGH** |
-| 4 | `ApiAuthRepository` — all methods return `Err('API not implemented')` | `auth/data/api_auth_repository.dart` | STUB |
-| 5 | No camera/gallery permissions in AndroidManifest | AndroidManifest.xml | MEDIUM |
-| 6 | `_addFakePhoto()` in NewReportScreen uses fake paths, no image_picker | `reports/presentation/screens/new_report_screen.dart` | MEDIUM |
-| 7 | `ProjectCard.onTap` is empty — no project detail navigation | `projects/presentation/screens/project_list_screen.dart:164` | MEDIUM |
-| 8 | No `reportDetail` route wired in router | `app/router.dart` | LOW |
-| 9 | No dio setup file found (no network client configured) | — | LOW (only for API stage) |
-| 10 | Splash screen has no timeout fallback — if restoreSession never resolves, spinner forever | `splash_screen.dart` | **BLOCKER** (part of #1) |
+Уборка кода:
+- `ff37222` refactor: move providers out of screen files — провайдеры хранилищ перенесены в `core/storage/storage_providers.dart`, тема — в `profile_provider.dart`.
+- `cc43e27` refactor(auth): move currentUserProvider to auth_provider
+- `1356b93` refactor(auth): migrate AuthNotifier from StateNotifier to Notifier — legacy-провайдеров больше нет, неиспользуемый `inviteCodeProvider` удалён.
+- `fd0d078` chore: normalize line endings — `.gitattributes`, LF во всём репозитории.
+- `ffb4fb4` feat(profile): persist theme mode — тема восстанавливается в `main()` до первого кадра.
+- `7a59299` fix(l10n): move hardcoded UI strings to app_ru.arb
+- `819a433` feat(reports): explain denied camera/photo access
+- `7518653` feat(reports): open app settings from denied-access snackbar — добавлен пакет `app_settings`.
+- `fb41619` refactor(core): typed failures with localized messages — в `docs/api-contract.md` добавлена таблица «HTTP-ответ → FailureCode».
+- `6a0b494` refactor: return Result from mutations
 
-### Stubs and TODOs
-- `auth_provider.dart:14` — `authRepositoryProvider` throws `UnimplementedError('Override in DI')` (overridden in app.dart, OK)
-- `api_auth_repository.dart:17` — `TODO: Implement with Dio`
-- `build.gradle.kts:18` — `TODO: Specify your own unique Application ID`
-- `build.gradle.kts:34` — `TODO: Add your own signing config for the release build`
+## Проверить на устройстве
+- Тёмная тема после перезапуска приложения: должна открыться сразу, без вспышки светлой.
+- Отказ в доступе к камере: должен показаться снэкбар на 8 с, а кнопка «Настройки» — открыть настройки BuildFlow.
 
-### Screens Status
-| Screen | Status |
-|--------|--------|
-| SplashScreen | Built, hangs (see bug #1) |
-| LoginScreen | Built, has demo credentials hint |
-| RegisterScreen | Built |
-| ProjectListScreen | Built, onTap stub |
-| TeamListScreen | Built |
-| ReportListScreen | Built |
-| NewReportScreen | Built, fake photos only |
-| ProfileScreen | Built |
+## Следующие шаги
+1. **fix: prevent double submit.** Проверить все кнопки мутаций.
+   - У `NewReportScreen._submit` нет проверки в начале. Кнопка блокируется только после перестройки, так что двойное нажатие в одном кадре отправит отчёт дважды.
+   - То же проверить для смены статуса объекта (`PopupMenuButton`), удаления участника и сохранения состава объекта.
+   - В `docs/api-contract.md` записать, что `DELETE /team/members/:id` сам убирает участника из всех объектов. Сейчас это делает клиент в `MembersNotifier.removeMember`, и только по возможности (best-effort).
+2. **Шрифт Inter в assets вместо google_fonts** (пункт 5 уборки).
+   - Сейчас google_fonts используется только в `app_text_theme.dart`.
+   - В коде встречаются начертания 400, 500, 600, 700 и 800 (800 — заголовок на сплэше). Рядом со шрифтами положить лицензию OFL.
+   - Удалить пакет, если он больше не нужен. Тогда виджет-тесты (`router_test`, `test/helpers/test_app.dart`) смогут поднимать настоящий `AppTheme`.
+3. **UI входа по коду приглашения.** `joinWithInviteCode` уже есть в репозитории, ошибка `invalidInviteCode` локализована. Сейчас фейк проверяет только длину кода, а роль всегда `foreman`.
+4. **README:** запуск, демо-входы, архитектура кратко, ссылка на CLAUDE.md.
+5. **Сжатие фото** через `flutter_image_compress`. Сейчас есть только `imageQuality: 85` и 1920 px в image_picker.
+6. **Офлайн-очередь отчётов:** `DraftReport` и `localStorageProvider` уже есть, нужны UI, повторная отправка и `OfflineBanner`.
+7. **Android-релиз:** `applicationId` вместо `com.example.buildflow`, подпись release-ключом (сейчас debug).
+8. **Настоящий API.**
+   - Клиент Dio с интерсепторами: при `sessionExpired` — logout. Перевод ответов в `FailureCode` — по таблице в `docs/api-contract.md`.
+   - `kUseMockData` через `--dart-define`.
+   - Реализации `Api*Repository`.
+9. **Обновление на Riverpod 3.** Legacy-провайдеров уже нет, всё на `Notifier`/`AsyncNotifier`. Проверить `ref.mounted` в мутациях после `await`.
 
----
-
-## Stage 1 — Fix Infinite Loading
-- [ ] Wrap `restoreSession()` in try/catch + timeout (5s)
-- [ ] Add INTERNET permission to AndroidManifest.xml
-- [ ] Set minSdk = 23 in build.gradle.kts
-- [ ] Add camera/gallery permissions in AndroidManifest.xml
-- [ ] Add safety timeout on SplashScreen (fallback to login after 8s)
-- [ ] Run `flutter analyze` — no errors
-- [ ] Commit
-
-## Stage 2 — Demo Mode
-- [ ] Not started
-
-## Stage 3 — Complete Main Scenario
-- [ ] Not started
-
-## Stage 4 — Real API
-- [ ] Not started
+При обновлении Flutter: `app_settings` и `flutter_image_compress_common` применяют Kotlin Gradle Plugin, а будущие версии Flutter такие плагины собирать не будут. Перед обновлением проверить их новые версии.
