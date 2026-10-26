@@ -25,7 +25,7 @@ flutter_secure_storage, shared_preferences, image_picker, google_fonts, intl, ve
 
 ```
 lib/app/       app.dart (ProviderScope + MaterialApp.router), router.dart, routes.dart, theme/, l10n/
-lib/core/      config.dart, error/ (Result, Failure), storage/ (secure, local), utils/, widgets/
+lib/core/      config.dart, error/ (Result, Failure), storage/ (secure, local, storage_providers), utils/, widgets/
 lib/features/<фича>/data/          Fake*Repository, Api*Repository
                     domain/        entities/ (freezed), repositories/ (абстрактные интерфейсы)
                     presentation/  providers/, screens/, widgets/
@@ -48,7 +48,9 @@ result.when(success: (p) => ..., failure: (f) => ...);       // у вызыва�
 - Реализацию выбирает только `xxxRepositoryProvider` в `presentation/providers/<фича>_provider.dart`
   (`authRepositoryProvider` лежит в auth_provider.dart): `kUseMockData ? FakeXxxRepository() : ApiXxxRepository()`.
   Флаг — в [config.dart](lib/core/config.dart). `ProviderScope` в app.dart без overrides.
-- `FakeAuthRepository` получает `SecureStorageService` через `secureStorageProvider`.
+- Сервисы хранилищ создаются только в [storage_providers.dart](lib/core/storage/storage_providers.dart):
+  `secureStorageProvider` и `localStorageProvider`. `FakeAuthRepository` получает `SecureStorageService` через
+  `secureStorageProvider`. Напрямую `SecureStorageService()` / `LocalStorageService()` не создавать (кроме тестов).
 - Новый репозиторий подключать так же: интерфейс в domain, `Fake*` и `Api*` в data, выбор в его провайдере.
   В тестах подменять через `ProviderScope(overrides: [xxxRepositoryProvider.overrideWithValue(...)])`.
 - `Api*Repository` есть у всех четырёх фич, но это заглушки: все методы возвращают
@@ -79,13 +81,14 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - Импорты только абсолютные: `package:buildflow/...`.
 - Сущности: `@freezed abstract class X with _$X` + `factory X.fromJson`, `part 'x.freezed.dart'; part 'x.g.dart';`.
   Перечисления — обычные Dart enum с геттерами (`status.isActive`, `role.isOwner`).
-- Провайдеры — top-level `final` в `presentation/providers/<фича>_provider.dart`:
+- Провайдеры — top-level `final` в `presentation/providers/<фича>_provider.dart`, не в файлах экранов и виджетов.
+  Провайдеры core-сервисов — в `lib/core/<модуль>/`, `routerProvider` — в router.dart:
   - список: `AsyncNotifierProvider<XxxNotifier, List<X>>`; в `build()` вызывать `ref.watch(currentUserProvider)`,
     чтобы список перезагружался при смене пользователя;
   - один элемент: `Provider.family<AsyncValue<X?>, String>`, выводится из списка (`projectByIdProvider`, `reportByIdProvider`);
   - после успешной мутации вызывать `ref.invalidateSelf()`.
   - Исключения: auth — legacy `StateNotifierProvider<AuthNotifier, AuthState>`, `inviteCodeProvider` — `StateProvider`.
-    `themeModeProvider` и `localStorageProvider` объявлены прямо в profile_screen.dart.
+    `themeModeProvider` — `StateProvider` в profile_provider.dart, его читает app.dart.
 - Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас:
   `Scaffold` + `AppBar(title: Text(l10n.…))`. Асинхронные данные:
   `.when(loading: LoadingShimmerList, error: ErrorState(onRetry: ref.invalidate), data: EmptyState, если пусто)`,

@@ -1,7 +1,7 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/router.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
-import 'package:buildflow/features/profile/presentation/screens/profile_screen.dart';
+import 'package:buildflow/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

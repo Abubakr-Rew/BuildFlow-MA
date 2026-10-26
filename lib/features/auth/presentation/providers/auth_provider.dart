@@ -1,5 +1,5 @@
 import 'package:buildflow/core/config.dart';
-import 'package:buildflow/core/storage/secure_storage.dart';
+import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:buildflow/features/auth/data/api_auth_repository.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
@@ -8,10 +8,6 @@ import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ── DI providers ─────────────────────────────────────────────
-
-final secureStorageProvider = Provider<SecureStorageService>(
-  (ref) => SecureStorageService(),
-);
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => kUseMockData

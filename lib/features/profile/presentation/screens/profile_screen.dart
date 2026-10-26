@@ -1,19 +1,11 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
-import 'package:buildflow/core/storage/local_storage.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
+import 'package:buildflow/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-/// Theme mode provider for light/dark toggle.
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
-
-/// Local storage provider.
-final localStorageProvider = Provider<LocalStorageService>(
-  (ref) => LocalStorageService(),
-);
 
 /// Profile screen — role info, theme toggle, logout.
 class ProfileScreen extends ConsumerWidget {
