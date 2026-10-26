@@ -97,9 +97,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   JSON-сущности. Виджет-тестов нет (`test/widget_test.dart` — заглушка).
 
 ## Подводные камни
-- **explicitToJson НЕ исправлен.** `Report.toJson()` кладёт вложенные `ReportPhoto` объектами, а не Map, поэтому
-  тест `Report entity fromJson and toJson round-trip` падает. Чинится через `build.yaml` (`explicit_to_json: true`)
-  или `@JsonSerializable(explicitToJson: true)` и build_runner. Это касается любых моделей со вложенными freezed-объектами.
+- `explicit_to_json: true` включён глобально в [build.yaml](build.yaml): вложенные модели (`Report.photos`) сериализуются
+  через `.toJson()`. Отдельная аннотация `@JsonSerializable(explicitToJson: true)` на моделях не нужна.
 - После любой правки freezed- или json-модели обязательно запускать build_runner. `*.g.dart` и `*.freezed.dart` лежат в git.
 - Демо-входы (пароль у всех `123456`): `owner@buildflow.kg`, `foreman1@`, `foreman2@`, `worker1@`, `worker2@buildflow.kg`.
 - Secure storage — только через `SecureStorageService`: в нём таймауты, потому что на Xiaomi/MIUI KeyStore может зависнуть.
@@ -128,7 +127,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 
 ## Правила работы
 - После изменений запускать `flutter analyze` и `flutter test`. Не завершать задачу с ошибками анализатора
-  или упавшими тестами (кроме известного round-trip теста, пока он не починен, и об этом нужно сказать).
+  или упавшими тестами.
 - Не коммитить без явной просьбы.
 - Не добавлять пакеты в pubspec.yaml без согласования.
 - Новый код следует существующей архитектуре (feature / data / domain / presentation) и возвращает `Result<T>` из репозиториев.

@@ -26,6 +26,6 @@ Map<String, dynamic> _$ReportToJson(_Report instance) => <String, dynamic>{
   'authorId': instance.authorId,
   'authorName': instance.authorName,
   'text': instance.text,
-  'photos': instance.photos,
+  'photos': instance.photos.map((e) => e.toJson()).toList(),
   'createdAt': instance.createdAt.toIso8601String(),
 };

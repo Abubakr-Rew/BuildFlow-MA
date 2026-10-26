@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
@@ -98,6 +100,27 @@ void main() {
       final json = report.toJson();
       final restored = Report.fromJson(json);
       expect(restored, report);
+    });
+
+    test('nested photos survive a JSON string round-trip', () {
+      final report = Report(
+        id: 'r1',
+        projectId: 'p1',
+        projectName: 'Test',
+        authorId: 'u1',
+        authorName: 'Author',
+        text: 'Report text',
+        photos: const [
+          ReportPhoto(id: 'ph1', url: 'fake:test'),
+          ReportPhoto(id: 'ph2', url: 'https://x/2.jpg', thumbnailUrl: 'https://x/2s.jpg'),
+        ],
+        createdAt: DateTime(2024, 6, 15, 10, 30),
+      );
+      final json = report.toJson();
+      expect(json['photos'], everyElement(isA<Map<String, dynamic>>()));
+
+      final decoded = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
+      expect(Report.fromJson(decoded), report);
     });
   });
 }
