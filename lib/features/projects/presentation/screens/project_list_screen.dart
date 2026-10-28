@@ -29,6 +29,7 @@ class ProjectListScreen extends ConsumerWidget {
       ),
       floatingActionButton: isOwner
           ? FloatingActionButton.extended(
+              heroTag: null, // shares the shell with the team tab's FAB
               onPressed: () => _showCreateSheet(context, ref),
               icon: const Icon(Icons.add),
               label: Text(l10n.addProject),

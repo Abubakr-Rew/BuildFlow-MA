@@ -47,6 +47,9 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.teamTitle)),
       floatingActionButton: FloatingActionButton.extended(
+        // The director's shell keeps the projects tab, which has a FAB too,
+        // alive: two default hero tags break every page transition.
+        heroTag: null,
         onPressed: _invite,
         icon: const Icon(Icons.person_add),
         label: Text(l10n.inviteMember),

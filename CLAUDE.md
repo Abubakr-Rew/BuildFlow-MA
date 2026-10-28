@@ -154,6 +154,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   предлагает действие «Настройки», которое вызывает `AppSettings.openAppSettings()`.
 - `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
   а роль всегда `foreman`.
+- Если в shell одной роли несколько вкладок с `FloatingActionButton`, у них должен быть `heroTag: null`.
+  `StatefulShellRoute` держит все вкладки живыми, и два одинаковых hero-тега роняют любой переход между страницами.
 - Название приложения — `l10n.appName`, в том числе в `MaterialApp.onGenerateTitle`. Можно склеивать строки l10n
   с разделителями (`'${l10n.foremenCount}: $n'`), но новые слова в такие строки не добавлять.
 - В `build.gradle.kts` стоит `minSdk = flutter.minSdkVersion` (в Flutter 3.47.5 это 24), хотя в коммите было `23`.
