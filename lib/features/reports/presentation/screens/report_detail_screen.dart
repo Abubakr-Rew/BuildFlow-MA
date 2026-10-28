@@ -68,7 +68,11 @@ class _ReportBody extends ConsumerWidget {
         ?.where((m) => m.userId == report.authorId)
         .firstOrNull
         ?.role;
-    final date = DateFormatter.full(report.createdAt);
+    final date = DateFormatter.reportDateTime(
+      report.createdAt,
+      today: l10n.today,
+      yesterday: l10n.yesterday,
+    );
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(

@@ -33,11 +33,7 @@ void main() {
         DateTime.now().subtract(const Duration(days: 1)),
       );
       expect(
-        DateFormatter.relative(
-          yesterday,
-          today: 'Сегодня',
-          yesterday: 'Вчера',
-        ),
+        DateFormatter.relative(yesterday, today: 'Сегодня', yesterday: 'Вчера'),
         'Вчера',
       );
     });
@@ -53,6 +49,53 @@ void main() {
       expect(result, isNotEmpty);
       expect(result, isNot('Сегодня'));
       expect(result, isNot('Вчера'));
+    });
+  });
+  group('DateFormatter.reportDateTime', () {
+    // Wednesday, 28 October 2026, 15:00.
+    final now = DateTime(2026, 10, 28, 15);
+    String format(DateTime date) => DateFormatter.reportDateTime(
+      date,
+      today: 'Сегодня',
+      yesterday: 'Вчера',
+      now: now,
+    );
+
+    test('today', () {
+      expect(format(DateTime(2026, 10, 28, 11, 47)), 'Сегодня, 11:47');
+      expect(format(DateTime(2026, 10, 28, 0, 5)), 'Сегодня, 00:05');
+    });
+
+    test('yesterday, even late at night', () {
+      expect(format(DateTime(2026, 10, 27, 12, 47)), 'Вчера, 12:47');
+      expect(format(DateTime(2026, 10, 27, 23, 59)), 'Вчера, 23:59');
+    });
+
+    test('within the week: capitalized short weekday', () {
+      expect(format(DateTime(2026, 10, 26, 9, 30)), 'Пн, 09:30');
+      expect(format(DateTime(2026, 10, 22, 8)), 'Чт, 08:00'); // 6 days ago
+    });
+
+    test('older this year: day and month', () {
+      expect(format(DateTime(2026, 10, 21, 12, 47)), '21 октября, 12:47');
+      expect(format(DateTime(2026, 1, 3, 7, 15)), '3 января, 07:15');
+    });
+
+    test('another year: with the year', () {
+      expect(format(DateTime(2025, 10, 27, 12, 47)), '27 октября 2025, 12:47');
+    });
+
+    test('a week across the new year shows the weekday', () {
+      final newYear = DateTime(2027, 1, 2, 10);
+      expect(
+        DateFormatter.reportDateTime(
+          DateTime(2026, 12, 30, 18),
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          now: newYear,
+        ),
+        'Ср, 18:00',
+      );
     });
   });
 }

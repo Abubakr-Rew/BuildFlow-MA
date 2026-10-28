@@ -38,9 +38,14 @@ class ReportCard extends ConsumerWidget {
         ?.where((m) => m.userId == report.authorId)
         .firstOrNull
         ?.role;
+    // The report list already groups cards under a day header.
     final time = showProject
         ? DateFormatter.time(report.createdAt)
-        : DateFormatter.full(report.createdAt);
+        : DateFormatter.reportDateTime(
+            report.createdAt,
+            today: l10n.today,
+            yesterday: l10n.yesterday,
+          );
 
     return BfCard(
       onTap: () => context.push(Routes.report(report.id)),
