@@ -59,7 +59,6 @@ class ProjectDetailScreen extends ConsumerStatefulWidget {
 class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     with SingleTickerProviderStateMixin {
   static const _reportsTab = 0;
-  static const _teamTab = 1;
 
   late final _tabs = TabController(length: 2, vsync: this)
     ..addListener(() => setState(() {}));
@@ -128,39 +127,22 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: canReport
-                            ? _ActionTile(
-                                icon: Icons.add_a_photo_rounded,
-                                label: l10n.navNewReport,
-                                accent: true,
-                                onTap: () => Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => NewReportScreen(
-                                      initialProjectId: loaded.id,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : _ActionTile(
-                                icon: Icons.article_rounded,
-                                label: l10n.navReports,
-                                onTap: () => _tabs.animateTo(_reportsTab),
-                              ),
-                      ),
-                      const SizedBox(width: AppTheme.spacing12),
-                      Expanded(
-                        child: _ActionTile(
-                          icon: Icons.group_rounded,
-                          label: l10n.navTeam,
-                          onTap: () => _tabs.animateTo(_teamTab),
+                  // Tiles are for actions only; the tabs below already
+                  // switch between reports and team.
+                  if (canReport) ...[
+                    _ActionTile(
+                      icon: Icons.add_a_photo_rounded,
+                      label: l10n.newReport,
+                      accent: true,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              NewReportScreen(initialProjectId: loaded.id),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: AppTheme.spacing12),
+                    ),
+                    const SizedBox(height: AppTheme.spacing12),
+                  ],
                   _ProgressCard(percent: loaded.progress),
                   const SizedBox(height: AppTheme.spacing8),
                   TabBar(

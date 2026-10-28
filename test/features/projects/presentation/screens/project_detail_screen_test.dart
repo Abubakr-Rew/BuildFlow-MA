@@ -60,8 +60,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('status menu and team editor are locked during a status change',
-      (tester) async {
+  testWidgets('status menu and team editor are locked during a status change', (
+    tester,
+  ) async {
     final projects = await pumpProject(tester);
     final gate = projects.gate = Completer<void>();
     await openTeamTab(tester);
@@ -173,5 +174,36 @@ void main() {
       find.descendant(of: card, matching: find.text(l10n.percentValue(80))),
       findsOneWidget,
     );
+  });
+  testWidgets('tiles are only for actions: «Новый отчёт» for a foreman', (
+    tester,
+  ) async {
+    Future<void> pumpAs(User user) async {
+      await pumpTestApp(
+        tester,
+        const ProjectDetailScreen(projectId: 'project-1'),
+        overrides: [currentUserProvider.overrideWithValue(user)],
+      );
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+    }
+
+    await pumpAs(_owner);
+    expect(find.text(l10n.newReport), findsNothing);
+    // Reports and team appear once each: as tabs, not as tiles too.
+    expect(find.text(l10n.navReports), findsOneWidget);
+    expect(find.text(l10n.navTeam), findsOneWidget);
+
+    await pumpAs(
+      const User(
+        id: 'user-foreman-1',
+        email: 'foreman1@buildflow.kg',
+        name: 'Бакыт Касымов',
+        role: UserRole.foreman,
+        companyId: 'company-1',
+      ),
+    );
+    expect(find.text(l10n.newReport), findsOneWidget);
+    expect(find.text(l10n.navTeam), findsOneWidget);
   });
 }
