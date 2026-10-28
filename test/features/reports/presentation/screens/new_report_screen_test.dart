@@ -39,6 +39,30 @@ class _FailingReports extends FakeReportRepository {
       Err(failure);
 }
 
+class _CountingReports extends FakeReportRepository {
+  int submits = 0;
+
+  @override
+  Future<Result<Report>> submitReport({
+    required String projectId,
+    required String projectName,
+    required String authorId,
+    required String authorName,
+    required String text,
+    required List<String> photoPaths,
+  }) {
+    submits++;
+    return super.submitReport(
+      projectId: projectId,
+      projectName: projectName,
+      authorId: authorId,
+      authorName: authorName,
+      text: text,
+      photoPaths: photoPaths,
+    );
+  }
+}
+
 void main() {
   final l10n = AppLocalizationsRu();
 
@@ -90,6 +114,30 @@ void main() {
 
       expect(find.text(l10n.reportError(l10n.errorNetwork)), findsOneWidget);
       expect(find.text('Залили фундамент'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 5)); // let the snackbar go
+    });
+
+    testWidgets('a double tap sends the report once', (tester) async {
+      final reports = _CountingReports();
+      await pumpTestApp(
+        tester,
+        const NewReportScreen(initialProjectId: 'project-1'),
+        overrides: [
+          currentUserProvider.overrideWithValue(_foreman),
+          reportRepositoryProvider.overrideWithValue(reports),
+        ],
+      );
+      await tester.pump(const Duration(seconds: 1)); // projects load
+
+      await tester.enterText(find.byType(TextFormField), 'Залили фундамент');
+      // No pump in between: both taps land before the button rebuilds.
+      await tester.tap(find.text(l10n.sendReport));
+      await tester.tap(find.text(l10n.sendReport));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(reports.submits, 1);
+      expect(find.text(l10n.reportSent), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 5)); // let the snackbar go
     });

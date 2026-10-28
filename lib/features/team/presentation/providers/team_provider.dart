@@ -36,7 +36,9 @@ class MembersNotifier extends AsyncNotifier<List<Member>> {
   /// Removes the member from the company, then from every project.
   ///
   /// The result is the removal itself: the project cleanup is best effort,
-  /// since project pages only list current members anyway.
+  /// since project pages only list current members anyway. With the real
+  /// API the server does the cleanup (docs/api-contract.md,
+  /// `DELETE /team/members/:id`), and this loop goes away.
   Future<Result<void>> removeMember(Member member) async {
     final repo = ref.read(teamRepositoryProvider);
     final result = await repo.removeMember(member.id);

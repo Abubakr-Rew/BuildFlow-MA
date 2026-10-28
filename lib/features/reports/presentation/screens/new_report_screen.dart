@@ -58,6 +58,9 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   }
 
   Future<void> _submit() async {
+    // The button is disabled only after the next rebuild, so a second tap
+    // in the same frame still lands here.
+    if (_isSubmitting) return;
     if (_selectedProjectId == null) {
       _showSnackBar(AppLocalizations.of(context).selectProjectHint);
       return;
@@ -69,10 +72,11 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // Add fake photo paths if none selected (for demo purposes)
+    // Add fake photo paths if none selected (for demo purposes).
+    // A copy: photos added or removed while sending don't change this report.
     final photos = _photoPaths.isEmpty
         ? ['fake:demo-${DateTime.now().millisecondsSinceEpoch}']
-        : _photoPaths;
+        : List.of(_photoPaths);
 
     final result = await ref.read(reportsProvider.notifier).submitReport(
           projectId: _selectedProjectId!,

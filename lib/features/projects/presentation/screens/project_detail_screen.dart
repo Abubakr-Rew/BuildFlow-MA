@@ -22,15 +22,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 ///
 /// Directors can change the status and the team; foremen can start a
 /// report for this project.
-class ProjectDetailScreen extends ConsumerWidget {
+class ProjectDetailScreen extends ConsumerStatefulWidget {
   const ProjectDetailScreen({required this.projectId, super.key});
 
   final String projectId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectDetailScreen> createState() =>
+      _ProjectDetailScreenState();
+}
+
+class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen> {
+  /// While a status change is in flight the menu and the team editor are
+  /// locked: both send the whole project, so a second update started from
+  /// the old copy would undo the first.
+  bool _changingStatus = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final project = ref.watch(projectByIdProvider(projectId));
+    final project = ref.watch(projectByIdProvider(widget.projectId));
     final role = ref.watch(currentUserProvider)?.role;
 
     final loaded = project.valueOrNull;
@@ -43,8 +54,8 @@ class ProjectDetailScreen extends ConsumerWidget {
             PopupMenuButton<ProjectStatus>(
               tooltip: l10n.projectStatus,
               icon: const Icon(Icons.more_vert),
-              onSelected: (status) =>
-                  _changeStatus(context, ref, loaded, status),
+              enabled: !_changingStatus,
+              onSelected: (status) => _changeStatus(loaded, status),
               itemBuilder: (_) => [
                 for (final status in ProjectStatus.values)
                   CheckedPopupMenuItem(
@@ -81,22 +92,23 @@ class ProjectDetailScreen extends ConsumerWidget {
                 icon: Icons.construction_outlined,
                 title: l10n.projectNotFound,
               )
-            : _ProjectBody(project: project, isOwner: role == UserRole.owner),
+            : _ProjectBody(
+                project: project,
+                isOwner: role == UserRole.owner,
+                canEditTeam: !_changingStatus,
+              ),
       ),
     );
   }
 
-  Future<void> _changeStatus(
-    BuildContext context,
-    WidgetRef ref,
-    Project project,
-    ProjectStatus status,
-  ) async {
-    if (status == project.status) return;
+  Future<void> _changeStatus(Project project, ProjectStatus status) async {
+    if (_changingStatus || status == project.status) return;
+    setState(() => _changingStatus = true);
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final result =
         await ref.read(projectsProvider.notifier).setStatus(project, status);
+    if (mounted) setState(() => _changingStatus = false);
     final message = result.when(
       success: (_) => l10n.statusChanged,
       failure: l10n.failureMessage,
@@ -106,10 +118,15 @@ class ProjectDetailScreen extends ConsumerWidget {
 }
 
 class _ProjectBody extends ConsumerWidget {
-  const _ProjectBody({required this.project, required this.isOwner});
+  const _ProjectBody({
+    required this.project,
+    required this.isOwner,
+    required this.canEditTeam,
+  });
 
   final Project project;
   final bool isOwner;
+  final bool canEditTeam;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -185,11 +202,13 @@ class _ProjectBody extends ConsumerWidget {
               ),
               if (isOwner)
                 TextButton.icon(
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => _EditTeamSheet(project: project),
-                  ),
+                  onPressed: canEditTeam
+                      ? () => showModalBottomSheet<void>(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => _EditTeamSheet(project: project),
+                          )
+                      : null,
                   icon: const Icon(Icons.edit, size: 18),
                   label: Text(l10n.editTeam),
                 ),
@@ -316,6 +335,7 @@ class _EditTeamSheetState extends ConsumerState<_EditTeamSheet> {
   bool _saving = false;
 
   Future<void> _save() async {
+    if (_saving) return; // a second tap before the button is disabled
     setState(() => _saving = true);
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);

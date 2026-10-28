@@ -16,11 +16,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Team list screen — members grouped by role, invites and removal.
-class TeamListScreen extends ConsumerWidget {
+class TeamListScreen extends ConsumerStatefulWidget {
   const TeamListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeamListScreen> createState() => _TeamListScreenState();
+}
+
+class _TeamListScreenState extends ConsumerState<TeamListScreen> {
+  /// Members being removed: their cards show progress instead of the menu,
+  /// so the removal can't be started twice.
+  final Set<String> _removing = {};
+  bool _inviting = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final members = ref.watch(membersProvider);
     final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
@@ -37,7 +47,7 @@ class TeamListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.teamTitle)),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _invite(context, ref),
+        onPressed: _invite,
         icon: const Icon(Icons.person_add),
         label: Text(l10n.inviteMember),
       ),
@@ -56,7 +66,7 @@ class TeamListScreen extends ConsumerWidget {
                 icon: Icons.group_outlined,
                 title: l10n.noMembers,
                 actionLabel: l10n.inviteMember,
-                onAction: () => _invite(context, ref),
+                onAction: _invite,
               );
             }
 
@@ -81,9 +91,8 @@ class TeamListScreen extends ConsumerWidget {
                 return _MemberCard(
                   member: member,
                   projectCount: projectCount(member),
-                  onRemove: canRemove
-                      ? () => _confirmRemove(context, ref, member)
-                      : null,
+                  isRemoving: _removing.contains(member.id),
+                  onRemove: canRemove ? () => _confirmRemove(member) : null,
                 );
               },
             );
@@ -93,7 +102,18 @@ class TeamListScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _invite(BuildContext context, WidgetRef ref) async {
+  /// Ignores taps while an earlier invite is still being chosen or created.
+  Future<void> _invite() async {
+    if (_inviting) return;
+    _inviting = true;
+    try {
+      await _createInvite();
+    } finally {
+      _inviting = false;
+    }
+  }
+
+  Future<void> _createInvite() async {
     final l10n = AppLocalizations.of(context);
 
     final role = await showModalBottomSheet<UserRole>(
@@ -118,13 +138,13 @@ class TeamListScreen extends ConsumerWidget {
         ),
       ),
     );
-    if (role == null || !context.mounted) return;
+    if (role == null || !mounted) return;
 
     final result = await ref.read(teamRepositoryProvider).generateInviteCode();
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     result.when(
-      success: (invite) => _showInviteCodeSheet(context, invite, role),
+      success: (invite) => _showInviteCodeSheet(invite, role),
       failure: (f) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.failureMessage(f))),
@@ -133,11 +153,8 @@ class TeamListScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmRemove(
-    BuildContext context,
-    WidgetRef ref,
-    Member member,
-  ) async {
+  Future<void> _confirmRemove(Member member) async {
+    if (_removing.contains(member.id)) return;
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -156,11 +173,15 @@ class TeamListScreen extends ConsumerWidget {
         ],
       ),
     );
-    if (!(confirmed ?? false) || !context.mounted) return;
+    if (!(confirmed ?? false) || !mounted || _removing.contains(member.id)) {
+      return;
+    }
 
+    setState(() => _removing.add(member.id));
     final messenger = ScaffoldMessenger.of(context);
     final result =
         await ref.read(membersProvider.notifier).removeMember(member);
+    if (mounted) setState(() => _removing.remove(member.id));
     final message = result.when(
       success: (_) => l10n.memberRemoved,
       failure: l10n.failureMessage,
@@ -168,11 +189,7 @@ class TeamListScreen extends ConsumerWidget {
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _showInviteCodeSheet(
-    BuildContext context,
-    InviteCode invite,
-    UserRole role,
-  ) {
+  void _showInviteCodeSheet(InviteCode invite, UserRole role) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
@@ -258,11 +275,13 @@ class _MemberCard extends StatelessWidget {
   const _MemberCard({
     required this.member,
     required this.projectCount,
+    this.isRemoving = false,
     this.onRemove,
   });
 
   final Member member;
   final int projectCount;
+  final bool isRemoving;
   final VoidCallback? onRemove;
 
   @override
@@ -289,7 +308,17 @@ class _MemberCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             RoleBadge(role: member.role),
-            if (onRemove != null)
+            if (isRemoving)
+              const SizedBox.square(
+                dimension: AppTheme.minTouchTarget,
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else if (onRemove != null)
               // onSelected runs after the menu has closed, so the
               // confirmation dialog isn't popped together with the menu.
               PopupMenuButton<bool>(
