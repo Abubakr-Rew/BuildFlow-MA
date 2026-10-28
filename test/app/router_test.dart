@@ -113,6 +113,14 @@ void main() {
         test('can open people search', () {
           expect(authRedirect(auth, Routes.peopleSearch), isNull);
         });
+
+        test('has its chats tab and opens a chat over the navigation', () {
+          expect(authRedirect(auth, Routes.chatsFor(role)), isNull);
+          expect(authRedirect(auth, Routes.chat('chat-project-1')), isNull);
+          for (final other in UserRole.values.where((r) => r != role)) {
+            expect(authRedirect(auth, Routes.chatsFor(other)), home);
+          }
+        });
       });
     }
   });

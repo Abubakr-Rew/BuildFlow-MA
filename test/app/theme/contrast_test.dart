@@ -41,7 +41,9 @@ void main() {
         'accentText on card': (t.accentText, t.card),
         'onGraphite on graphite': (t.onGraphite, t.graphite),
         'onGraphiteSecondary on graphite': (t.onGraphiteSecondary, t.graphite),
-        'accent on graphite (snack bar action)': (t.accent, t.graphite),
+        // Snack bar action; read ticks and the building on chat avatars.
+        'accent on graphite': (t.accent, t.graphite),
+        'danger on canvas (unsent message icon)': (t.danger.fg, t.canvas),
         'active': (t.active.fg, t.active.bg),
         'paused': (t.paused.fg, t.paused.bg),
         'danger': (t.danger.fg, t.danger.bg),

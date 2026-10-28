@@ -5,16 +5,21 @@ import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/widgets/avatar_initials.dart';
+import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:buildflow/core/widgets/bf_chip.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
+import 'package:buildflow/core/widgets/highlighted_text.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
+import 'package:buildflow/features/chat/domain/entities/chat.dart';
+import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
@@ -192,6 +197,10 @@ class _PeopleSearchScreenState extends ConsumerState<PeopleSearchScreen> {
           Navigator.pop(sheetContext);
           context.push(Routes.project(project.id));
         },
+        onOpenChat: (chat) {
+          Navigator.pop(sheetContext);
+          context.push(Routes.chat(chat.id));
+        },
       ),
     );
   }
@@ -320,8 +329,8 @@ class _PersonCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _HighlightedName(
-                  name: member.name,
+                HighlightedText(
+                  text: member.name,
                   ranges: match.ranges,
                   style: theme.textTheme.titleMedium,
                 ),
@@ -339,43 +348,6 @@ class _PersonCard extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// [name] with the matched [ranges] on the `matchHighlight` background.
-class _HighlightedName extends StatelessWidget {
-  const _HighlightedName({
-    required this.name,
-    required this.ranges,
-    this.style,
-  });
-
-  final String name;
-  final List<MatchRange> ranges;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    final highlight = TextStyle(
-      backgroundColor: context.bfTheme.matchHighlight,
-    );
-    final spans = <TextSpan>[];
-    var pos = 0;
-    for (final r in ranges) {
-      if (r.start > pos) spans.add(TextSpan(text: name.substring(pos, r.start)));
-      spans.add(
-        TextSpan(text: name.substring(r.start, r.end), style: highlight),
-      );
-      pos = r.end;
-    }
-    if (pos < name.length) spans.add(TextSpan(text: name.substring(pos)));
-
-    return Text.rich(
-      TextSpan(children: spans),
-      style: style,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -437,20 +409,55 @@ class _CompanyOnlyNote extends StatelessWidget {
 
 // ── Person sheet ──────────────────────────────────────────────
 
-class _PersonSheet extends ConsumerWidget {
-  const _PersonSheet({required this.member, required this.onOpenProject});
+class _PersonSheet extends ConsumerStatefulWidget {
+  const _PersonSheet({
+    required this.member,
+    required this.onOpenProject,
+    required this.onOpenChat,
+  });
 
   final Member member;
   final ValueChanged<Project> onOpenProject;
+  final ValueChanged<Chat> onOpenChat;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PersonSheet> createState() => _PersonSheetState();
+}
+
+class _PersonSheetState extends ConsumerState<_PersonSheet> {
+  bool _opening = false;
+  Failure? _failure;
+
+  Member get member => widget.member;
+
+  /// Opens the direct chat, creating it on first use.
+  Future<void> _write() async {
+    if (_opening) return;
+    setState(() {
+      _opening = true;
+      _failure = null;
+    });
+    final result =
+        await ref.read(chatsProvider.notifier).openDirect(member.userId);
+    if (!mounted) return;
+    result.when(
+      success: widget.onOpenChat,
+      failure: (f) => setState(() {
+        _opening = false;
+        _failure = f;
+      }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final t = context.bfTheme;
-    final viewerIsOwner =
-        ref.watch(currentUserProvider)?.role.isOwner ?? false;
+    final me = ref.watch(currentUserProvider);
+    final viewerIsOwner = me?.role.isOwner ?? false;
     final projects = ref.watch(memberProjectsProvider(member.userId));
+    final failure = _failure;
 
     return SafeArea(
       child: ConstrainedBox(
@@ -493,6 +500,25 @@ class _PersonSheet extends ConsumerWidget {
                   ),
                 ],
               ),
+              // Nobody writes to themselves.
+              if (me != null && me.id != member.userId) ...[
+                const SizedBox(height: AppTheme.spacing24),
+                BfButton(
+                  label: l10n.writeMessage,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  isLoading: _opening,
+                  onPressed: _write,
+                ),
+                if (failure != null) ...[
+                  const SizedBox(height: AppTheme.spacing8),
+                  Text(
+                    l10n.failureMessage(failure),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: t.danger.fg),
+                  ),
+                ],
+              ],
               // Directors run every project rather than being assigned.
               if (!member.role.isOwner) ...[
                 const SizedBox(height: AppTheme.spacing24),
@@ -511,7 +537,7 @@ class _PersonSheet extends ConsumerWidget {
                     if (i > 0) const SizedBox(height: AppTheme.spacing8),
                     _ProjectRow(
                       project: project,
-                      onTap: () => onOpenProject(project),
+                      onTap: () => widget.onOpenProject(project),
                     ),
                   ],
               ],

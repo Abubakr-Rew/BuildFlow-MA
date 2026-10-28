@@ -639,5 +639,104 @@
   "@noSharedProjects": {"description": "Person sheet for a foreman or worker: the person works on none of the viewer's projects"},
 
   "memberNotAssigned": "Не назначен на объекты",
-  "@memberNotAssigned": {"description": "Person sheet for the director: the person works on no project"}
+  "@memberNotAssigned": {"description": "Person sheet for the director: the person works on no project"},
+
+  "navChats": "Чаты",
+  "@navChats": {"description": "Bottom navigation: chats tab"},
+
+  "navHistory": "История",
+  "@navHistory": {"description": "Bottom navigation for the foreman: the list of reports"},
+
+  "reportHistoryTitle": "История",
+  "@reportHistoryTitle": {"description": "Title of the foreman's report list tab"},
+
+  "chatsTitle": "Чаты",
+  "@chatsTitle": {"description": "Chat list screen title"},
+
+  "searchChats": "Объект или имя",
+  "@searchChats": {"description": "Chat list search field label"},
+
+  "chatFilterAll": "Все",
+  "@chatFilterAll": {"description": "Chat list filter chip: every chat"},
+
+  "chatFilterProjects": "Объекты",
+  "@chatFilterProjects": {"description": "Chat list filter chip: project chats"},
+
+  "chatFilterDirect": "Личные",
+  "@chatFilterDirect": {"description": "Chat list filter chip: direct chats"},
+
+  "noChats": "Чатов пока нет",
+  "@noChats": {"description": "Empty chat list"},
+
+  "noChatsHint": "Здесь будут чаты ваших объектов и личные переписки",
+  "@noChatsHint": {"description": "Hint under noChats"},
+
+  "noChatsFound": "Ничего не нашли",
+  "@noChatsFound": {"description": "Chat search or filter found nothing"},
+
+  "noChatsFoundHint": "Проверьте название объекта или имя",
+  "@noChatsFoundHint": {"description": "Hint under noChatsFound"},
+
+  "newDirectChat": "Написать коллеге",
+  "@newDirectChat": {"description": "Tooltip of the chat list button that opens people search"},
+
+  "chatNoMessages": "Сообщений пока нет",
+  "@chatNoMessages": {"description": "Chat list preview and empty chat title: no messages yet"},
+
+  "chatEmptyHint": "Напишите первое сообщение",
+  "@chatEmptyHint": {"description": "Hint in an empty chat"},
+
+  "you": "Вы",
+  "@you": {"description": "Author of the user's own message in a chat preview: «Вы: текст»"},
+
+  "chatParticipants": "{count, plural, one{{count} участник} few{{count} участника} many{{count} участников} other{{count} участника}}",
+  "@chatParticipants": {"description": "Subtitle of a project chat", "placeholders": {"count": {"type": "int"}}},
+
+  "messageHint": "Сообщение",
+  "@messageHint": {"description": "Hint of the message field"},
+
+  "sendMessage": "Отправить",
+  "@sendMessage": {"description": "Tooltip of the send button in a chat"},
+
+  "messageSending": "Отправляется",
+  "@messageSending": {"description": "Status of an own message, for screen readers"},
+
+  "messageSent": "Отправлено",
+  "@messageSent": {"description": "Status of an own message, for screen readers"},
+
+  "messageRead": "Прочитано",
+  "@messageRead": {"description": "Status of an own message, for screen readers"},
+
+  "messageFailed": "Не отправлено",
+  "@messageFailed": {"description": "Own message that failed to send; title of the retry menu"},
+
+  "newMessagesBelow": "Новые сообщения",
+  "@newMessagesBelow": {"description": "Pill over the chat when new messages arrived below the visible part"},
+
+  "unsupportedMessage": "Неподдерживаемое сообщение",
+  "@unsupportedMessage": {"description": "A message kind this app version can't show yet (photo, voice, report card)"},
+
+  "systemMemberAdded": "{name} теперь в чате",
+  "@systemMemberAdded": {"description": "System message: someone joined the project team", "placeholders": {"name": {"type": "String"}}},
+
+  "systemMemberRemoved": "{name} больше не в чате",
+  "@systemMemberRemoved": {"description": "System message: someone left the project team or the company", "placeholders": {"name": {"type": "String"}}},
+
+  "formerMember": "Бывший сотрудник",
+  "@formerMember": {"description": "Name of a person who is no longer in the company"},
+
+  "peerLeftCompany": "Сотрудник больше не работает в компании, написать ему нельзя",
+  "@peerLeftCompany": {"description": "Instead of the message field in a direct chat with a removed member"},
+
+  "chatUnavailable": "Чат недоступен",
+  "@chatUnavailable": {"description": "The user is no longer in the chat"},
+
+  "chatUnavailableHint": "Вас исключили из объекта, или чат больше не доступен",
+  "@chatUnavailableHint": {"description": "Hint under chatUnavailable"},
+
+  "projectChat": "Чат объекта",
+  "@projectChat": {"description": "Project page tile that opens the project chat"},
+
+  "writeMessage": "Написать",
+  "@writeMessage": {"description": "Person sheet button that opens the direct chat"}
 }

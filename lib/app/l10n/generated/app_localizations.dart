@@ -1311,6 +1311,204 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не назначен на объекты'**
   String get memberNotAssigned;
+
+  /// Bottom navigation: chats tab
+  ///
+  /// In ru, this message translates to:
+  /// **'Чаты'**
+  String get navChats;
+
+  /// Bottom navigation for the foreman: the list of reports
+  ///
+  /// In ru, this message translates to:
+  /// **'История'**
+  String get navHistory;
+
+  /// Title of the foreman's report list tab
+  ///
+  /// In ru, this message translates to:
+  /// **'История'**
+  String get reportHistoryTitle;
+
+  /// Chat list screen title
+  ///
+  /// In ru, this message translates to:
+  /// **'Чаты'**
+  String get chatsTitle;
+
+  /// Chat list search field label
+  ///
+  /// In ru, this message translates to:
+  /// **'Объект или имя'**
+  String get searchChats;
+
+  /// Chat list filter chip: every chat
+  ///
+  /// In ru, this message translates to:
+  /// **'Все'**
+  String get chatFilterAll;
+
+  /// Chat list filter chip: project chats
+  ///
+  /// In ru, this message translates to:
+  /// **'Объекты'**
+  String get chatFilterProjects;
+
+  /// Chat list filter chip: direct chats
+  ///
+  /// In ru, this message translates to:
+  /// **'Личные'**
+  String get chatFilterDirect;
+
+  /// Empty chat list
+  ///
+  /// In ru, this message translates to:
+  /// **'Чатов пока нет'**
+  String get noChats;
+
+  /// Hint under noChats
+  ///
+  /// In ru, this message translates to:
+  /// **'Здесь будут чаты ваших объектов и личные переписки'**
+  String get noChatsHint;
+
+  /// Chat search or filter found nothing
+  ///
+  /// In ru, this message translates to:
+  /// **'Ничего не нашли'**
+  String get noChatsFound;
+
+  /// Hint under noChatsFound
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте название объекта или имя'**
+  String get noChatsFoundHint;
+
+  /// Tooltip of the chat list button that opens people search
+  ///
+  /// In ru, this message translates to:
+  /// **'Написать коллеге'**
+  String get newDirectChat;
+
+  /// Chat list preview and empty chat title: no messages yet
+  ///
+  /// In ru, this message translates to:
+  /// **'Сообщений пока нет'**
+  String get chatNoMessages;
+
+  /// Hint in an empty chat
+  ///
+  /// In ru, this message translates to:
+  /// **'Напишите первое сообщение'**
+  String get chatEmptyHint;
+
+  /// Author of the user's own message in a chat preview: «Вы: текст»
+  ///
+  /// In ru, this message translates to:
+  /// **'Вы'**
+  String get you;
+
+  /// Subtitle of a project chat
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} участник} few{{count} участника} many{{count} участников} other{{count} участника}}'**
+  String chatParticipants(int count);
+
+  /// Hint of the message field
+  ///
+  /// In ru, this message translates to:
+  /// **'Сообщение'**
+  String get messageHint;
+
+  /// Tooltip of the send button in a chat
+  ///
+  /// In ru, this message translates to:
+  /// **'Отправить'**
+  String get sendMessage;
+
+  /// Status of an own message, for screen readers
+  ///
+  /// In ru, this message translates to:
+  /// **'Отправляется'**
+  String get messageSending;
+
+  /// Status of an own message, for screen readers
+  ///
+  /// In ru, this message translates to:
+  /// **'Отправлено'**
+  String get messageSent;
+
+  /// Status of an own message, for screen readers
+  ///
+  /// In ru, this message translates to:
+  /// **'Прочитано'**
+  String get messageRead;
+
+  /// Own message that failed to send; title of the retry menu
+  ///
+  /// In ru, this message translates to:
+  /// **'Не отправлено'**
+  String get messageFailed;
+
+  /// Pill over the chat when new messages arrived below the visible part
+  ///
+  /// In ru, this message translates to:
+  /// **'Новые сообщения'**
+  String get newMessagesBelow;
+
+  /// A message kind this app version can't show yet (photo, voice, report card)
+  ///
+  /// In ru, this message translates to:
+  /// **'Неподдерживаемое сообщение'**
+  String get unsupportedMessage;
+
+  /// System message: someone joined the project team
+  ///
+  /// In ru, this message translates to:
+  /// **'{name} теперь в чате'**
+  String systemMemberAdded(String name);
+
+  /// System message: someone left the project team or the company
+  ///
+  /// In ru, this message translates to:
+  /// **'{name} больше не в чате'**
+  String systemMemberRemoved(String name);
+
+  /// Name of a person who is no longer in the company
+  ///
+  /// In ru, this message translates to:
+  /// **'Бывший сотрудник'**
+  String get formerMember;
+
+  /// Instead of the message field in a direct chat with a removed member
+  ///
+  /// In ru, this message translates to:
+  /// **'Сотрудник больше не работает в компании, написать ему нельзя'**
+  String get peerLeftCompany;
+
+  /// The user is no longer in the chat
+  ///
+  /// In ru, this message translates to:
+  /// **'Чат недоступен'**
+  String get chatUnavailable;
+
+  /// Hint under chatUnavailable
+  ///
+  /// In ru, this message translates to:
+  /// **'Вас исключили из объекта, или чат больше не доступен'**
+  String get chatUnavailableHint;
+
+  /// Project page tile that opens the project chat
+  ///
+  /// In ru, this message translates to:
+  /// **'Чат объекта'**
+  String get projectChat;
+
+  /// Person sheet button that opens the direct chat
+  ///
+  /// In ru, this message translates to:
+  /// **'Написать'**
+  String get writeMessage;
 }
 
 class _AppLocalizationsDelegate

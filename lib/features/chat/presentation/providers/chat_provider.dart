@@ -77,6 +77,15 @@ final chatListProvider = Provider<AsyncValue<List<Chat>>>((ref) {
   );
 });
 
+/// Names of the company's members by user id, for message authors and
+/// previews. Empty while the members load.
+final memberNamesProvider = Provider<Map<String, String>>(
+  (ref) => {
+    for (final m in ref.watch(membersProvider).valueOrNull ?? const <Member>[])
+      m.userId: m.name,
+  },
+);
+
 /// A chat of the user by id; `null` if they aren't in it.
 final chatByIdProvider = Provider.family<AsyncValue<Chat?>, String>(
   (ref, id) => ref

@@ -7,6 +7,9 @@ import 'package:buildflow/features/auth/presentation/screens/join_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/login_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/register_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/splash_screen.dart';
+import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
+import 'package:buildflow/features/chat/presentation/screens/chat_list_screen.dart';
+import 'package:buildflow/features/chat/presentation/screens/chat_screen.dart';
 import 'package:buildflow/features/profile/presentation/screens/profile_screen.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_list_screen.dart';
@@ -100,26 +103,34 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.peopleSearch,
         builder: (_, __) => const PeopleSearchScreen(),
       ),
+      GoRoute(
+        path: Routes.chatDetail,
+        builder: (_, state) =>
+            ChatScreen(chatId: state.pathParameters['id']!),
+      ),
 
-      // Director shell
+      // Director shell: Объекты · Команда · Чаты · Отчёты · Профиль
       _shell(_ShellRole.owner, [
         (Routes.ownerProjects, const ProjectListScreen()),
         (Routes.ownerTeam, const TeamListScreen()),
+        (Routes.ownerChats, const ChatListScreen()),
         (Routes.ownerReports, const ReportListScreen()),
         (Routes.ownerProfile, const ProfileScreen()),
       ]),
 
-      // Foreman shell
+      // Foreman shell: Объекты · Чаты · Отчёт · История · Профиль
       _shell(_ShellRole.foreman, [
         (Routes.foremanProjects, const ProjectListScreen()),
+        (Routes.foremanChats, const ChatListScreen()),
         (Routes.foremanNewReport, const NewReportScreen()),
         (Routes.foremanReports, const ReportListScreen()),
         (Routes.foremanProfile, const ProfileScreen()),
       ]),
 
-      // Worker shell
+      // Worker shell: Объекты · Чаты · Отчёты · Профиль
       _shell(_ShellRole.worker, [
         (Routes.workerProjects, const ProjectListScreen()),
+        (Routes.workerChats, const ChatListScreen()),
         (Routes.workerReports, const ReportListScreen()),
         (Routes.workerProfile, const ProfileScreen()),
       ]),
@@ -179,6 +190,12 @@ class _RoleShell extends ConsumerWidget {
       selectedIcon: Icons.person,
       label: l10n.navProfile,
     );
+    final chats = BfNavItem(
+      icon: Icons.chat_bubble_outline_rounded,
+      selectedIcon: Icons.chat_bubble_rounded,
+      label: l10n.navChats,
+      badgeCount: ref.watch(totalUnreadProvider),
+    );
 
     final destinations = switch (role) {
       _ShellRole.owner => [
@@ -188,25 +205,31 @@ class _RoleShell extends ConsumerWidget {
             selectedIcon: Icons.group,
             label: l10n.navTeam,
           ),
+          chats,
           reports,
           profile,
         ],
       _ShellRole.foreman => [
           projects,
+          chats,
           BfNavItem(
-            icon: Icons.add_a_photo_outlined,
-            selectedIcon: Icons.add_a_photo,
+            icon: Icons.photo_camera_outlined,
+            selectedIcon: Icons.photo_camera_rounded,
             label: l10n.navNewReport,
+            prominent: true,
           ),
-          reports,
+          BfNavItem(
+            icon: Icons.history_rounded,
+            selectedIcon: Icons.history_rounded,
+            label: l10n.navHistory,
+          ),
           profile,
         ],
-      _ShellRole.worker => [projects, reports, profile],
+      _ShellRole.worker => [projects, chats, reports, profile],
     };
 
     return Scaffold(
       body: shell,
-      // A chats tab will pass its unread count as BfNavItem.badgeCount.
       bottomNavigationBar: BfBottomNav(
         selectedIndex: shell.currentIndex,
         onSelected: (i) => shell.goBranch(

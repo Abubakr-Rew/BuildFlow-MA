@@ -188,7 +188,7 @@ class FakeChatStore {
         .firstOrNull;
     if (chat == null) {
       chat = _ChatRecord(
-        id: 'chat-direct-${++_seq}',
+        id: directChatId(userId, peerId),
         type: ChatType.direct,
         companyId: me.companyId,
         participants: pair,
@@ -225,6 +225,12 @@ class FakeChatStore {
       _setParticipants(chat, _teamOf(project));
     }
     _emit();
+  }
+
+  /// Id of the direct chat of two users, the same in either order.
+  static String directChatId(String a, String b) {
+    final pair = [a, b]..sort();
+    return 'chat-direct-${pair.join('-')}';
   }
 
   // ── Internals ──────────────────────────────────────────────

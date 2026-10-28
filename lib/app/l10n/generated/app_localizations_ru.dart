@@ -659,4 +659,120 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get memberNotAssigned => 'Не назначен на объекты';
+
+  @override
+  String get navChats => 'Чаты';
+
+  @override
+  String get navHistory => 'История';
+
+  @override
+  String get reportHistoryTitle => 'История';
+
+  @override
+  String get chatsTitle => 'Чаты';
+
+  @override
+  String get searchChats => 'Объект или имя';
+
+  @override
+  String get chatFilterAll => 'Все';
+
+  @override
+  String get chatFilterProjects => 'Объекты';
+
+  @override
+  String get chatFilterDirect => 'Личные';
+
+  @override
+  String get noChats => 'Чатов пока нет';
+
+  @override
+  String get noChatsHint =>
+      'Здесь будут чаты ваших объектов и личные переписки';
+
+  @override
+  String get noChatsFound => 'Ничего не нашли';
+
+  @override
+  String get noChatsFoundHint => 'Проверьте название объекта или имя';
+
+  @override
+  String get newDirectChat => 'Написать коллеге';
+
+  @override
+  String get chatNoMessages => 'Сообщений пока нет';
+
+  @override
+  String get chatEmptyHint => 'Напишите первое сообщение';
+
+  @override
+  String get you => 'Вы';
+
+  @override
+  String chatParticipants(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count участника',
+      many: '$count участников',
+      few: '$count участника',
+      one: '$count участник',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messageHint => 'Сообщение';
+
+  @override
+  String get sendMessage => 'Отправить';
+
+  @override
+  String get messageSending => 'Отправляется';
+
+  @override
+  String get messageSent => 'Отправлено';
+
+  @override
+  String get messageRead => 'Прочитано';
+
+  @override
+  String get messageFailed => 'Не отправлено';
+
+  @override
+  String get newMessagesBelow => 'Новые сообщения';
+
+  @override
+  String get unsupportedMessage => 'Неподдерживаемое сообщение';
+
+  @override
+  String systemMemberAdded(String name) {
+    return '$name теперь в чате';
+  }
+
+  @override
+  String systemMemberRemoved(String name) {
+    return '$name больше не в чате';
+  }
+
+  @override
+  String get formerMember => 'Бывший сотрудник';
+
+  @override
+  String get peerLeftCompany =>
+      'Сотрудник больше не работает в компании, написать ему нельзя';
+
+  @override
+  String get chatUnavailable => 'Чат недоступен';
+
+  @override
+  String get chatUnavailableHint =>
+      'Вас исключили из объекта, или чат больше не доступен';
+
+  @override
+  String get projectChat => 'Чат объекта';
+
+  @override
+  String get writeMessage => 'Написать';
 }

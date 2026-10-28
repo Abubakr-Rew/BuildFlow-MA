@@ -54,6 +54,52 @@ abstract final class DateFormatter {
     return '$day, ${time(date)}';
   }
 
+  /// Time of a chat's last message in the chat list: «14:05» today,
+  /// «Вчера», «Пн» within the last week, then «27 окт.»; «27.10.25» in
+  /// another year.
+  static String chatListTime(
+    DateTime date, {
+    required String yesterday,
+    DateTime? now,
+  }) {
+    final local = date.toLocal();
+    final current = now ?? DateTime.now();
+    return switch (_daysBetween(local, current)) {
+      <= 0 => time(local),
+      1 => yesterday,
+      >= 2 && <= 6 => _capitalized(_weekday.format(local)),
+      _ when local.year == current.year => _dayShortMonth.format(local),
+      _ => _numeric.format(local),
+    };
+  }
+
+  /// Divider above the first message of a day: «Сегодня», «Вчера»,
+  /// «27 октября»; the year only when it isn't the current one.
+  static String chatDay(
+    DateTime day, {
+    required String today,
+    required String yesterday,
+    DateTime? now,
+  }) {
+    final current = now ?? DateTime.now();
+    return switch (_daysBetween(day, current)) {
+      <= 0 => today,
+      1 => yesterday,
+      _ when day.year == current.year => dayMonth(day),
+      _ => dayMonthYear(day),
+    };
+  }
+
+  static final _dayShortMonth = DateFormat('d MMM', 'ru');
+  static final _numeric = DateFormat('dd.MM.yy', 'ru');
+
+  /// Calendar days from [date] to [now], in UTC so that a DST switch can't
+  /// turn yesterday into today.
+  static int _daysBetween(DateTime date, DateTime now) =>
+      DateTime.utc(now.year, now.month, now.day)
+          .difference(DateTime.utc(date.year, date.month, date.day))
+          .inDays;
+
   static String _capitalized(String s) =>
       s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 

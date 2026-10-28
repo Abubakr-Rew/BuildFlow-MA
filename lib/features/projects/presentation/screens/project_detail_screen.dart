@@ -1,5 +1,6 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
@@ -12,9 +13,11 @@ import 'package:buildflow/core/widgets/bf_progress_bar.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/photo_thumbnail.dart';
+import 'package:buildflow/core/widgets/unread_badge.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
+import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
@@ -27,6 +30,7 @@ import 'package:buildflow/features/team/presentation/providers/team_provider.dar
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// An item of the director's "more" menu on the project page.
 sealed class ProjectMenuAction {
@@ -102,6 +106,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
     final isOwner = role == UserRole.owner;
     final canReport = role == UserRole.foreman && loaded.status.isActive;
+    final chat = ref.watch(projectChatProvider(loaded.id));
 
     return Scaffold(
       body: RefreshIndicator(
@@ -142,6 +147,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                               NewReportScreen(initialProjectId: loaded.id),
                         ),
                       ),
+                    ),
+                    const SizedBox(height: AppTheme.spacing12),
+                  ],
+                  // Everyone in the project team has the project chat.
+                  if (chat != null) ...[
+                    _ActionTile(
+                      icon: Icons.forum_rounded,
+                      label: l10n.projectChat,
+                      trailing: UnreadBadge(count: chat.unreadCount),
+                      onTap: () => context.push(Routes.chat(chat.id)),
                     ),
                     const SizedBox(height: AppTheme.spacing12),
                   ],
@@ -386,11 +401,15 @@ class _ActionTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.accent = false,
+    this.trailing,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+
+  /// At the right edge, e.g. an unread counter.
+  final Widget? trailing;
 
   /// Accent icon: the tile starts the screen's main action.
   final bool accent;
@@ -428,6 +447,10 @@ class _ActionTile extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
+          if (trailing != null) ...[
+            const SizedBox(width: AppTheme.spacing8),
+            trailing!,
+          ],
         ],
       ),
     );

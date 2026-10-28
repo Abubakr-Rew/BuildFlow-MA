@@ -5,6 +5,9 @@ import 'package:buildflow/features/auth/presentation/providers/auth_provider.dar
 import 'package:buildflow/features/auth/presentation/screens/join_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/login_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/register_screen.dart';
+import 'package:buildflow/features/chat/data/fake_chat_store.dart';
+import 'package:buildflow/features/chat/presentation/screens/chat_list_screen.dart';
+import 'package:buildflow/features/chat/presentation/screens/chat_screen.dart';
 import 'package:buildflow/features/profile/presentation/screens/profile_screen.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_list_screen.dart';
@@ -55,6 +58,15 @@ void main() {
     'report': (const ReportDetailScreen(reportId: 'report-3'), _owner),
     'team': (const TeamListScreen(), _owner),
     'people search': (const PeopleSearchScreen(), _owner),
+    'chats': (const ChatListScreen(), _owner),
+    'chats (foreman)': (const ChatListScreen(), _foreman),
+    'project chat': (const ChatScreen(chatId: 'chat-project-1'), _owner),
+    'direct chat': (
+      ChatScreen(
+        chatId: FakeChatStore.directChatId(_owner.id, _foreman.id),
+      ),
+      _foreman,
+    ),
     'people search (foreman)': (const PeopleSearchScreen(), _foreman),
     'profile': (const ProfileScreen(), _owner),
   };

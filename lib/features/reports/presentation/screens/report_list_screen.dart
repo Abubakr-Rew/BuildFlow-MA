@@ -7,6 +7,8 @@ import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
 import 'package:buildflow/core/widgets/screen_header.dart';
+import 'package:buildflow/features/auth/domain/entities/user_role.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:buildflow/features/reports/presentation/widgets/report_card.dart';
@@ -21,6 +23,8 @@ class ReportListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final reports = ref.watch(reportsProvider);
+    final isForeman =
+        ref.watch(currentUserProvider)?.role == UserRole.foreman;
 
     return Scaffold(
       body: SafeArea(
@@ -28,7 +32,10 @@ class ReportListScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ScreenHeader(title: l10n.reportsTitle),
+            ScreenHeader(
+              // The foreman's tab is «История», next to the new report.
+              title: isForeman ? l10n.reportHistoryTitle : l10n.reportsTitle,
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => ref.refresh(reportsProvider.future),

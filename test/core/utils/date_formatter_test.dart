@@ -98,4 +98,35 @@ void main() {
       );
     });
   });
+
+  group('chat dates', () {
+    // Wednesday.
+    final now = DateTime(2026, 10, 28, 15);
+
+    String listTime(DateTime date) =>
+        DateFormatter.chatListTime(date, yesterday: 'Вчера', now: now);
+
+    String day(DateTime date) => DateFormatter.chatDay(
+          date,
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          now: now,
+        );
+
+    test('chat list: time today, «Вчера», weekday, then the date', () {
+      expect(listTime(DateTime(2026, 10, 28, 9, 5)), '09:05');
+      expect(listTime(DateTime(2026, 10, 27, 23, 59)), 'Вчера');
+      expect(listTime(DateTime(2026, 10, 26, 8)), 'Пн');
+      expect(listTime(DateTime(2026, 10, 22, 8)), 'Чт');
+      expect(listTime(DateTime(2026, 10, 21, 8)), '21 окт.');
+      expect(listTime(DateTime(2025, 10, 21, 8)), '21.10.25');
+    });
+
+    test('day dividers: «Сегодня», «Вчера», then the date', () {
+      expect(day(DateTime(2026, 10, 28)), 'Сегодня');
+      expect(day(DateTime(2026, 10, 27)), 'Вчера');
+      expect(day(DateTime(2026, 10, 20)), '20 октября');
+      expect(day(DateTime(2025, 12, 31)), '31 декабря 2025');
+    });
+  });
 }
