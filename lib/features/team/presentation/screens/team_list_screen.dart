@@ -1,6 +1,7 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/core/widgets/avatar_initials.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
@@ -290,17 +291,12 @@ class _MemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
-    final scheme = theme.colorScheme;
-
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.only(left: 16, right: 4),
-        leading: CircleAvatar(
-          backgroundColor: member.role.containerColor(scheme),
-          child: Icon(member.role.icon, color: member.role.color(scheme)),
-        ),
+        leading: AvatarInitials(name: member.name),
         title: Text(member.name),
         subtitle: Text(
           member.role.isOwner

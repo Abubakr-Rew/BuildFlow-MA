@@ -22,6 +22,7 @@ class FakeProjectRepository implements ProjectRepository {
       companyId: 'company-1',
       foremanIds: ['user-foreman-1'],
       workerIds: ['user-worker-1'],
+      progress: 65,
     ),
     const Project(
       id: 'project-2',
@@ -31,6 +32,7 @@ class FakeProjectRepository implements ProjectRepository {
       companyId: 'company-1',
       foremanIds: ['user-foreman-1', 'user-foreman-2'],
       workerIds: ['user-worker-1', 'user-worker-2'],
+      progress: 30,
     ),
     const Project(
       id: 'project-3',
@@ -40,6 +42,7 @@ class FakeProjectRepository implements ProjectRepository {
       companyId: 'company-1',
       foremanIds: ['user-foreman-2'],
       workerIds: ['user-worker-2'],
+      progress: 45,
     ),
     const Project(
       id: 'project-4',
@@ -47,6 +50,7 @@ class FakeProjectRepository implements ProjectRepository {
       address: 'ул. Дэн Сяопина 200, Бишкек',
       status: ProjectStatus.finished,
       companyId: 'company-1',
+      progress: 100,
     ),
   ];
 

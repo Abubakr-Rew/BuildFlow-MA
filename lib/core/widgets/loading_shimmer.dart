@@ -1,3 +1,6 @@
+import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:flutter/material.dart';
 
 /// Skeleton / shimmer loading placeholder.
@@ -40,7 +43,7 @@ class _LoadingShimmerState extends State<LoadingShimmer>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final muted = context.bfTheme.muted;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, _) {
@@ -52,11 +55,7 @@ class _LoadingShimmerState extends State<LoadingShimmer>
             gradient: LinearGradient(
               begin: Alignment(-1 + 2 * _animation.value, 0),
               end: Alignment(1 + 2 * _animation.value, 0),
-              colors: [
-                theme.colorScheme.surfaceContainerHigh,
-                theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.4),
-                theme.colorScheme.surfaceContainerHigh,
-              ],
+              colors: [muted, muted.withValues(alpha: 0.4), muted],
               stops: const [0.0, 0.5, 1.0],
             ),
           ),
@@ -76,9 +75,12 @@ class LoadingShimmerList extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppTheme.screenPadding,
+        vertical: AppTheme.spacing16,
+      ),
       itemCount: itemCount,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: AppTheme.cardGap),
       itemBuilder: (context, _) => const _ShimmerCard(),
     );
   }
@@ -89,22 +91,19 @@ class _ShimmerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const LoadingShimmer(width: 200, height: 20),
-            const SizedBox(height: 12),
-            const LoadingShimmer(height: 14),
-            const SizedBox(height: 8),
-            LoadingShimmer(
-              width: MediaQuery.sizeOf(context).width * 0.6,
-              height: 14,
-            ),
-          ],
-        ),
+    return BfCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const LoadingShimmer(width: 200, height: 20),
+          const SizedBox(height: 12),
+          const LoadingShimmer(height: 14),
+          const SizedBox(height: 8),
+          LoadingShimmer(
+            width: MediaQuery.sizeOf(context).width * 0.6,
+            height: 14,
+          ),
+        ],
       ),
     );
   }

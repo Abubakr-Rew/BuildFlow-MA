@@ -130,7 +130,7 @@
   "statusPaused": "На паузе",
   "@statusPaused": {"description": "Paused project status"},
 
-  "statusFinished": "Завершён",
+  "statusFinished": "Сдан",
   "@statusFinished": {"description": "Finished project status"},
 
   "noProjects": "Нет объектов",

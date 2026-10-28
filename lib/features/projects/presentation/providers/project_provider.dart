@@ -70,6 +70,10 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
   Future<Result<Project>> setStatus(Project project, ProjectStatus status) =>
       updateProject(project.copyWith(status: status));
 
+  /// [percent] is clamped to 0–100.
+  Future<Result<Project>> setProgress(Project project, int percent) =>
+      updateProject(project.copyWith(progress: percent.clamp(0, 100)));
+
   Future<Result<Project>> setTeam(
     Project project, {
     required List<String> foremanIds,

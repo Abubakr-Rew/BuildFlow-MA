@@ -1,11 +1,11 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/core/widgets/avatar_initials.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
-import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
@@ -303,11 +303,7 @@ class _TeamGroup extends StatelessWidget {
                 children: [
                   for (final m in members)
                     Chip(
-                      avatar: Icon(
-                        m.role.icon,
-                        size: 18,
-                        color: m.role.color(theme.colorScheme),
-                      ),
+                      avatar: AvatarInitials(name: m.name, size: 24),
                       label: Text(m.name),
                     ),
                 ],
@@ -366,7 +362,7 @@ class _EditTeamSheetState extends ConsumerState<_EditTeamSheet> {
           value: selected.contains(m.userId),
           title: Text(m.name),
           subtitle: Text(m.email),
-          secondary: Icon(m.role.icon, color: m.role.color(theme.colorScheme)),
+          secondary: AvatarInitials(name: m.name),
           onChanged: (v) => setState(
             () => v ?? false ? selected.add(m.userId) : selected.remove(m.userId),
           ),

@@ -139,7 +139,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statusPaused => 'На паузе';
 
   @override
-  String get statusFinished => 'Завершён';
+  String get statusFinished => 'Сдан';
 
   @override
   String get noProjects => 'Нет объектов';

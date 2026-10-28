@@ -171,7 +171,9 @@ Authorization: Bearer <token>
       "address": "ул. Токтогула 125, Бишкек",
       "status": "active",
       "companyId": "company-1",
-      "foremanIds": ["user-foreman-1"]
+      "foremanIds": ["user-foreman-1"],
+      "workerIds": ["user-worker-1"],
+      "progress": 65
     }
   ]
 }
@@ -204,14 +206,15 @@ Authorization: Bearer <token>
 
 ### PUT /projects/:id
 
-Обновление объекта (только owner).
+Обновление объекта (только owner). `progress` — готовность в процентах, целое 0–100; клиент шлёт значения с шагом 5, сервер принимает любое целое в диапазоне, иначе 422 → `validation`.
 
 ```json
 // Request
 {
   "name": "Обновлённое имя",
   "address": "Новый адрес",
-  "status": "paused"
+  "status": "paused",
+  "progress": 70
 }
 
 // Response 200
@@ -437,4 +440,4 @@ Files:
 ### ProjectStatus
 - `active` — объект в работе
 - `paused` — приостановлен
-- `finished` — завершён
+- `finished` — сдан (завершён)

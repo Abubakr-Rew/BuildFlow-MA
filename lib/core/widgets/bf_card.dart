@@ -1,13 +1,15 @@
+import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:flutter/material.dart';
 
-/// Reusable card with consistent styling, optional photo thumbnail.
+/// Flat card: 1px border, radius 20, no shadow.
 class BfCard extends StatelessWidget {
   const BfCard({
     required this.child,
     this.onTap,
     this.padding,
     this.margin,
+    this.color,
     super.key,
   });
 
@@ -16,18 +18,27 @@ class BfCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
 
+  /// Fill instead of the card color, e.g. `context.bfTheme.graphite`.
+  /// A filled card has no border.
+  final Color? color;
+
   @override
   Widget build(BuildContext context) {
-    final radius = context.bfTheme.cardBorderRadius;
+    final t = context.bfTheme;
+    final radius = BorderRadius.circular(BuildFlowThemeExtension.cardRadius);
     return Padding(
       padding: margin ?? EdgeInsets.zero,
-      child: Card(
+      child: Material(
+        color: color ?? t.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: color == null ? BorderSide(color: t.border) : BorderSide.none,
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(radius),
           child: Padding(
-            padding: padding ?? const EdgeInsets.all(16),
+            padding: padding ?? const EdgeInsets.all(AppTheme.spacing16),
             child: child,
           ),
         ),

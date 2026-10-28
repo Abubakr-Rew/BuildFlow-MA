@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:math';
+
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:flutter/material.dart';
 
 /// Displays a photo thumbnail with Hero animation support.
@@ -9,7 +11,7 @@ class PhotoThumbnail extends StatelessWidget {
     required this.photoId,
     required this.url,
     this.size = 80,
-    this.borderRadius = 8,
+    this.borderRadius = BuildFlowThemeExtension.photoRadius,
     this.onTap,
     super.key,
   });
@@ -66,18 +68,7 @@ class _FakePlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final hash = seed.hashCode;
     final random = Random(hash);
-
-    // Construction-themed color palette
-    final colors = [
-      const Color(0xFFFF8F00),
-      const Color(0xFF5D4037),
-      const Color(0xFF607D8B),
-      const Color(0xFF795548),
-      const Color(0xFF8D6E63),
-      const Color(0xFF455A64),
-      const Color(0xFFBF360C),
-      const Color(0xFF4E342E),
-    ];
+    final colors = context.bfTheme.photoPlaceholders;
 
     final icons = [
       Icons.construction,
@@ -107,7 +98,7 @@ class _FakePlaceholder extends StatelessWidget {
       child: Icon(
         icons[iconIndex],
         size: size * 0.4,
-        color: Colors.white.withValues(alpha: 0.7),
+        color: context.bfTheme.onGraphite.withValues(alpha: 0.7),
       ),
     );
   }

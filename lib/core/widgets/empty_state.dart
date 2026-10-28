@@ -1,4 +1,6 @@
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:flutter/material.dart';
 
 /// Friendly empty state with icon, title, and optional description/action.
@@ -21,6 +23,7 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = context.bfTheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spacing32),
@@ -31,13 +34,13 @@ class EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: t.muted,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 icon,
                 size: 40,
-                color: theme.colorScheme.primary,
+                color: t.textSecondary,
               ),
             ),
             const SizedBox(height: AppTheme.spacing16),
@@ -51,17 +54,17 @@ class EmptyState extends StatelessWidget {
               Text(
                 description!,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: t.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppTheme.spacing24),
-              FilledButton.icon(
+              BfButton(
+                label: actionLabel!,
                 onPressed: onAction,
-                icon: const Icon(Icons.add, size: 20),
-                label: Text(actionLabel!),
+                icon: Icons.add,
               ),
             ],
           ],

@@ -355,7 +355,7 @@ abstract class AppLocalizations {
   /// Finished project status
   ///
   /// In ru, this message translates to:
-  /// **'Завершён'**
+  /// **'Сдан'**
   String get statusFinished;
 
   /// No projects empty state title

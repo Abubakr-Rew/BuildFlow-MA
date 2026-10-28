@@ -14,6 +14,9 @@ abstract class Project with _$Project {
     required String companyId,
     @Default([]) List<String> foremanIds,
     @Default([]) List<String> workerIds,
+
+    /// Readiness in percent, 0–100. Set by the director.
+    @Default(0) int progress,
   }) = _Project;
 
   factory Project.fromJson(Map<String, dynamic> json) =>
