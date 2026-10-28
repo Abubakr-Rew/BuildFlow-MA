@@ -14,7 +14,7 @@ void main() {
   group('FakeTeamRepository', () {
     test('getMembers returns seeded members', () async {
       final result = await repo.getMembers();
-      expect(result.value.length, 5);
+      expect(result.value.length, 6);
     });
 
     test('generateInviteCode returns a 6-character code for the role',
@@ -32,7 +32,7 @@ void main() {
 
     test('removeMember removes an existing member', () async {
       expect((await repo.removeMember('member-2')).isSuccess, isTrue);
-      expect((await repo.getMembers()).value.length, 4);
+      expect((await repo.getMembers()).value.length, 5);
     });
 
     test('removeMember fails with notFound for an unknown member', () async {

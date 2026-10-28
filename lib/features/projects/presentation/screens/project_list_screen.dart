@@ -9,6 +9,7 @@ import 'package:buildflow/core/widgets/avatar_initials.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:buildflow/core/widgets/bf_chip.dart';
+import 'package:buildflow/core/widgets/bf_icon_button.dart';
 import 'package:buildflow/core/widgets/bf_progress_bar.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
@@ -78,6 +79,16 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
                   ? null
                   : greetingFor(l10n, user.name, DateTime.now().hour),
               title: l10n.projectsTitle,
+              // Directors search people from the team tab; the other roles
+              // have none.
+              actions: [
+                if (user != null && !isOwner)
+                  BfIconButton(
+                    icon: Icons.person_search_rounded,
+                    tooltip: l10n.searchPeople,
+                    onPressed: () => context.push(Routes.peopleSearch),
+                  ),
+              ],
             ),
             Expanded(
               child: RefreshIndicator(

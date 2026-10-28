@@ -12,6 +12,11 @@ abstract final class AppColors {
   /// Text on [accent]. White fails contrast on this orange.
   static const onAccent = Color(0xFF15171A);
 
+  /// Opacity of [accent] behind the matched part of a name in search
+  /// results; the text on it stays the regular primary text color.
+  static const matchHighlightOpacityLight = 0.24;
+  static const matchHighlightOpacityDark = 0.32;
+
   // ── Light ───────────────────────────────────────────────────
   static const canvasLight = Color(0xFFF3F2EE);
   static const cardLight = Color(0xFFFFFFFF);

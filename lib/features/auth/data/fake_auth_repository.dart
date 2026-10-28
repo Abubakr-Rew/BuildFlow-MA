@@ -85,6 +85,16 @@ class FakeAuthRepository implements AuthRepository {
       ),
       password: '123456',
     ),
+    'worker3@buildflow.kg': const FakeUserRecord(
+      user: User(
+        id: 'user-worker-3',
+        email: 'worker3@buildflow.kg',
+        name: 'Азамат Асанов',
+        role: UserRole.worker,
+        companyId: _companyId,
+      ),
+      password: '123456',
+    ),
   };
 
   Company get company => _company;

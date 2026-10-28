@@ -1239,6 +1239,78 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Нужны материалы'**
   String get templateMaterials;
+
+  /// People search screen title and the tooltip of its entry button
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск людей'**
+  String get searchPeople;
+
+  /// People search field label
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя или фамилия'**
+  String get searchPeopleField;
+
+  /// Tooltip of the clear button in a search field
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить'**
+  String get clearSearch;
+
+  /// Section of recently opened people on the empty search screen
+  ///
+  /// In ru, this message translates to:
+  /// **'Недавние'**
+  String get recentPeople;
+
+  /// People search before typing, when nobody was opened yet
+  ///
+  /// In ru, this message translates to:
+  /// **'Найдите коллегу'**
+  String get searchPeopleStart;
+
+  /// Hint under searchPeopleStart
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите имя или фамилию, хватит первых букв'**
+  String get searchPeopleStartHint;
+
+  /// People search found nobody
+  ///
+  /// In ru, this message translates to:
+  /// **'Никого не нашли'**
+  String get nobodyFound;
+
+  /// Hint under nobodyFound
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте написание имени или фамилии'**
+  String get nobodyFoundHint;
+
+  /// Footer of the people search screen, next to a lock icon
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск показывает только сотрудников вашей компании'**
+  String get searchCompanyOnly;
+
+  /// Projects section in the person sheet
+  ///
+  /// In ru, this message translates to:
+  /// **'Объекты'**
+  String get memberProjects;
+
+  /// Person sheet for a foreman or worker: the person works on none of the viewer's projects
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет общих объектов'**
+  String get noSharedProjects;
+
+  /// Person sheet for the director: the person works on no project
+  ///
+  /// In ru, this message translates to:
+  /// **'Не назначен на объекты'**
+  String get memberNotAssigned;
 }
 
 class _AppLocalizationsDelegate

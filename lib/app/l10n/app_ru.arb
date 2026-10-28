@@ -603,5 +603,41 @@
   "@templateMasonry": {"description": "Quick template chip appended to the report text"},
 
   "templateMaterials": "Нужны материалы",
-  "@templateMaterials": {"description": "Quick template chip appended to the report text"}
+  "@templateMaterials": {"description": "Quick template chip appended to the report text"},
+
+  "searchPeople": "Поиск людей",
+  "@searchPeople": {"description": "People search screen title and the tooltip of its entry button"},
+
+  "searchPeopleField": "Имя или фамилия",
+  "@searchPeopleField": {"description": "People search field label"},
+
+  "clearSearch": "Очистить",
+  "@clearSearch": {"description": "Tooltip of the clear button in a search field"},
+
+  "recentPeople": "Недавние",
+  "@recentPeople": {"description": "Section of recently opened people on the empty search screen"},
+
+  "searchPeopleStart": "Найдите коллегу",
+  "@searchPeopleStart": {"description": "People search before typing, when nobody was opened yet"},
+
+  "searchPeopleStartHint": "Введите имя или фамилию, хватит первых букв",
+  "@searchPeopleStartHint": {"description": "Hint under searchPeopleStart"},
+
+  "nobodyFound": "Никого не нашли",
+  "@nobodyFound": {"description": "People search found nobody"},
+
+  "nobodyFoundHint": "Проверьте написание имени или фамилии",
+  "@nobodyFoundHint": {"description": "Hint under nobodyFound"},
+
+  "searchCompanyOnly": "Поиск показывает только сотрудников вашей компании",
+  "@searchCompanyOnly": {"description": "Footer of the people search screen, next to a lock icon"},
+
+  "memberProjects": "Объекты",
+  "@memberProjects": {"description": "Projects section in the person sheet"},
+
+  "noSharedProjects": "Нет общих объектов",
+  "@noSharedProjects": {"description": "Person sheet for a foreman or worker: the person works on none of the viewer's projects"},
+
+  "memberNotAssigned": "Не назначен на объекты",
+  "@memberNotAssigned": {"description": "Person sheet for the director: the person works on no project"}
 }

@@ -27,6 +27,7 @@ abstract final class Routes {
   // Shared detail routes (full screen, above the bottom navigation)
   static const projectDetail = '/projects/:id';
   static const reportDetail = '/reports/:id';
+  static const peopleSearch = '/people';
 
   static String project(String id) => '/projects/$id';
   static String report(String id) => '/reports/$id';

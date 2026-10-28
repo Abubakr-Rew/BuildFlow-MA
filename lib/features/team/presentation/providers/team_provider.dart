@@ -2,6 +2,7 @@ import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/team/data/api_team_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_repository.dart';
@@ -68,5 +69,44 @@ class MembersNotifier extends AsyncNotifier<List<Member>> {
 
     ref.invalidateSelf();
     return result;
+  }
+}
+
+/// Projects the user with the given id works on that the current user can
+/// see: all of them for a director, the shared ones for a foreman or worker.
+/// Empty while the projects load.
+final memberProjectsProvider = Provider.family<List<Project>, String>(
+  (ref, userId) {
+    final projects = ref.watch(projectsProvider).valueOrNull ?? const [];
+    return projects
+        .where(
+          (p) => p.foremanIds.contains(userId) || p.workerIds.contains(userId),
+        )
+        .toList();
+  },
+);
+
+/// Ids of members opened from people search, newest first. Kept in memory
+/// for the session and cleared when the user changes.
+final recentPeopleProvider =
+    NotifierProvider<RecentPeopleNotifier, List<String>>(
+  RecentPeopleNotifier.new,
+);
+
+class RecentPeopleNotifier extends Notifier<List<String>> {
+  static const limit = 5;
+
+  @override
+  List<String> build() {
+    ref.watch(currentUserProvider);
+    return const [];
+  }
+
+  /// Moves [memberId] to the top, keeping at most [limit] people.
+  void add(String memberId) {
+    state = [
+      memberId,
+      ...state.where((id) => id != memberId),
+    ].take(limit).toList();
   }
 }

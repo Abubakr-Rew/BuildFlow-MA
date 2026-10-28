@@ -621,4 +621,42 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get templateMaterials => 'Нужны материалы';
+
+  @override
+  String get searchPeople => 'Поиск людей';
+
+  @override
+  String get searchPeopleField => 'Имя или фамилия';
+
+  @override
+  String get clearSearch => 'Очистить';
+
+  @override
+  String get recentPeople => 'Недавние';
+
+  @override
+  String get searchPeopleStart => 'Найдите коллегу';
+
+  @override
+  String get searchPeopleStartHint =>
+      'Введите имя или фамилию, хватит первых букв';
+
+  @override
+  String get nobodyFound => 'Никого не нашли';
+
+  @override
+  String get nobodyFoundHint => 'Проверьте написание имени или фамилии';
+
+  @override
+  String get searchCompanyOnly =>
+      'Поиск показывает только сотрудников вашей компании';
+
+  @override
+  String get memberProjects => 'Объекты';
+
+  @override
+  String get noSharedProjects => 'Нет общих объектов';
+
+  @override
+  String get memberNotAssigned => 'Не назначен на объекты';
 }

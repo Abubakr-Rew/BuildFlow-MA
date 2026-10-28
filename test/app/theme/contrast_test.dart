@@ -56,6 +56,11 @@ void main() {
           t.onGraphiteSecondary,
           scrimmedWhite,
         ),
+        // Search match highlight: translucent accent laid over the card.
+        'textPrimary on matchHighlight': (
+          t.textPrimary,
+          Color.alphaBlend(t.matchHighlight, t.card),
+        ),
         'onError on error': (scheme.onError, scheme.error),
         'onPrimaryContainer on primaryContainer': (
           scheme.onPrimaryContainer,

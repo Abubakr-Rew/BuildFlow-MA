@@ -34,6 +34,7 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     required this.graphite,
     required this.onGraphite,
     required this.onGraphiteSecondary,
+    required this.matchHighlight,
     required this.active,
     required this.paused,
     required this.danger,
@@ -66,6 +67,10 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
   final Color graphite;
   final Color onGraphite;
   final Color onGraphiteSecondary;
+
+  /// Background of the matched part of a name in search results:
+  /// translucent [accent] over the card, under [textPrimary].
+  final Color matchHighlight;
 
   /// Status tones: in progress / report sent.
   final ToneColors active;
@@ -112,6 +117,9 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     graphite: AppColors.graphiteLight,
     onGraphite: AppColors.onGraphite,
     onGraphiteSecondary: AppColors.onGraphiteSecondary,
+    matchHighlight: AppColors.accent.withValues(
+      alpha: AppColors.matchHighlightOpacityLight,
+    ),
     active: const ToneColors(
       fg: AppColors.activeFgLight,
       bg: AppColors.activeBgLight,
@@ -148,6 +156,9 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     graphite: AppColors.graphiteDark,
     onGraphite: AppColors.onGraphite,
     onGraphiteSecondary: AppColors.onGraphiteSecondary,
+    matchHighlight: AppColors.accent.withValues(
+      alpha: AppColors.matchHighlightOpacityDark,
+    ),
     active: const ToneColors(
       fg: AppColors.activeFgDark,
       bg: AppColors.activeBgDark,
@@ -185,6 +196,7 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     Color? graphite,
     Color? onGraphite,
     Color? onGraphiteSecondary,
+    Color? matchHighlight,
     ToneColors? active,
     ToneColors? paused,
     ToneColors? danger,
@@ -206,6 +218,7 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
       graphite: graphite ?? this.graphite,
       onGraphite: onGraphite ?? this.onGraphite,
       onGraphiteSecondary: onGraphiteSecondary ?? this.onGraphiteSecondary,
+      matchHighlight: matchHighlight ?? this.matchHighlight,
       active: active ?? this.active,
       paused: paused ?? this.paused,
       danger: danger ?? this.danger,
@@ -236,6 +249,7 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
       graphite: c(graphite, other.graphite),
       onGraphite: c(onGraphite, other.onGraphite),
       onGraphiteSecondary: c(onGraphiteSecondary, other.onGraphiteSecondary),
+      matchHighlight: c(matchHighlight, other.matchHighlight),
       active: active.lerpTo(other.active, t),
       paused: paused.lerpTo(other.paused, t),
       danger: danger.lerpTo(other.danger, t),

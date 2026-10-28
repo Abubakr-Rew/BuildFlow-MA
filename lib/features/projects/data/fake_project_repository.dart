@@ -41,7 +41,7 @@ class FakeProjectRepository implements ProjectRepository {
       status: ProjectStatus.paused,
       companyId: 'company-1',
       foremanIds: ['user-foreman-2'],
-      workerIds: ['user-worker-2'],
+      workerIds: ['user-worker-2', 'user-worker-3'],
       progress: 45,
     ),
     const Project(

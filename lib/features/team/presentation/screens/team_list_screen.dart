@@ -1,10 +1,12 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/widgets/avatar_initials.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
+import 'package:buildflow/core/widgets/bf_icon_button.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
@@ -19,6 +21,7 @@ import 'package:buildflow/features/team/presentation/providers/team_provider.dar
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// Team list screen — members grouped by role, invites and removal.
 class TeamListScreen extends ConsumerStatefulWidget {
@@ -62,7 +65,16 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ScreenHeader(title: l10n.teamTitle),
+            ScreenHeader(
+              title: l10n.teamTitle,
+              actions: [
+                BfIconButton(
+                  icon: Icons.person_search_rounded,
+                  tooltip: l10n.searchPeople,
+                  onPressed: () => context.push(Routes.peopleSearch),
+                ),
+              ],
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => ref.refresh(membersProvider.future),

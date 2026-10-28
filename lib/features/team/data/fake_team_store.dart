@@ -66,6 +66,15 @@ class FakeTeamStore {
       companyId: 'company-1',
       assignedProjectIds: ['project-2', 'project-3'],
     ),
+    const Member(
+      id: 'member-6',
+      userId: 'user-worker-3',
+      name: 'Азамат Асанов',
+      email: 'worker3@buildflow.kg',
+      role: UserRole.worker,
+      companyId: 'company-1',
+      assignedProjectIds: ['project-3'],
+    ),
   ];
 
   // ── Members ────────────────────────────────────────────────

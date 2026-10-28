@@ -13,6 +13,7 @@ import 'package:buildflow/features/auth/presentation/providers/auth_provider.dar
 import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:buildflow/features/reports/presentation/screens/report_detail_screen.dart';
+import 'package:buildflow/features/team/presentation/screens/people_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -107,6 +108,10 @@ void main() {
         test('can open project and report details', () {
           expect(authRedirect(auth, Routes.project('project-1')), isNull);
           expect(authRedirect(auth, Routes.report('report-1')), isNull);
+        });
+
+        test('can open people search', () {
+          expect(authRedirect(auth, Routes.peopleSearch), isNull);
         });
       });
     }
@@ -276,6 +281,38 @@ void main() {
       unawaited(router.push(Routes.report('report-1')));
       await settle(tester);
       expect(find.byType(ReportDetailScreen), findsOneWidget);
+
+      await tearDownApp(tester);
+    });
+
+    testWidgets('opens people search from the team tab or the projects', (
+      tester,
+    ) async {
+      final l10n = AppLocalizationsRu();
+      await pumpApp(tester);
+
+      Future<void> openSearch() async {
+        await tester.tap(find.byTooltip(l10n.searchPeople));
+        await settle(tester);
+        expect(find.byType(PeopleSearchScreen), findsOneWidget);
+        router.pop();
+        await settle(tester);
+      }
+
+      // Directors have a team tab with the search in its header.
+      await login(tester, 'owner@buildflow.kg');
+      router.go(Routes.ownerTeam);
+      await settle(tester);
+      await openSearch();
+      expect(location(), Routes.ownerTeam);
+      await logout(tester);
+
+      // Foremen and workers don't: theirs is in the projects header.
+      for (final email in ['foreman1@buildflow.kg', 'worker1@buildflow.kg']) {
+        await login(tester, email);
+        await openSearch();
+        await logout(tester);
+      }
 
       await tearDownApp(tester);
     });
