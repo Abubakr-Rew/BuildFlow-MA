@@ -101,6 +101,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Открывать через `context.push(Routes.project(id))` / `Routes.report(id)`.
 - Видимость данных по ролям — в провайдерах, а не в роутере: `canSeeProject()` в project_provider.dart.
   `reportsProvider` отдаёт отчёты только по видимым объектам.
+  Обложка шапки объекта — `projectCoverProvider` (последнее фото последнего отчёта с фото); без фото шапка
+  180 px на графите, с фото 250 px под затемнением `BuildFlowThemeExtension.coverScrimOpacity`.
   Сводка дня на экране объектов (`daySummaryProvider`, `todayReportTimeProvider`) лежит в report_provider.dart
   и считается по видимым объектам. Пока отчёты не загрузились, сводка в состоянии loading: иначе все объекты
   на мгновение выглядели бы «без отчёта».
@@ -141,7 +143,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   **Все строки UI — только через l10n**, без хардкода.
 - Готовое из core, вместо того чтобы писать своё: компоненты из «Дизайн-токены и компоненты», а также `EmptyState`,
   `ErrorState`, `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`,
-  локальный путь и http), `DateFormatter` (ru), `Validators`, `Haptics`.
+  локальный путь и http; `PhotoImage` — то же фото, растянутое на родителя), `DateFormatter` (ru; время отчёта —
+  `reportDateTime`: «Сегодня, 11:47», «Вчера, …», «Пн, …», «27 октября, …», год только не текущий), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
   перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
   репозитория доходит до экрана со своим кодом), защита от двойной отправки, сохранение темы, `describePhotoPickError`,
@@ -195,7 +198,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `BfTextField` — поле с заливкой `muted`.
 - `StatusBadge(label, tone: StatusTone.…)` — пилюля статуса, роли или счётчика. `ProjectStatusBadge` и `RoleBadge` —
   обёртки над ней; тон статуса объекта — `projectStatusTone()`.
-- `AvatarInitials(name)` — инициалы (1–2 буквы, `initialsOf()`) на пастельном фоне; `AvatarStack(names)` — стопкой с «+N».
+- `AvatarInitials(name)` — инициалы (1–2 буквы, `initialsOf()`) на пастельном фоне; `AvatarStack(names)` — стопкой с «+N»:
+  до 4 аватаров по 32 px, перекрытие 20 %, обводка цветом `card`.
 - `BfChip` — фильтры и быстрые шаблоны; `selected` — графит с белым текстом. Видимая высота 36, нажимаемая 48.
 - `BfProgressBar(percent)` — акцентная полоса на треке `muted`.
 - `ScreenHeader(title, overline, actions)` — шапка вкладки.
