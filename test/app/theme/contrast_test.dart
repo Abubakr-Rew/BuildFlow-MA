@@ -19,6 +19,12 @@ void main() {
     group('$name theme text contrast ≥ 4.5', () {
       final t = theme.extension<BuildFlowThemeExtension>()!;
       final scheme = theme.colorScheme;
+      final scrimmedWhite = Color.alphaBlend(
+        t.graphite.withValues(
+          alpha: BuildFlowThemeExtension.coverScrimOpacity,
+        ),
+        const Color(0xFFFFFFFF),
+      );
 
       final pairs = <String, (Color, Color)>{
         for (final (bgName, bg) in [
@@ -44,6 +50,12 @@ void main() {
         'danger on card (field error)': (t.danger.fg, t.card),
         'danger on muted (field error)': (t.danger.fg, t.muted),
         for (final (i, a) in t.avatars.indexed) 'avatar $i': (a.fg, a.bg),
+        // Header text over a white cover photo under the scrim.
+        'onGraphite on scrimmed white cover': (t.onGraphite, scrimmedWhite),
+        'onGraphiteSecondary on scrimmed white cover': (
+          t.onGraphiteSecondary,
+          scrimmedWhite,
+        ),
         'onError on error': (scheme.onError, scheme.error),
         'onPrimaryContainer on primaryContainer': (
           scheme.onPrimaryContainer,

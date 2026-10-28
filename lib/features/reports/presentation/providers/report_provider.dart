@@ -148,3 +148,15 @@ final daySummaryProvider = Provider<AsyncValue<DaySummary>>((ref) {
     );
   });
 });
+
+/// Cover of a project page: the last photo of the project's latest report
+/// with photos, or `null` if there are none.
+final projectCoverProvider = Provider.family<String?, String>((ref, projectId) {
+  final reports = ref.watch(projectReportsProvider(projectId)).valueOrNull;
+  Report? latest;
+  for (final r in reports ?? const <Report>[]) {
+    if (r.photos.isEmpty) continue;
+    if (latest == null || r.createdAt.isAfter(latest.createdAt)) latest = r;
+  }
+  return latest?.photos.last.url;
+});

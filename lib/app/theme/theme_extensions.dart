@@ -87,6 +87,10 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
   static const double photoRadius = 12;
   static const double bottomSheetRadius = 24;
 
+  /// Graphite scrim under the text on a cover photo; with it white and
+  /// [onGraphiteSecondary] text pass 4.5:1 even over a white photo.
+  static const double coverScrimOpacity = 0.9;
+
   /// Stable avatar colors for a name.
   ToneColors avatarFor(String seed) {
     // String.hashCode is not stable across runs; this sum is.

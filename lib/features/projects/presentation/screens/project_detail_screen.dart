@@ -11,6 +11,7 @@ import 'package:buildflow/core/widgets/bf_icon_button.dart';
 import 'package:buildflow/core/widgets/bf_progress_bar.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
+import 'package:buildflow/core/widgets/photo_thumbnail.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
@@ -115,6 +116,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           children: [
             _ProjectHeader(
               project: loaded,
+              coverUrl: ref.watch(projectCoverProvider(loaded.id)),
               menu: isOwner ? _menu(loaded) : null,
             ),
             Padding(
@@ -250,13 +252,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
 // ── Header ────────────────────────────────────────────────────
 
-/// Graphite header, 250 px tall; room for a cover photo later.
+/// Project header: 250 px over the latest report photo, darkened towards
+/// the bottom so the text stays readable; 180 px of graphite without one.
 class _ProjectHeader extends StatelessWidget {
-  const _ProjectHeader({required this.project, this.menu});
+  const _ProjectHeader({required this.project, this.coverUrl, this.menu});
 
-  static const _height = 250.0;
+  static const _coverHeight = 250.0;
+  static const _plainHeight = 180.0;
 
   final Project project;
+  final String? coverUrl;
   final Widget? menu;
 
   @override
@@ -268,61 +273,92 @@ class _ProjectHeader extends StatelessWidget {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: Container(
-        height: _height + top,
-        color: t.graphite,
-        padding: EdgeInsets.fromLTRB(
-          AppTheme.screenPadding,
-          top + AppTheme.spacing8,
-          AppTheme.screenPadding,
-          AppTheme.spacing24,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: SizedBox(
+        height: (coverUrl == null ? _plainHeight : _coverHeight) + top,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            Row(
-              children: [
-                BfIconButton(
-                  icon: Icons.arrow_back_rounded,
-                  tooltip: l10n.back,
-                  translucent: true,
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-                const Spacer(),
-                if (menu != null) menu!,
-              ],
-            ),
-            const Spacer(),
-            ProjectStatusBadge(status: project.status),
-            const SizedBox(height: AppTheme.spacing8),
-            Text(
-              project.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: t.onGraphite,
-              ),
-            ),
-            const SizedBox(height: AppTheme.spacing4),
-            Row(
-              children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 16,
-                  color: t.onGraphiteSecondary,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    project.address,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: t.onGraphiteSecondary,
-                    ),
+            ColoredBox(color: t.graphite),
+            if (coverUrl != null) ...[
+              PhotoImage(url: coverUrl!, iconSize: 64),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    // Light at the top for the status bar and buttons,
+                    // full scrim from the middle down, under the text.
+                    colors: [
+                      t.graphite.withValues(alpha: 0.45),
+                      t.graphite.withValues(alpha: 0.2),
+                      t.graphite.withValues(
+                        alpha: BuildFlowThemeExtension.coverScrimOpacity,
+                      ),
+                      t.graphite.withValues(
+                        alpha: BuildFlowThemeExtension.coverScrimOpacity,
+                      ),
+                    ],
+                    stops: const [0, 0.25, 0.55, 1],
                   ),
                 ),
-              ],
+              ),
+            ],
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppTheme.screenPadding,
+                top + AppTheme.spacing8,
+                AppTheme.screenPadding,
+                AppTheme.spacing24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      BfIconButton(
+                        icon: Icons.arrow_back_rounded,
+                        tooltip: l10n.back,
+                        translucent: true,
+                        onPressed: () => Navigator.of(context).maybePop(),
+                      ),
+                      const Spacer(),
+                      if (menu != null) menu!,
+                    ],
+                  ),
+                  const Spacer(),
+                  ProjectStatusBadge(status: project.status),
+                  const SizedBox(height: AppTheme.spacing8),
+                  Text(
+                    project.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: t.onGraphite,
+                    ),
+                  ),
+                  const SizedBox(height: AppTheme.spacing4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 16,
+                        color: t.onGraphiteSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          project.address,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: t.onGraphiteSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
