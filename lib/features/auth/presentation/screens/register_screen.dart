@@ -2,7 +2,9 @@ import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/utils/validators.dart';
+import 'package:buildflow/core/widgets/app_logo.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -60,7 +62,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppTheme.spacing24),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.screenPadding,
+              vertical: AppTheme.spacing24,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
@@ -68,30 +73,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.construction_rounded,
-                        size: 40,
-                        color: theme.colorScheme.onPrimary,
-                      ),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppLogo(),
                     ),
                     const SizedBox(height: AppTheme.spacing24),
                     Text(
                       l10n.registerTitle,
-                      style: theme.textTheme.headlineMedium,
+                      style: theme.textTheme.headlineLarge,
                     ),
                     const SizedBox(height: AppTheme.spacing8),
                     Text(
                       l10n.createCompany,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: context.bfTheme.textSecondary,
                       ),
                     ),
                     const SizedBox(height: AppTheme.spacing32),
@@ -160,7 +155,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Text(
                         l10n.failureMessage(failure),
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.error,
+                          color: context.bfTheme.danger.fg,
                         ),
                         textAlign: TextAlign.center,
                       ),

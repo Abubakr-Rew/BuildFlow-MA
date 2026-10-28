@@ -1,15 +1,22 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
+import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/utils/date_formatter.dart';
+import 'package:buildflow/core/widgets/avatar_initials.dart';
+import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/photo_thumbnail.dart';
+import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/entities/report_photo.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
+import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -44,77 +51,98 @@ class ReportDetailScreen extends ConsumerWidget {
   }
 }
 
-class _ReportBody extends StatelessWidget {
+class _ReportBody extends ConsumerWidget {
   const _ReportBody({required this.report});
 
   final Report report;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final t = context.bfTheme;
     final l10n = AppLocalizations.of(context);
-    final muted = theme.textTheme.bodyMedium?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
+    // The report has no role; take it from the team when the author is there.
+    final role = ref
+        .watch(membersProvider)
+        .valueOrNull
+        ?.where((m) => m.userId == report.authorId)
+        .firstOrNull
+        ?.role;
+    final date = DateFormatter.full(report.createdAt);
 
     return ListView(
-      padding: const EdgeInsets.all(AppTheme.spacing16),
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.screenPadding,
+        AppTheme.spacing8,
+        AppTheme.screenPadding,
+        AppTheme.spacing32,
+      ),
       children: [
         // Project — tap to open it
-        InkWell(
-          borderRadius: BorderRadius.circular(8),
+        BfCard(
           onTap: () => context.push(Routes.project(report.projectId)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                Icon(Icons.construction, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    report.projectName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: t.muted,
+                  borderRadius: BorderRadius.circular(
+                    BuildFlowThemeExtension.photoRadius,
                   ),
                 ),
-                Icon(Icons.chevron_right, color: theme.colorScheme.primary),
-              ],
-            ),
+                child: Icon(Icons.construction_rounded, color: t.textPrimary),
+              ),
+              const SizedBox(width: AppTheme.spacing12),
+              Expanded(
+                child: Text(
+                  report.projectName,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: t.textSecondary),
+            ],
           ),
         ),
-        const SizedBox(height: AppTheme.spacing8),
-        Row(
-          children: [
-            Icon(
-              Icons.person_outlined,
-              size: 18,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Expanded(child: Text(l10n.reportBy(report.authorName), style: muted)),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(
-              Icons.schedule,
-              size: 18,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Text(DateFormatter.full(report.createdAt), style: muted),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacing16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.spacing16),
-            child: Text(report.text, style: theme.textTheme.bodyLarge),
+        const SizedBox(height: AppTheme.cardGap),
+
+        // Author, date and text
+        BfCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AvatarInitials(name: report.authorName, size: 44),
+                  const SizedBox(width: AppTheme.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          report.authorName,
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        Text(
+                          role == null ? date : '${role.label(l10n)} · $date',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: t.textTertiary,
+                            fontFeatures: AppTextTheme.tabular,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+              Text(report.text, style: theme.textTheme.bodyLarge),
+            ],
           ),
         ),
+
         if (report.photos.isNotEmpty) ...[
           const SizedBox(height: AppTheme.spacing24),
           Text(
@@ -170,8 +198,9 @@ class _PhotoViewer extends StatefulWidget {
 }
 
 class _PhotoViewerState extends State<_PhotoViewer> {
-  late final PageController _controller =
-      PageController(initialPage: widget.initialIndex);
+  late final PageController _controller = PageController(
+    initialPage: widget.initialIndex,
+  );
   late int _index = widget.initialIndex;
 
   @override
@@ -185,11 +214,16 @@ class _PhotoViewerState extends State<_PhotoViewer> {
     final l10n = AppLocalizations.of(context);
     final photos = widget.report.photos;
 
+    final t = context.bfTheme;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: t.graphite,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        backgroundColor: t.graphite,
+        foregroundColor: t.onGraphite,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        titleTextStyle: Theme.of(context).textTheme.titleLarge
+            ?.copyWith(color: t.onGraphite),
         title: Text(l10n.photoOf(_index + 1, photos.length)),
       ),
       body: PageView.builder(

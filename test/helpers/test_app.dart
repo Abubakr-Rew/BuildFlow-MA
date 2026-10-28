@@ -10,6 +10,7 @@ Future<void> pumpTestApp(
   WidgetTester tester,
   Widget home, {
   List<Override> overrides = const [],
+  ThemeData? theme,
 }) async {
   tester.view
     ..physicalSize = const Size(1080, 2340)
@@ -20,7 +21,7 @@ Future<void> pumpTestApp(
     ProviderScope(
       overrides: overrides,
       child: MaterialApp(
-        theme: AppTheme.light,
+        theme: theme ?? AppTheme.light,
         locale: const Locale('ru'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

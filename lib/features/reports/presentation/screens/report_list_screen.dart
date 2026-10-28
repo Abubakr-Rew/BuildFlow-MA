@@ -1,10 +1,12 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
+import 'package:buildflow/core/widgets/screen_header.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:buildflow/features/reports/presentation/widgets/report_card.dart';
@@ -21,66 +23,76 @@ class ReportListScreen extends ConsumerWidget {
     final reports = ref.watch(reportsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.reportsTitle)),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(reportsProvider.future),
-        child: reports.when(
-          loading: () => const LoadingShimmerList(),
-          error: (error, _) => ErrorState(
-            message: l10n.failureMessage(error),
-            onRetry: () => ref.invalidate(reportsProvider),
-            retryLabel: l10n.retry,
-          ),
-          data: (list) {
-            if (list.isEmpty) {
-              return EmptyState(
-                icon: Icons.article_outlined,
-                title: l10n.noReports,
-              );
-            }
-            // Group by date
-            final grouped = _groupByDate(list, l10n);
-            return ListView.builder(
-              padding: const EdgeInsets.all(AppTheme.spacing16),
-              itemCount: grouped.length,
-              itemBuilder: (context, index) {
-                final group = grouped[index];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (index > 0)
-                      const SizedBox(height: AppTheme.spacing16),
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: 4,
-                        bottom: AppTheme.spacing8,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ScreenHeader(title: l10n.reportsTitle),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => ref.refresh(reportsProvider.future),
+                child: reports.when(
+                  loading: () => const LoadingShimmerList(),
+                  error: (error, _) => ErrorState(
+                    message: l10n.failureMessage(error),
+                    onRetry: () => ref.invalidate(reportsProvider),
+                    retryLabel: l10n.retry,
+                  ),
+                  data: (list) {
+                    if (list.isEmpty) {
+                      return EmptyState(
+                        icon: Icons.article_outlined,
+                        title: l10n.noReports,
+                      );
+                    }
+                    // Group by date
+                    final grouped = _groupByDate(list, l10n);
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppTheme.screenPadding,
+                        0,
+                        AppTheme.screenPadding,
+                        AppTheme.spacing24,
                       ),
-                      child: Text(
-                        group.dateLabel,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
+                      itemCount: grouped.length,
+                      itemBuilder: (context, index) {
+                        final group = grouped[index];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (index > 0)
+                              const SizedBox(height: AppTheme.spacing16),
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: 4,
+                                bottom: AppTheme.spacing8,
+                              ),
+                              child: Text(
+                                group.dateLabel,
+                                style: Theme.of(context).textTheme.labelMedium
+                                    ?.copyWith(
+                                      color: context.bfTheme.textSecondary,
+                                    ),
+                              ),
                             ),
-                      ),
-                    ),
-                    ...group.reports.map(
-                      (report) => Padding(
-                        padding: const EdgeInsets.only(
-                          bottom: AppTheme.spacing12,
-                        ),
-                        child: ReportCard(report: report),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
+                            ...group.reports.map(
+                              (report) => Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppTheme.cardGap,
+                                ),
+                                child: ReportCard(report: report),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -93,8 +105,7 @@ class ReportListScreen extends ConsumerWidget {
       groups.putIfAbsent(dateKey, () => []).add(report);
     }
 
-    final sortedKeys = groups.keys.toList()
-      ..sort((a, b) => b.compareTo(a));
+    final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return sortedKeys.map((date) {
       final label = DateFormatter.relative(

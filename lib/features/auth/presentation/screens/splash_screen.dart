@@ -1,4 +1,7 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/widgets/app_logo.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,49 +74,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.construction_rounded,
-                    size: 52,
-                    color: theme.colorScheme.onPrimary,
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const AppLogo(size: 100),
+                const SizedBox(height: AppTheme.spacing24),
                 Text(
                   l10n.appName,
-                  style: theme.textTheme.displayLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme.textTheme.displayLarge,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppTheme.spacing8),
                 Text(
                   l10n.appTagline,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: context.bfTheme.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 48),
-                SizedBox(
+                const SizedBox(height: AppTheme.spacing48),
+                const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: theme.colorScheme.primary,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
                 ),
               ],
             ),

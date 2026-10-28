@@ -1,9 +1,14 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
+import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/utils/validators.dart';
+import 'package:buildflow/core/widgets/app_logo.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
+import 'package:buildflow/core/widgets/bf_card.dart';
+import 'package:buildflow/core/widgets/bf_chip.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -65,12 +70,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final l10n = AppLocalizations.of(context);
     final auth = ref.watch(authProvider);
     final theme = Theme.of(context);
+    final t = context.bfTheme;
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppTheme.spacing24),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.screenPadding,
+              vertical: AppTheme.spacing24,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Form(
@@ -78,27 +87,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.construction_rounded,
-                        size: 40,
-                        color: theme.colorScheme.onPrimary,
-                      ),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: AppLogo(),
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    Text(l10n.loginTitle, style: theme.textTheme.headlineMedium),
+                    Text(l10n.loginTitle, style: theme.textTheme.headlineLarge),
                     const SizedBox(height: AppTheme.spacing8),
                     Text(
                       l10n.appName,
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: t.textSecondary,
                       ),
                     ),
                     const SizedBox(height: AppTheme.spacing32),
@@ -145,7 +144,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         l10n.failureMessage(failure),
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.error,
+                          color: t.danger.fg,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -173,19 +172,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       child: Text(l10n.haveInviteCode),
                     ),
                     const SizedBox(height: AppTheme.spacing32),
-                    Container(
-                      padding: const EdgeInsets.all(AppTheme.spacing16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    BfCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             l10n.quickLogin,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: theme.colorScheme.primary,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: t.textSecondary,
                             ),
                           ),
                           const SizedBox(height: AppTheme.spacing8),
@@ -194,10 +188,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             runSpacing: 8,
                             children: [
                               for (final (role, email) in _demoAccounts)
-                                ActionChip(
-                                  avatar: Icon(role.icon, size: 18),
-                                  label: Text(role.label(l10n)),
-                                  onPressed: _submitting
+                                BfChip(
+                                  icon: role.icon,
+                                  label: role.label(l10n),
+                                  onTap: _submitting
                                       ? null
                                       : () => _quickLogin(email),
                                 ),
@@ -211,8 +205,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               '${l10n.password}: $_demoPassword',
                             ].join('\n'),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontFamily: 'monospace',
+                              color: t.textTertiary,
+                              fontFeatures: AppTextTheme.tabular,
                             ),
                           ),
                         ],

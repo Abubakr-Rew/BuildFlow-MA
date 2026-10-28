@@ -1,10 +1,14 @@
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/widgets/avatar_initials.dart';
+import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/loading_shimmer.dart';
+import 'package:buildflow/core/widgets/screen_header.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
@@ -40,13 +44,11 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
     int projectCount(Member m) => projects
         .where(
           (p) =>
-              p.foremanIds.contains(m.userId) ||
-              p.workerIds.contains(m.userId),
+              p.foremanIds.contains(m.userId) || p.workerIds.contains(m.userId),
         )
         .length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.teamTitle)),
       floatingActionButton: FloatingActionButton.extended(
         // The director's shell keeps the projects tab, which has a FAB too,
         // alive: two default hero tags break every page transition.
@@ -55,52 +57,66 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
         icon: const Icon(Icons.person_add),
         label: Text(l10n.inviteMember),
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(membersProvider.future),
-        child: members.when(
-          loading: () => const LoadingShimmerList(),
-          error: (error, _) => ErrorState(
-            message: l10n.failureMessage(error),
-            onRetry: () => ref.invalidate(membersProvider),
-            retryLabel: l10n.retry,
-          ),
-          data: (list) {
-            if (list.isEmpty) {
-              return EmptyState(
-                icon: Icons.group_outlined,
-                title: l10n.noMembers,
-                actionLabel: l10n.inviteMember,
-                onAction: _invite,
-              );
-            }
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ScreenHeader(title: l10n.teamTitle),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => ref.refresh(membersProvider.future),
+                child: members.when(
+                  loading: () => const LoadingShimmerList(),
+                  error: (error, _) => ErrorState(
+                    message: l10n.failureMessage(error),
+                    onRetry: () => ref.invalidate(membersProvider),
+                    retryLabel: l10n.retry,
+                  ),
+                  data: (list) {
+                    if (list.isEmpty) {
+                      return EmptyState(
+                        icon: Icons.group_outlined,
+                        title: l10n.noMembers,
+                        actionLabel: l10n.inviteMember,
+                        onAction: _invite,
+                      );
+                    }
 
-            // Directors first, then foremen, then workers.
-            final sorted = [...list]
-              ..sort((a, b) => a.role.index.compareTo(b.role.index));
+                    // Directors first, then foremen, then workers.
+                    final sorted = [...list]
+                      ..sort((a, b) => a.role.index.compareTo(b.role.index));
 
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                AppTheme.spacing16,
-                AppTheme.spacing16,
-                AppTheme.spacing16,
-                96, // keep the last card above the FAB
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppTheme.screenPadding,
+                        0,
+                        AppTheme.screenPadding,
+                        96, // keep the last card above the FAB
+                      ),
+                      itemCount: sorted.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppTheme.cardGap),
+                      itemBuilder: (context, index) {
+                        final member = sorted[index];
+                        final canRemove =
+                            !member.role.isOwner &&
+                            member.userId != currentUserId;
+                        return _MemberCard(
+                          member: member,
+                          projectCount: projectCount(member),
+                          isRemoving: _removing.contains(member.id),
+                          onRemove: canRemove
+                              ? () => _confirmRemove(member)
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
-              itemCount: sorted.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: AppTheme.spacing12),
-              itemBuilder: (context, index) {
-                final member = sorted[index];
-                final canRemove =
-                    !member.role.isOwner && member.userId != currentUserId;
-                return _MemberCard(
-                  member: member,
-                  projectCount: projectCount(member),
-                  isRemoving: _removing.contains(member.id),
-                  onRemove: canRemove ? () => _confirmRemove(member) : null,
-                );
-              },
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
@@ -144,16 +160,16 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
     );
     if (role == null || !mounted) return;
 
-    final result =
-        await ref.read(teamRepositoryProvider).generateInviteCode(role: role);
+    final result = await ref
+        .read(teamRepositoryProvider)
+        .generateInviteCode(role: role);
     if (!mounted) return;
 
     result.when(
       success: (invite) => _showInviteCodeSheet(invite, role),
       failure: (f) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.failureMessage(f))),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.failureMessage(f))));
       },
     );
   }
@@ -171,7 +187,10 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.cancel),
           ),
-          FilledButton(
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: context.bfTheme.danger.fg,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.delete),
           ),
@@ -184,8 +203,9 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
 
     setState(() => _removing.add(member.id));
     final messenger = ScaffoldMessenger.of(context);
-    final result =
-        await ref.read(membersProvider.notifier).removeMember(member);
+    final result = await ref
+        .read(membersProvider.notifier)
+        .removeMember(member);
     if (mounted) setState(() => _removing.remove(member.id));
     final message = result.when(
       success: (_) => l10n.memberRemoved,
@@ -197,19 +217,33 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
   void _showInviteCodeSheet(InviteCode invite, UserRole role) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final t = context.bfTheme;
 
     showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(
+            AppTheme.screenPadding,
+            0,
+            AppTheme.screenPadding,
+            AppTheme.spacing24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.card_membership_rounded,
-                size: 48,
-                color: theme.colorScheme.primary,
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: t.muted,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.card_membership_rounded,
+                  size: 32,
+                  color: t.textPrimary,
+                ),
               ),
               const SizedBox(height: AppTheme.spacing16),
               Text(
@@ -221,7 +255,7 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
               Text(
                 l10n.inviteCodeHint,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: t.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -232,8 +266,10 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
                   vertical: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
+                  color: t.muted,
+                  borderRadius: BorderRadius.circular(
+                    BuildFlowThemeExtension.inputRadius,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -241,9 +277,8 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
                     Text(
                       invite.code,
                       style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
                         letterSpacing: 4,
-                        fontFamily: 'monospace',
+                        fontFeatures: AppTextTheme.tabular,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -261,13 +296,7 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
                 ),
               ),
               const SizedBox(height: AppTheme.spacing24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.done),
-                ),
-              ),
+              BfButton(label: l10n.done, onPressed: () => Navigator.pop(ctx)),
             ],
           ),
         ),
