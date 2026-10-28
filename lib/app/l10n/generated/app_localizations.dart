@@ -343,7 +343,7 @@ abstract class AppLocalizations {
   /// Active project status
   ///
   /// In ru, this message translates to:
-  /// **'Активный'**
+  /// **'В работе'**
   String get statusActive;
 
   /// Paused project status

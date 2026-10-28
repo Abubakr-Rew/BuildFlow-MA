@@ -55,6 +55,10 @@ void main() {
     });
   }
 
+  test('"active" reads «В работе» (badge and filter chip)', () {
+    expect(l10n.statusActive, 'В работе');
+  });
+
   test('"finished" reads «Сдан»', () {
     expect(l10n.statusFinished, 'Сдан');
   });

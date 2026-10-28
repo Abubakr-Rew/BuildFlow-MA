@@ -133,7 +133,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectStatus => 'Статус';
 
   @override
-  String get statusActive => 'Активный';
+  String get statusActive => 'В работе';
 
   @override
   String get statusPaused => 'На паузе';

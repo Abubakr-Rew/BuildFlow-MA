@@ -124,7 +124,7 @@
   "projectStatus": "Статус",
   "@projectStatus": {"description": "Project status label"},
 
-  "statusActive": "Активный",
+  "statusActive": "В работе",
   "@statusActive": {"description": "Active project status"},
 
   "statusPaused": "На паузе",
