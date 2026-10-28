@@ -101,6 +101,11 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Открывать через `context.push(Routes.project(id))` / `Routes.report(id)`.
 - Видимость данных по ролям — в провайдерах, а не в роутере: `canSeeProject()` в project_provider.dart.
   `reportsProvider` отдаёт отчёты только по видимым объектам.
+  Сводка дня на экране объектов (`daySummaryProvider`, `todayReportTimeProvider`) лежит в report_provider.dart
+  и считается по видимым объектам. Пока отчёты не загрузились, сводка в состоянии loading: иначе все объекты
+  на мгновение выглядели бы «без отчёта».
+- `Project.progress` — готовность 0–100. Меняет только директор из меню «ещё» на карточке объекта (шаг 5 %,
+  `ProjectsNotifier.setProgress`). Смена статуса и готовности блокирует друг друга и редактор состава.
 
 ## Соглашения
 - Файлы в snake_case. Классы: `XxxScreen`, `XxxRepository` (интерфейс), `FakeXxxRepository` / `ApiXxxRepository`,
@@ -118,25 +123,33 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
     загрузку и ошибку) и `themeModeProvider` в profile_provider.dart (его читает app.dart). Тема сохраняется
     через `localStorageProvider` (ключ `theme_mode`), `restore()` вызывается в main.dart до `runApp`.
   - Legacy `StateProvider` / `StateNotifierProvider` не использовать.
-- Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас:
-  `Scaffold` + `AppBar(title: Text(l10n.…))`. Асинхронные данные:
+- Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас зависит от места:
+  - вкладка нижней навигации (объекты, команда, отчёты, профиль): `Scaffold` без AppBar,
+    `SafeArea(bottom: false)` → `ScreenHeader(title: l10n.…)` (крупный заголовок 30/w800, над ним можно `overline`);
+  - экран поверх навигации (детали отчёта, состояния загрузки и ошибки объекта): `Scaffold` + `AppBar(title: Text(l10n.…))`;
+  - свои шапки только у карточки объекта (графитовая, 250px) и у нового отчёта (крестик, если экран открыт поверх).
+
+  Асинхронные данные:
   `.when(loading: LoadingShimmerList, error: ErrorState(message: l10n.failureMessage(error), onRetry: ref.invalidate),
   data: EmptyState, если пусто)`,
   а список оборачивается в `RefreshIndicator(onRefresh: () => ref.refresh(x.future))`.
-- Отступы: `AppTheme.spacing4/8/12/16/24/32/48`, плюс `minTouchTarget` и `primaryActionHeight`.
-  Цвета: `Theme.of(context).colorScheme`; success / warning / draft и радиусы — через `context.bfTheme`.
+- Отступы: `AppTheme.spacing4/8/12/16/24/32/48`; по краям экрана `AppTheme.screenPadding` (20), между карточками
+  `AppTheme.cardGap` (12). Размеры: `minTouchTarget` (48), `iconButtonSize` (44), `primaryActionHeight` (56).
+  Цвета и радиусы — см. «Дизайн-токены и компоненты».
 - Локализация: единственный и шаблонный ARB — [app_ru.arb](lib/app/l10n/app_ru.arb). Сгенерированный код лежит
   в `lib/app/l10n/generated/` и хранится в git. В коде: `final l10n = AppLocalizations.of(context);` → `l10n.key`.
   **Все строки UI — только через l10n**, без хардкода.
-- Готовое из core, вместо того чтобы писать своё: `BfButton`, `BfCard`, `BfTextField`, `EmptyState`, `ErrorState`,
-  `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`, локальный путь и http),
-  `DateFormatter` (ru), `Validators`, `Haptics`.
+- Готовое из core, вместо того чтобы писать своё: компоненты из «Дизайн-токены и компоненты», а также `EmptyState`,
+  `ErrorState`, `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`,
+  локальный путь и http), `DateFormatter` (ru), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
   перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
   репозитория доходит до экрана со своим кодом), защита от двойной отправки, сохранение темы, `describePhotoPickError`,
-  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер. Виджет-тесты: `test/app/router_test.dart`
+  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер, контраст токенов
+  (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса. Виджет-тесты: `test/app/router_test.dart`
   (`MaterialApp.router`) и экраны через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart).
-  Тема в них — настоящая `AppTheme.light`. Шрифты из assets flutter_test не грузит, текст рисуется тестовым шрифтом Ahem.
+  Тема в них — настоящая `AppTheme.light` (параметр `theme:` подменяет её). `screens_smoke_test.dart` рендерит каждый
+  экран в обеих темах; новый экран добавлять туда. Шрифты из assets flutter_test не грузит, текст рисуется тестовым шрифтом Ahem.
   Поверхность 1080 px и `textScaler` 0.7: Ahem шире настоящего шрифта, и без этого строки переполняются.
   Пока на экране крутится индикатор, `pumpAndSettle` не завершится. В таких местах нужен `pump(duration)`, а Riverpod
   перезагружает провайдер после `invalidate` только на следующем кадре, так что одного длинного `pump` мало.
@@ -144,6 +157,51 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `test/widget_test.dart` — заглушка.
 - Не менять провайдеры синхронно в `initState` или `build`: на `authProvider` подписан роутер, и Riverpod падает
   на assert. Откладывать через `addPostFrameCallback`, как в splash_screen.dart.
+
+## Дизайн-токены и компоненты
+Стиль: графит, светлый «каменный» фон, сигнальный оранжевый. **Никаких хексов и `Colors.*` в экранах и виджетах.**
+Палитра лежит только в [app_colors.dart](lib/app/theme/app_colors.dart), экраны читают её через тему.
+
+**Цвета — `context.bfTheme`** ([theme_extensions.dart](lib/app/theme/theme_extensions.dart)):
+- поверхности: `canvas` (фон экрана), `card`, `border` (1px у карточек, навигации, иконочных кнопок), `muted` (трек
+  прогресса, чипы, поля ввода);
+- текст: `textPrimary`, `textSecondary`, `textTertiary` (время, подписи);
+- акцент: `accent` + `onAccent` (текст **на** оранжевом всегда тёмный, белый не проходит контраст), `accentText` (оранжевый
+  как цвет текста или ссылки). Оранжевый — **только** для главного действия: основная кнопка, активная вкладка, FAB,
+  бейджи непрочитанного, прогресс. Удаление и прочие разрушительные действия — `danger`, не акцент;
+- графит: `graphite`, `onGraphite`, `onGraphiteSecondary` (сводка дня, вторичная кнопка, активный чип, шапка объекта);
+- статусы — пары `ToneColors(fg, bg)`: `active` (в работе, отчёт сдан), `paused`, `danger` (ошибка, нет отчёта), `finished`;
+- `avatarFor(name)` — пастельная пара для аватара, `photoPlaceholders` — фон `fake:`-фото.
+
+`ColorScheme` выводится из тех же токенов (`primary` = accent, `error` = danger.fg, `surface` = canvas,
+`surfaceContainer*` = card / muted), так что диалоги, меню и снэкбары Material уже в стиле.
+Новую пару «текст/фон» добавлять в `contrast_test.dart`: в обеих темах нужен контраст ≥ 4.5.
+
+**Формы:** радиусы — константы `BuildFlowThemeExtension.cardRadius` (20), `buttonRadius` (16), `inputRadius` (14),
+`iconButtonRadius` (14), `photoRadius` (12), чипы и бейджи — `StadiumBorder`. Карточки плоские: рамка 1px, без тени.
+Тень только у FAB.
+
+**Типографика** ([app_text_theme.dart](lib/app/theme/app_text_theme.dart)): `headlineLarge` 30/w800 — заголовок экрана,
+`headlineMedium` 26/w800 — шапка объекта и крупные цифры, `titleLarge` 20/w700 — AppBar, шиты, диалоги,
+`titleMedium` 17/w700 — заголовок карточки, `bodyMedium/Large` 15, `bodySmall` 13 — подписи,
+`AppTextTheme.button` 17/w800 — кнопки. Цифры (счётчики, время, проценты) — `fontFeatures: AppTextTheme.tabular`.
+
+**Компоненты в `lib/core/widgets/`** — использовать вместо своих стилей:
+- `BfButton` — во всю ширину, 56: `primary` (акцент, одна на экран, обычно закреплена внизу), `secondary` (графит),
+  `outline` (белая с рамкой, тихие действия вроде «Выйти»), `text`. В диалогах — `TextButton`, не `BfButton`.
+- `BfIconButton` — 44×44, радиус 14, белая с рамкой; `translucent: true` — поверх тёмной шапки или фото.
+  `BfIconButtonSurface` — та же подложка для `PopupMenuButton(child: …)`.
+- `BfCard` — плоская карточка; `color: t.graphite` — тёмная карточка без рамки.
+- `BfTextField` — поле с заливкой `muted`.
+- `StatusBadge(label, tone: StatusTone.…)` — пилюля статуса, роли или счётчика. `ProjectStatusBadge` и `RoleBadge` —
+  обёртки над ней; тон статуса объекта — `projectStatusTone()`.
+- `AvatarInitials(name)` — инициалы (1–2 буквы, `initialsOf()`) на пастельном фоне; `AvatarStack(names)` — стопкой с «+N».
+- `BfChip` — фильтры и быстрые шаблоны; `selected` — графит с белым текстом. Видимая высота 36, нажимаемая 48.
+- `BfProgressBar(percent)` — акцентная полоса на треке `muted`.
+- `ScreenHeader(title, overline, actions)` — шапка вкладки.
+- `BfBottomNav` / `BfNavItem` — нижняя навигация (`_RoleShell` в router.dart). У `BfNavItem` есть `badgeCount`
+  для будущей вкладки «Чаты».
+- `AppLogo` — знак приложения на сплэше и экранах входа.
 
 ## Подводные камни
 - `explicit_to_json: true` включён глобально в [build.yaml](build.yaml): вложенные модели (`Report.photos`) сериализуются
@@ -183,9 +241,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Семейство задаётся в `AppTextTheme` на каждом стиле, а не только в `ThemeData`: AppBar и кнопки берут стили прямо оттуда.
 
 ## Текущее состояние
-Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список, детали, статус,
-команда объекта), команда и коды приглашения по ролям, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
-(сохраняется между запусками), три роли.
+Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
+детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
+(сохраняется между запусками), три роли. Визуальный стиль — см. «Дизайн-токены и компоненты».
 Заглушки и пробелы: Api-репозитории (все четыре — заглушки), клиент Dio, сжатие фото (flutter_image_compress),
 загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),
 applicationId и подпись Android-релиза.
