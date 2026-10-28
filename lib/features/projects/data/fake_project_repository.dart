@@ -16,7 +16,7 @@ class FakeProjectRepository implements ProjectRepository {
   final List<Project> _projects = [
     const Project(
       id: 'project-1',
-      name: 'ЖК "Ала-Тоо Резиденс"',
+      name: 'ЖК «Ала-Тоо Резиденс»',
       address: 'ул. Токтогула 125, Бишкек',
       status: ProjectStatus.active,
       companyId: 'company-1',
@@ -26,7 +26,7 @@ class FakeProjectRepository implements ProjectRepository {
     ),
     const Project(
       id: 'project-2',
-      name: 'Коттеджный посёлок "Горный"',
+      name: 'Коттеджный посёлок «Горный»',
       address: 'с. Кок-Жар, Чуйская обл.',
       status: ProjectStatus.active,
       companyId: 'company-1',
@@ -36,7 +36,7 @@ class FakeProjectRepository implements ProjectRepository {
     ),
     const Project(
       id: 'project-3',
-      name: 'Офис "Байтик"',
+      name: 'Офис «Байтик»',
       address: 'пр. Чуй 55А, Бишкек',
       status: ProjectStatus.paused,
       companyId: 'company-1',

@@ -19,7 +19,7 @@ class FakeReportRepository implements ReportRepository {
     Report(
       id: 'report-1',
       projectId: 'project-1',
-      projectName: 'ЖК "Ала-Тоо Резиденс"',
+      projectName: 'ЖК «Ала-Тоо Резиденс»',
       authorId: 'user-foreman-1',
       authorName: 'Бакыт Касымов',
       text: 'Залили фундамент блока Б. Бетон марки М300, '
@@ -34,7 +34,7 @@ class FakeReportRepository implements ReportRepository {
     Report(
       id: 'report-2',
       projectId: 'project-2',
-      projectName: 'Коттеджный посёлок "Горный"',
+      projectName: 'Коттеджный посёлок «Горный»',
       authorId: 'user-foreman-2',
       authorName: 'Данияр Жумабеков',
       text: 'Закончили кладку стен 1-го этажа дома №5. '
@@ -48,7 +48,7 @@ class FakeReportRepository implements ReportRepository {
     Report(
       id: 'report-3',
       projectId: 'project-1',
-      projectName: 'ЖК "Ала-Тоо Резиденс"',
+      projectName: 'ЖК «Ала-Тоо Резиденс»',
       authorId: 'user-foreman-1',
       authorName: 'Бакыт Касымов',
       text: 'Установили арматурный каркас для колонн 2-го этажа. '
@@ -64,7 +64,7 @@ class FakeReportRepository implements ReportRepository {
     Report(
       id: 'report-4',
       projectId: 'project-2',
-      projectName: 'Коттеджный посёлок "Горный"',
+      projectName: 'Коттеджный посёлок «Горный»',
       authorId: 'user-foreman-1',
       authorName: 'Бакыт Касымов',
       text: 'Завезли пиломатериал для стропильной системы дома №3. '
@@ -78,7 +78,7 @@ class FakeReportRepository implements ReportRepository {
     Report(
       id: 'report-5',
       projectId: 'project-3',
-      projectName: 'Офис "Байтик"',
+      projectName: 'Офис «Байтик»',
       authorId: 'user-foreman-2',
       authorName: 'Данияр Жумабеков',
       text: 'Штукатурка стен 2-го этажа завершена на 80%. '

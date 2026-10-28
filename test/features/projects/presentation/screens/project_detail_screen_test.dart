@@ -167,7 +167,7 @@ void main() {
     );
     await tester.pump(const Duration(seconds: 1));
     final card = find.ancestor(
-      of: find.text('ЖК "Ала-Тоо Резиденс"'),
+      of: find.text('ЖК «Ала-Тоо Резиденс»'),
       matching: find.byType(BfCard),
     );
     expect(

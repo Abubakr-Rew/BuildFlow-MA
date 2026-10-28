@@ -167,7 +167,7 @@ Authorization: Bearer <token>
   "projects": [
     {
       "id": "project-1",
-      "name": "ЖК \"Ала-Тоо Резиденс\"",
+      "name": "ЖК «Ала-Тоо Резиденс»",
       "address": "ул. Токтогула 125, Бишкек",
       "status": "active",
       "companyId": "company-1",
@@ -324,7 +324,7 @@ Authorization: Bearer <token>
     {
       "id": "report-1",
       "projectId": "project-1",
-      "projectName": "ЖК \"Ала-Тоо Резиденс\"",
+      "projectName": "ЖК «Ала-Тоо Резиденс»",
       "authorId": "user-foreman-1",
       "authorName": "Бакыт Касымов",
       "text": "Залили фундамент блока Б...",

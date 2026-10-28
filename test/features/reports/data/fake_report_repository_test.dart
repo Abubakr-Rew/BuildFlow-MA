@@ -46,7 +46,7 @@ void main() {
     test('submitReport adds a new report', () async {
       final result = await repo.submitReport(
         projectId: 'project-1',
-        projectName: 'ЖК "Ала-Тоо Резиденс"',
+        projectName: 'ЖК «Ала-Тоо Резиденс»',
         authorId: 'user-foreman-1',
         authorName: 'Бакыт Касымов',
         text: 'Тестовый отчёт',
