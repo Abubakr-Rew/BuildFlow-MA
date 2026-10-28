@@ -23,7 +23,8 @@ flutter build apk --release                               # APK → build/app/ou
 flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, very_good_analysis.
 Шрифт Inter лежит в `assets/fonts/inter/`, google_fonts не используется.
 `app_settings` нужен только для того, чтобы открыть системные настройки приложения после отказа в разрешении.
-Подключены, но в `lib/` не используются: dio, flutter_image_compress, cached_network_image, uuid.
+`uuid` генерирует `clientId` сообщений чата.
+Подключены, но в `lib/` не используются: dio, flutter_image_compress, cached_network_image.
 
 ```
 lib/main.dart  ProviderContainer, восстановление темы до первого кадра, runApp
@@ -33,7 +34,7 @@ lib/features/<фича>/data/          Fake*Repository, Api*Repository
                     domain/        entities/ (freezed), repositories/ (абстрактные интерфейсы)
                     presentation/  providers/, screens/, widgets/
 ```
-Фичи: `auth`, `projects`, `reports`, `team`, `profile` (у profile есть только `presentation/`).
+Фичи: `auth`, `projects`, `reports`, `team`, `chat`, `profile` (у profile есть только `presentation/`).
 
 **Ошибки — `Result<T>`** ([lib/core/error/result.dart](lib/core/error/result.dart)): sealed `Success(data)` / `Err(failure)`.
 `Failure` ([failures.dart](lib/core/error/failures.dart)) — один класс. Что увидит пользователь, решает `code`
@@ -74,8 +75,9 @@ Text(l10n.failureMessage(error))                                             // 
   `secureStorageProvider`. Напрямую `SecureStorageService()` / `LocalStorageService()` не создавать (кроме тестов).
 - Новый репозиторий подключать так же: интерфейс в domain, `Fake*` и `Api*` в data, выбор в его провайдере.
   В тестах подменять через `ProviderScope(overrides: [xxxRepositoryProvider.overrideWithValue(...)])`.
-- `Api*Repository` есть у всех четырёх фич, но это заглушки: все методы возвращают
-  `Err(Failure(FailureCode.server, message: 'API not implemented'))`. Контракт: [docs/api-contract.md](docs/api-contract.md).
+- `Api*Repository` есть у всех пяти фич с данными, но это заглушки: все методы возвращают
+  `Err(Failure(FailureCode.server, message: 'API not implemented'))`, потоки чата — `Stream.error` с той же ошибкой.
+  Контракт: [docs/api-contract.md](docs/api-contract.md).
 - Fake-репозитории изолированы друг от друга, но используют общие ID (`user-owner-1`, `user-foreman-1`, `project-1`…).
   Есть искусственная задержка. Данные живут только в памяти и при перезапуске сбрасываются.
   Исключение — участники и коды приглашения. Они лежат в общем
@@ -84,22 +86,61 @@ Text(l10n.failureMessage(error))                                             // 
   работает на экране присоединения, а новый участник появляется в команде. Провайдер лежит в отдельном
   `team/presentation/providers/fake_team_store_provider.dart`: его читает auth_provider, а team_provider уже импортирует
   auth_provider, так что в team_provider был бы цикл. Пользователи и пароли хранятся только в `FakeAuthRepository`.
+  `FakeTeamStore.addMembersListener` сообщает об уходе и приходе участников, его слушает `FakeChatStore`.
+
+**Чат** (`lib/features/chat/`, этап 1 из 4: основа и текст; дальше фото, голосовые, карточки отчётов):
+- Сущности `Chat` (`direct` | `project`) и `Message` (`kind`: `text`, `photo`, `voice`, `report`, `system`).
+  `attachments`, `reportId`, `systemEvent`/`subjectUserId` — задел на этапы 2–4. Чего клиент не умеет показать
+  (`!kind.isSupported`), то рисуется пузырём «Неподдерживаемое сообщение».
+- `ChatRepository` — потоки `watchChats()` / `watchMessages(chatId)` (последние `chatPageSize` = 50) и `Result`-методы
+  `loadOlder`, `send` (идемпотентно по `clientId`), `getOrCreateDirect`, `markRead`. Потоки не бросают: отказ —
+  событие ошибки с `Failure` (`forbidden`, когда пользователя исключили), оно попадает в `AsyncValue.error`.
+- [FakeChatStore](lib/features/chat/data/fake_chat_store.dart) — общий in-memory «сервер» всех пользователей
+  процесса (broadcast `StreamController`), поэтому после выхода и входа другим человеком сообщения на месте.
+  Отдаёт его `fakeChatStoreProvider` из отдельного файла (его читает project_provider, а chat_provider импортирует
+  team_provider → project_provider). `FakeChatRepository` — тонкая обёртка с задержкой и `userId` текущего пользователя.
+  - Состав чата объекта = директора компании + `foremanIds` + `workerIds`. `FakeProjectRepository(onProjectChanged:)`
+    вызывает `FakeChatStore.syncProject` после create/update. Кто пришёл или ушёл — системное сообщение.
+  - Удалённый из компании теряет все чаты компании, включая личные (через `FakeTeamStore`); его личные чаты
+    остаются у собеседника только для чтения.
+  - Демо-история: чаты объектов 1–4 (в «Ала-Тоо» 66 сообщений, чтобы листать страницы), личные директор ↔ Бакыт
+    и Бакыт ↔ Эрлан. У директора на старте 3 непрочитанных. Id личного чата — `FakeChatStore.directChatId(a, b)`.
+  - Флаги в config.dart (только при `kUseMockData`): `kFakeChatEcho` — собеседник в личном чате «читает» через 1–2 с
+    и отвечает через 2–4 с; `kFakeChatSendFailureRate` (0–1) — доля отправок с ошибкой `network`, для ручной
+    проверки «Повторить / Удалить».
+- Провайдеры в chat_provider.dart: `chatsProvider` (`StreamNotifierProvider`, сырые чаты), `chatListProvider`
+  (с именами собеседников, loading до загрузки участников), `chatByIdProvider`, `projectChatProvider(projectId)`,
+  `totalUnreadProvider` (бейдж вкладки), `memberNamesProvider`, `chatThreadProvider(chatId)` (autoDispose family).
+  `ChatThreadNotifier` держит все виденные сообщения по id (сообщение, выпавшее из живой страницы, не пропадает)
+  и очередь своих `sending`/`failed` по `clientId`; `send` / `retry` / `discard` / `loadOlder` / `markRead`.
+  Повтор идёт с тем же `clientId`. `markRead` шлёт отметку, только если последнее сообщение чужое и ещё не отмечено.
+- Экран чата — `CustomScrollView(reverse: true, center: история)`: история растёт вверх, сообщения, пришедшие, пока
+  человек читает выше, — в отдельный sliver ниже центра, поэтому не сдвигают текст; вместо этого плашка
+  «Новые сообщения ↓». Своё сообщение или новое, когда пользователь внизу, переносит якорь и прыгает вниз.
+  Ленту строит чистая `buildTimeline()` (chat_timeline.dart): разделители дней, группы одного автора (пауза ≤ 10 мин).
+- Поле ввода `ChatComposer`: слоты `leading` (этап 2 — «+») и `trailingWhenEmpty` (этап 3 — микрофон вместо отправки).
+- Поиск по чатам — `searchChats()` (chat_search.dart) по правилам `matchName`, кавычки и знаки читаются как пробелы.
+- Тексты (превью «Бакыт: …», «Вы: …», системные, «Бывший сотрудник») — расширение `ChatTexts` на `AppLocalizations`.
+- Входы: вкладка «Чаты», плитка «Чат объекта» с бейджем на карточке объекта (видна, если пользователь в команде),
+  «Написать» в шите человека в поиске людей. Себе написать нельзя.
 
 **Роли:** `UserRole { owner, foreman, worker }` ([user_role.dart](lib/features/auth/domain/entities/user_role.dart)).
 UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_label.dart](lib/features/auth/presentation/role_label.dart).
 - [router.dart](lib/app/router.dart): по одному `StatefulShellRoute` (`_shell`) на роль, у каждой своя нижняя навигация
-  (`_RoleShell`). Owner: объекты, команда, отчёты, профиль. Foreman: объекты, новый отчёт, отчёты, профиль.
-  Worker: объекты, отчёты, профиль.
-- Пути — в [routes.dart](lib/app/routes.dart): `/owner/*`, `/foreman/*`, `/worker/*`, плюс `Routes.homeFor(role)` и `prefixFor(role)`.
+  (`_RoleShell`). Owner: объекты, команда, чаты, отчёты, профиль. Foreman: объекты, чаты, «Отчёт» (акцентная
+  кнопка с камерой в центре, `BfNavItem.prominent`, новый отчёт), «История» (список отчётов), профиль.
+  Worker: объекты, чаты, отчёты, профиль. На вкладке «Чаты» бейдж — `totalUnreadProvider`.
+- Пути — в [routes.dart](lib/app/routes.dart): `/owner/*`, `/foreman/*`, `/worker/*`, плюс `Routes.homeFor(role)`,
+  `chatsFor(role)` и `prefixFor(role)`.
 - Навигацию по авторизации делает только роутер. Чистая функция `authRedirect(AuthState, path)` в router.dart:
   статус `initial` → остаёмся на сплэше; нет пользователя → `/login`; сплэш, login, register или join → home роли;
   префикс чужой роли → home роли. Тесты лежат в `test/app/router_test.dart`.
 - `routerProvider` создаёт `GoRouter` один раз. `refreshListenable` срабатывает, когда в `authProvider` меняется
   `(status, user)`. После login, register, join, logout и restoreSession **не вызывать `context.go`**: достаточно сменить
   состояние в `AuthNotifier`.
-- `/projects/:id`, `/reports/:id` и `/people` (поиск людей) — роуты верхнего уровня вне shell, поэтому
+- `/projects/:id`, `/reports/:id`, `/chats/:id` и `/people` (поиск людей) — роуты верхнего уровня вне shell, поэтому
   открываются поверх навигации. Открывать через `context.push(Routes.project(id))` / `Routes.report(id)` /
-  `Routes.peopleSearch`.
+  `Routes.chat(id)` / `Routes.peopleSearch`.
 - Поиск людей ([people_search_screen.dart](lib/features/team/presentation/screens/people_search_screen.dart)).
   Вход — `BfIconButton(Icons.person_search_rounded)` в шапке: у директора на вкладке «Команда», у прораба
   и строителя на списке объектов (своей вкладки команды у них нет). Если на список объектов добавят поиск
@@ -138,6 +179,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Провайдеры core-сервисов — в `lib/core/<модуль>/`, `routerProvider` — в router.dart:
   - список: `AsyncNotifierProvider<XxxNotifier, List<X>>`; в `build()` вызывать `ref.watch(currentUserProvider)`
     (из auth_provider.dart), чтобы список перезагружался при смене пользователя;
+  - живой список с сервера (сейчас только чаты): `StreamNotifierProvider`, `build()` возвращает поток репозитория;
+    мутации после успеха не инвалидируют его — изменение приходит потоком;
   - один элемент: `Provider.family<AsyncValue<X?>, String>`, выводится из списка (`projectByIdProvider`, `reportByIdProvider`);
   - после успешной мутации вызывать `ref.invalidateSelf()`.
   - синхронное состояние: `NotifierProvider` — `authProvider` (`AuthNotifier`; `AuthState` сам хранит статус,
@@ -145,9 +188,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
     через `localStorageProvider` (ключ `theme_mode`), `restore()` вызывается в main.dart до `runApp`.
   - Legacy `StateProvider` / `StateNotifierProvider` не использовать.
 - Экраны: `ConsumerWidget`; если есть форма или контроллеры — `ConsumerStatefulWidget`. Каркас зависит от места:
-  - вкладка нижней навигации (объекты, команда, отчёты, профиль): `Scaffold` без AppBar,
+  - вкладка нижней навигации (объекты, команда, чаты, отчёты, профиль): `Scaffold` без AppBar,
     `SafeArea(bottom: false)` → `ScreenHeader(title: l10n.…)` (крупный заголовок 30/w800, над ним можно `overline`);
   - экран поверх навигации (детали отчёта, состояния загрузки и ошибки объекта): `Scaffold` + `AppBar(title: Text(l10n.…))`;
+    у чата в `title` аватар, название и подпись («3 участника» / роль собеседника);
   - свои шапки только у карточки объекта (графитовая, 250px) и у нового отчёта (крестик, если экран открыт поверх).
 
   Асинхронные данные:
@@ -163,13 +207,23 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - Готовое из core, вместо того чтобы писать своё: компоненты из «Дизайн-токены и компоненты», а также `EmptyState`,
   `ErrorState`, `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`,
   локальный путь и http; `PhotoImage` — то же фото, растянутое на родителя), `DateFormatter` (ru; время отчёта —
-  `reportDateTime`: «Сегодня, 11:47», «Вчера, …», «Пн, …», «27 октября, …», год только не текущий), `Validators`, `Haptics`.
+  `reportDateTime`: «Сегодня, 11:47», «Вчера, …», «Пн, …», «27 октября, …», год только не текущий; в списке чатов
+  `chatListTime`: «14:05», «Вчера», «Пн», «27 окт.»; разделитель дня в чате — `chatDay`), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
   перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
   репозитория доходит до экрана со своим кодом), защита от двойной отправки, сохранение темы, `describePhotoPickError`,
   валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер, контраст токенов
-  (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса, правила поиска людей и «Недавние». Виджет-тесты: `test/app/router_test.dart`
+  (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса, правила поиска людей и «Недавние»,
+  `FakeChatStore` (доставка, идемпотентность, непрочитанные, доступ при смене состава, эхо), `ChatThreadNotifier`,
+  лента и поиск чатов. Виджет-тесты: `test/app/router_test.dart`
   (`MaterialApp.router`) и экраны через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart).
+  Сценарии на всём приложении (вход, выход, переходы) — через `FullApp.pump()` из
+  [test/helpers/full_app.dart](test/helpers/full_app.dart), пример — `test/features/chat/presentation/chat_flow_test.dart`.
+  `await router.push(...)` в тесте ждёт закрытия экрана и вешает тест: оборачивать в `unawaited`. Путь после `push`
+  не виден в `currentConfiguration.uri`, проверять открытый экран (`find.byType(ChatScreen)`).
+  В тестах чата создавать `FakeChatStore` без эха (`echo: false` по умолчанию) и подменять `fakeChatStoreProvider`:
+  таймеры эха, оставшиеся после теста, роняют его. Кнопка отправки появляется через `AnimatedSwitcher`:
+  после ввода текста нужны `pump()` и ещё `pump(200 ms)`, иначе тап не попадёт.
   Тема в них — настоящая `AppTheme.light` (параметр `theme:` подменяет её). `screens_smoke_test.dart` рендерит каждый
   экран в обеих темах; новый экран добавлять туда. Шрифты из assets flutter_test не грузит, текст рисуется тестовым шрифтом Ahem.
   Поверхность 1080 px и `textScaler` 0.7: Ahem шире настоящего шрифта, и без этого строки переполняются.
@@ -223,8 +277,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `BfChip` — фильтры и быстрые шаблоны; `selected` — графит с белым текстом. Видимая высота 36, нажимаемая 48.
 - `BfProgressBar(percent)` — акцентная полоса на треке `muted`.
 - `ScreenHeader(title, overline, actions)` — шапка вкладки.
-- `BfBottomNav` / `BfNavItem` — нижняя навигация (`_RoleShell` в router.dart). У `BfNavItem` есть `badgeCount`
-  для будущей вкладки «Чаты».
+- `BfBottomNav` / `BfNavItem` — нижняя навигация (`_RoleShell` в router.dart). `badgeCount` — бейдж непрочитанного,
+  `prominent` — акцентная кнопка главного действия роли (у прораба «Отчёт»).
+- `UnreadBadge(count)` — акцентный счётчик непрочитанного («99+»; при 0 ничего): вкладка, строка чата, плитка чата.
+- `HighlightedText(text, ranges)` — текст с подсветкой совпадений `matchHighlight` (поиск людей и чатов).
 - `AppLogo` — знак приложения на сплэше и экранах входа.
 
 ## Подводные камни
@@ -268,8 +324,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 ## Текущее состояние
 Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
 детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, поиск людей по имени и фамилии, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
-(сохраняется между запусками), три роли. Визуальный стиль — см. «Дизайн-токены и компоненты».
-Заглушки и пробелы: Api-репозитории (все четыре — заглушки), клиент Dio, сжатие фото (flutter_image_compress),
+(сохраняется между запусками), три роли, чат этапа 1 (чаты объектов и личные, текст, статусы, непрочитанные).
+Визуальный стиль — см. «Дизайн-токены и компоненты».
+Заглушки и пробелы: Api-репозитории (все пять — заглушки), WebSocket-клиент чата, клиент Dio, сжатие фото (flutter_image_compress),
 загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),
 applicationId и подпись Android-релиза.
 Подробности и этапы — в [PROGRESS.md](PROGRESS.md); он отстаёт от кода, сверяйся с кодом.
