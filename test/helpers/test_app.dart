@@ -1,5 +1,5 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
-import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,7 +20,7 @@ Future<void> pumpTestApp(
     ProviderScope(
       overrides: overrides,
       child: MaterialApp(
-        theme: ThemeData(extensions: const [BuildFlowThemeExtension.light]),
+        theme: AppTheme.light,
         locale: const Locale('ru'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

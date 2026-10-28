@@ -20,7 +20,8 @@ flutter build apk --release                               # APK → build/app/ou
 
 ## Архитектура
 **Стек:** Flutter 3.47 / Dart ^3.13, flutter_riverpod 2.6, go_router 14, freezed 4 + json_serializable,
-flutter_secure_storage, shared_preferences, image_picker, app_settings, google_fonts, intl, very_good_analysis.
+flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, very_good_analysis.
+Шрифт Inter лежит в `assets/fonts/inter/`, google_fonts не используется.
 `app_settings` нужен только для того, чтобы открыть системные настройки приложения после отказа в разрешении.
 Подключены, но в `lib/` не используются: dio, flutter_image_compress, cached_network_image, uuid.
 
@@ -126,11 +127,13 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `DateFormatter` (ru), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
   перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
-  репозитория доходит до экрана со своим кодом), сохранение темы, `describePhotoPickError`, валидаторы, форматтер дат
-  и JSON-сущности, `authRedirect` и роутер. Виджет-тесты: `test/app/router_test.dart` (`MaterialApp.router`) и экраны
-  через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart). Тема в них —
-  `ThemeData(extensions: [BuildFlowThemeExtension.light])` без `AppTheme`, потому что google_fonts тянет шрифты из сети.
-  Поверхность 1080 px и `textScaler` 0.7: тестовый шрифт Ahem шире настоящего, и без этого строки переполняются.
+  репозитория доходит до экрана со своим кодом), защита от двойной отправки, сохранение темы, `describePhotoPickError`,
+  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер. Виджет-тесты: `test/app/router_test.dart`
+  (`MaterialApp.router`) и экраны через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart).
+  Тема в них — настоящая `AppTheme.light`. Шрифты из assets flutter_test не грузит, текст рисуется тестовым шрифтом Ahem.
+  Поверхность 1080 px и `textScaler` 0.7: Ahem шире настоящего шрифта, и без этого строки переполняются.
+  Пока на экране крутится индикатор, `pumpAndSettle` не завершится. В таких местах нужен `pump(duration)`, а Riverpod
+  перезагружает провайдер после `invalidate` только на следующем кадре, так что одного длинного `pump` мало.
   Fake-репозитории в виджет-тестах ждут до 0,8 с, поэтому после действий нужен `tester.pump(Duration(seconds: 1))`.
   `test/widget_test.dart` — заглушка.
 - Не менять провайдеры синхронно в `initState` или `build`: на `authProvider` подписан роутер, и Riverpod падает
@@ -158,7 +161,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `flutter build apk` предупреждает, что `app_settings` и `flutter_image_compress_common` применяют Kotlin Gradle Plugin,
   и будущие версии Flutter такие плагины собирать не будут. Перед обновлением Flutter проверь их новые версии.
 - AndroidManifest: только `INTERNET` и `CAMERA`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
-- `google_fonts` (Inter) без шрифтов в assets: по умолчанию он грузит их из сети.
+- Inter 4.1 (статические TTF из релиза rsms/inter) лежит в `assets/fonts/inter/`, начертания 400, 500, 600, 700 и 800,
+  рядом лицензия `OFL.txt`. main.dart регистрирует её в `LicenseRegistry`. Для нового начертания (например, 300) нужно
+  добавить файл и строку в `fonts:` в pubspec.yaml. Иначе Flutter возьмёт ближайшее начертание или сымитирует жирность.
+  Семейство задаётся в `AppTextTheme` на каждом стиле, а не только в `ThemeData`: AppBar и кнопки берут стили прямо оттуда.
 
 ## Текущее состояние
 Готово на Fake-данных: вход и регистрация, сплэш, объекты (список, детали, статус, команда объекта), команда

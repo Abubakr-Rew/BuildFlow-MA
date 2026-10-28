@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/router.dart';
 import 'package:buildflow/app/routes.dart';
-import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/core/storage/secure_storage.dart';
 import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
@@ -154,7 +154,7 @@ void main() {
           container: container,
           child: MaterialApp.router(
             routerConfig: router,
-            theme: ThemeData(extensions: const [BuildFlowThemeExtension.light]),
+            theme: AppTheme.light,
             locale: const Locale('ru'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

@@ -37,9 +37,6 @@ dependencies:
   # Platform: opens the app's system settings after a refused permission
   app_settings: ^9.0.1
 
-  # UI
-  google_fonts: ^6.2.1
-
   # Utilities
   intl: ^0.20.3
   uuid: ^4.5.1
@@ -57,3 +54,22 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+
+  assets:
+    # Registered in main.dart, so the license ships with the fonts.
+    - assets/fonts/inter/OFL.txt
+
+  # Inter 4.1 (https://github.com/rsms/inter), static weights used by the app.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/inter/Inter-ExtraBold.ttf
+          weight: 800

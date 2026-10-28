@@ -90,7 +90,6 @@ flutter test
 | json_annotation | ^4.12.0 | JSON сериализация |
 | flutter_secure_storage | ^9.2.0 | Безопасное хранение токенов |
 | shared_preferences | ^2.3.0 | Локальное хранилище (черновики) |
-| google_fonts | ^6.2.0 | Типографика (Inter) |
 | cached_network_image | ^3.4.0 | Кэширование изображений |
 | very_good_analysis | ^6.0.0 | Строгий линтер |
 
