@@ -232,7 +232,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reportDescriptionHint => 'Что было сделано сегодня?';
 
   @override
-  String get sendReport => 'Отправить';
+  String get sendReport => 'Отправить отчёт';
 
   @override
   String get sending => 'Отправка...';
@@ -587,4 +587,33 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get more => 'Ещё';
+
+  @override
+  String get reportForToday => 'Отчёт за сегодня';
+
+  @override
+  String photoCounter(int count, int total) {
+    return '$count из $total';
+  }
+
+  @override
+  String get takePhotoButton => 'Сделать фото';
+
+  @override
+  String get removePhoto => 'Удалить фото';
+
+  @override
+  String get reportWhatDone => 'Что сделано';
+
+  @override
+  String get templateConcrete => 'Бетон';
+
+  @override
+  String get templateRebar => 'Армирование';
+
+  @override
+  String get templateMasonry => 'Кладка';
+
+  @override
+  String get templateMaterials => 'Нужны материалы';
 }

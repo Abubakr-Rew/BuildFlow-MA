@@ -220,7 +220,7 @@
   "reportDescriptionHint": "Что было сделано сегодня?",
   "@reportDescriptionHint": {"description": "Report description hint"},
 
-  "sendReport": "Отправить",
+  "sendReport": "Отправить отчёт",
   "@sendReport": {"description": "Send report button"},
 
   "sending": "Отправка...",
@@ -573,5 +573,32 @@
   "@progressSaved": {"description": "Snackbar after the readiness is saved"},
 
   "more": "Ещё",
-  "@more": {"description": "Tooltip of the overflow menu button"}
+  "@more": {"description": "Tooltip of the overflow menu button"},
+
+  "reportForToday": "Отчёт за сегодня",
+  "@reportForToday": {"description": "New report screen title"},
+
+  "photoCounter": "{count} из {total}",
+  "@photoCounter": {"description": "Photos added out of the maximum", "placeholders": {"count": {"type": "int"}, "total": {"type": "int"}}},
+
+  "takePhotoButton": "Сделать фото",
+  "@takePhotoButton": {"description": "Opens the camera on the new report screen"},
+
+  "removePhoto": "Удалить фото",
+  "@removePhoto": {"description": "Tooltip of the remove button on a photo"},
+
+  "reportWhatDone": "Что сделано",
+  "@reportWhatDone": {"description": "Report text field label"},
+
+  "templateConcrete": "Бетон",
+  "@templateConcrete": {"description": "Quick template chip appended to the report text"},
+
+  "templateRebar": "Армирование",
+  "@templateRebar": {"description": "Quick template chip appended to the report text"},
+
+  "templateMasonry": "Кладка",
+  "@templateMasonry": {"description": "Quick template chip appended to the report text"},
+
+  "templateMaterials": "Нужны материалы",
+  "@templateMaterials": {"description": "Quick template chip appended to the report text"}
 }

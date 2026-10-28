@@ -35,8 +35,7 @@ class _FailingReports extends FakeReportRepository {
     required String authorName,
     required String text,
     required List<String> photoPaths,
-  }) async =>
-      Err(failure);
+  }) async => Err(failure);
 }
 
 class _CountingReports extends FakeReportRepository {
@@ -69,32 +68,73 @@ void main() {
   group('describePhotoPickError', () {
     test('explains a refused camera permission and offers settings', () {
       final error = PlatformException(code: 'camera_access_denied');
-      expect(
-        describePhotoPickError(l10n, error),
-        (message: l10n.cameraAccessDenied, offerSettings: true),
-      );
+      expect(describePhotoPickError(l10n, error), (
+        message: l10n.cameraAccessDenied,
+        offerSettings: true,
+      ));
     });
 
     test('explains a refused photo library permission and offers settings', () {
       final error = PlatformException(code: 'photo_access_denied');
-      expect(
-        describePhotoPickError(l10n, error),
-        (message: l10n.photoAccessDenied, offerSettings: true),
-      );
+      expect(describePhotoPickError(l10n, error), (
+        message: l10n.photoAccessDenied,
+        offerSettings: true,
+      ));
     });
 
     test('falls back to the generic text without settings', () {
       final noCamera = PlatformException(code: 'no_available_camera');
       for (final error in [noCamera, Exception('io')]) {
-        expect(
-          describePhotoPickError(l10n, error),
-          (message: l10n.photoPickError, offerSettings: false),
-        );
+        expect(describePhotoPickError(l10n, error), (
+          message: l10n.photoPickError,
+          offerSettings: false,
+        ));
       }
     });
   });
 
+  group('appendTemplate', () {
+    test('an empty text gets the word as is', () {
+      expect(appendTemplate('', 'Бетон'), 'Бетон');
+      expect(appendTemplate('  ', 'Бетон'), 'Бетон');
+    });
+
+    test('continues a phrase after a comma, in lower case', () {
+      expect(
+        appendTemplate('Залили фундамент ', 'Бетон'),
+        'Залили фундамент, бетон',
+      );
+    });
+
+    test('starts a new sentence after a full stop', () {
+      expect(
+        appendTemplate('Залили фундамент.', 'Нужны материалы'),
+        'Залили фундамент. Нужны материалы',
+      );
+    });
+  });
+
   group('NewReportScreen', () {
+    testWidgets('a template chip appends its word to the text', (tester) async {
+      await pumpTestApp(
+        tester,
+        const NewReportScreen(initialProjectId: 'project-1'),
+        overrides: [currentUserProvider.overrideWithValue(_foreman)],
+      );
+      await tester.pump(const Duration(seconds: 1)); // projects load
+
+      await tester.enterText(find.byType(TextFormField), 'Залили фундамент');
+      await tester.tap(find.text(l10n.templateConcrete));
+      await tester.pump();
+      await tester.tap(find.text(l10n.templateMaterials));
+      await tester.pump();
+
+      expect(
+        find.text('Залили фундамент, бетон, нужны материалы'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a failed submit says why and keeps the form', (tester) async {
       await pumpTestApp(
         tester,

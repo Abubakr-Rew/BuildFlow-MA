@@ -1,9 +1,15 @@
 import 'package:app_settings/app_settings.dart';
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
+import 'package:buildflow/core/widgets/bf_card.dart';
+import 'package:buildflow/core/widgets/bf_chip.dart';
+import 'package:buildflow/core/widgets/bf_icon_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/core/widgets/photo_thumbnail.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
@@ -25,16 +31,31 @@ const _actionSnackBarDuration = Duration(seconds: 8);
 ({String message, bool offerSettings}) describePhotoPickError(
   AppLocalizations l10n,
   Object error,
-) =>
-    switch (error) {
-      PlatformException(code: 'camera_access_denied') =>
-        (message: l10n.cameraAccessDenied, offerSettings: true),
-      PlatformException(code: 'photo_access_denied') =>
-        (message: l10n.photoAccessDenied, offerSettings: true),
-      _ => (message: l10n.photoPickError, offerSettings: false),
-    };
+) => switch (error) {
+  PlatformException(code: 'camera_access_denied') => (
+    message: l10n.cameraAccessDenied,
+    offerSettings: true,
+  ),
+  PlatformException(code: 'photo_access_denied') => (
+    message: l10n.photoAccessDenied,
+    offerSettings: true,
+  ),
+  _ => (message: l10n.photoPickError, offerSettings: false),
+};
 
-/// New report screen — select project, add text + photos, submit.
+/// Appends a quick template to the report text: «Залили» + «Бетон» →
+/// «Залили, бетон»; an empty text or a finished sentence gets the word as is.
+@visibleForTesting
+String appendTemplate(String text, String word) {
+  final trimmed = text.trimRight();
+  if (trimmed.isEmpty) return word;
+  if (RegExp(r'[.!?]$').hasMatch(trimmed)) return '$trimmed $word';
+  final lower =
+      word.characters.first.toLowerCase() + word.characters.skip(1).toString();
+  return '$trimmed, $lower';
+}
+
+/// New report screen — select project, add photos + text, submit.
 class NewReportScreen extends ConsumerStatefulWidget {
   const NewReportScreen({this.initialProjectId, super.key});
 
@@ -78,7 +99,9 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
         ? ['fake:demo-${DateTime.now().millisecondsSinceEpoch}']
         : List.of(_photoPaths);
 
-    final result = await ref.read(reportsProvider.notifier).submitReport(
+    final result = await ref
+        .read(reportsProvider.notifier)
+        .submitReport(
           projectId: _selectedProjectId!,
           text: _textController.text.trim(),
           photoPaths: photos,
@@ -119,29 +142,8 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     );
   }
 
-  Future<void> _pickPhoto() async {
+  Future<void> _pickPhoto(ImageSource source) async {
     final l10n = AppLocalizations.of(context);
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: Text(l10n.takePhoto),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: Text(l10n.fromGallery),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return;
-
     try {
       final picker = ImagePicker();
       final image = await picker.pickImage(
@@ -150,7 +152,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
         maxHeight: 1920,
         imageQuality: 85,
       );
-      if (image != null) {
+      if (image != null && mounted && _photoPaths.length < _maxPhotos) {
         setState(() {
           _photoPaths.add(image.path);
         });
@@ -172,87 +174,175 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     }
   }
 
+  void _addTemplate(String word) {
+    final text = appendTemplate(_textController.text, word);
+    _textController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  Future<void> _chooseProject(List<Project> projects) async {
+    final id = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          _ProjectSheet(projects: projects, selectedId: _selectedProjectId),
+    );
+    if (id != null && mounted) setState(() => _selectedProjectId = id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final t = context.bfTheme;
     final projects = ref.watch(projectsProvider);
+    final canAddPhoto = _photoPaths.length < _maxPhotos;
+    final sectionStyle = theme.textTheme.labelMedium?.copyWith(
+      color: t.textSecondary,
+    );
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.newReport)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
+      body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Project selector
-            Text(l10n.selectProject, style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppTheme.spacing8),
-            projects.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text(l10n.failureMessage(e)),
-              data: (list) {
-                final activeProjects =
-                    list.where((p) => p.status.isActive).toList();
-                return _ProjectSelector(
-                  projects: activeProjects,
-                  selectedId: _selectedProjectId,
-                  onSelected: (id) =>
-                      setState(() => _selectedProjectId = id),
-                );
-              },
+            _Header(
+              onClose: Navigator.of(context).canPop()
+                  ? () => Navigator.of(context).maybePop()
+                  : null,
             ),
-            const SizedBox(height: AppTheme.spacing24),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.screenPadding,
+                  0,
+                  AppTheme.screenPadding,
+                  AppTheme.spacing24,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Project
+                    Text(l10n.stepProject, style: sectionStyle),
+                    const SizedBox(height: AppTheme.spacing8),
+                    projects.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (e, _) => Text(l10n.failureMessage(e)),
+                      data: (list) {
+                        final active = list
+                            .where((p) => p.status.isActive)
+                            .toList();
+                        if (active.isEmpty) {
+                          return Text(
+                            l10n.noActiveProjects,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: t.textSecondary,
+                            ),
+                          );
+                        }
+                        return _ProjectButton(
+                          project: active
+                              .where((p) => p.id == _selectedProjectId)
+                              .firstOrNull,
+                          onTap: () => _chooseProject(active),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.spacing24),
 
-            // Report text
-            BfTextField(
-              label: l10n.reportText,
-              hint: l10n.reportTextHint,
-              controller: _textController,
-              maxLines: 5,
-              minLines: 3,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
-            ),
-            const SizedBox(height: AppTheme.spacing24),
+                    // Photos
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.stepPhotos,
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ),
+                        Text(
+                          l10n.photoCounter(_photoPaths.length, _maxPhotos),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: t.textSecondary,
+                            fontFeatures: AppTextTheme.tabular,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacing12),
+                    _PhotoGrid(
+                      paths: _photoPaths,
+                      onRemove: (path) =>
+                          setState(() => _photoPaths.remove(path)),
+                      onGallery: canAddPhoto
+                          ? () => _pickPhoto(ImageSource.gallery)
+                          : null,
+                    ),
+                    const SizedBox(height: AppTheme.spacing12),
+                    BfButton(
+                      label: l10n.takePhotoButton,
+                      icon: Icons.photo_camera_rounded,
+                      variant: BfButtonVariant.secondary,
+                      onPressed: canAddPhoto
+                          ? () => _pickPhoto(ImageSource.camera)
+                          : null,
+                    ),
+                    const SizedBox(height: AppTheme.spacing24),
 
-            // Photo section
-            Text(l10n.photos, style: theme.textTheme.titleMedium),
-            const SizedBox(height: AppTheme.spacing8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                ..._photoPaths.map((path) => _PhotoChip(
-                      path: path,
-                      onRemove: () => setState(
-                        () => _photoPaths.remove(path),
-                      ),
-                    )),
-                if (_photoPaths.length < _maxPhotos)
-                  ActionChip(
-                    avatar: const Icon(Icons.add_a_photo, size: 18),
-                    label: Text(l10n.addPhoto),
-                    onPressed: _pickPhoto,
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacing4),
-            Text(
-              l10n.maxPhotos,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                    // Report text
+                    BfTextField(
+                      label: l10n.reportWhatDone,
+                      hint: l10n.reportTextHint,
+                      controller: _textController,
+                      maxLines: 6,
+                      minLines: 3,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      textInputAction: TextInputAction.newline,
+                    ),
+                    const SizedBox(height: AppTheme.spacing8),
+                    Wrap(
+                      spacing: AppTheme.spacing8,
+                      children: [
+                        for (final word in [
+                          l10n.templateConcrete,
+                          l10n.templateRebar,
+                          l10n.templateMasonry,
+                          l10n.templateMaterials,
+                        ])
+                          BfChip(
+                            label: word,
+                            icon: Icons.add_rounded,
+                            onTap: () => _addTemplate(word),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: AppTheme.spacing32),
 
-            // Submit button
-            BfButton(
-              label: l10n.sendReport,
-              onPressed: _submit,
-              isLoading: _isSubmitting,
-              icon: Icons.send_rounded,
+            // Pinned submit button
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: t.canvas,
+                border: Border(top: BorderSide(color: t.border)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTheme.screenPadding,
+                  AppTheme.spacing12,
+                  AppTheme.screenPadding,
+                  AppTheme.spacing12,
+                ),
+                child: BfButton(
+                  label: l10n.sendReport,
+                  onPressed: _submit,
+                  isLoading: _isSubmitting,
+                  icon: Icons.send_rounded,
+                ),
+              ),
             ),
           ],
         ),
@@ -261,81 +351,351 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   }
 }
 
-class _ProjectSelector extends StatelessWidget {
-  const _ProjectSelector({
-    required this.projects,
-    required this.selectedId,
-    required this.onSelected,
-  });
+// ── Header ────────────────────────────────────────────────────
 
-  final List<Project> projects;
-  final String? selectedId;
-  final ValueChanged<String> onSelected;
+class _Header extends StatelessWidget {
+  const _Header({required this.onClose});
+
+  /// `null` when the screen is a navigation tab and has nothing to close.
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    if (projects.isEmpty) {
-      return Text(
-        AppLocalizations.of(context).noActiveProjects,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: projects.map((project) {
-        final isSelected = project.id == selectedId;
-        return ChoiceChip(
-          label: Text(project.name),
-          selected: isSelected,
-          onSelected: (_) => onSelected(project.id),
-          avatar: isSelected
-              ? const Icon(Icons.check, size: 18)
-              : const Icon(Icons.construction_outlined, size: 18),
-        );
-      }).toList(),
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppTheme.screenPadding,
+        AppTheme.spacing16,
+        AppTheme.screenPadding,
+        AppTheme.spacing16,
+      ),
+      child: Row(
+        children: [
+          if (onClose != null) ...[
+            BfIconButton(
+              icon: Icons.close_rounded,
+              tooltip: l10n.close,
+              onPressed: onClose,
+            ),
+            const SizedBox(width: AppTheme.spacing12),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.reportForToday,
+                    style: theme.textTheme.headlineLarge,
+                  ),
+                ),
+                Text(
+                  DateFormatter.dayMonthYear(DateTime.now()),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: context.bfTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _PhotoChip extends StatelessWidget {
-  const _PhotoChip({required this.path, required this.onRemove});
+// ── Project ───────────────────────────────────────────────────
+
+class _ProjectButton extends StatelessWidget {
+  const _ProjectButton({required this.project, required this.onTap});
+
+  final Project? project;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.bfTheme;
+    final l10n = AppLocalizations.of(context);
+    return BfCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: t.muted,
+              borderRadius: BorderRadius.circular(
+                BuildFlowThemeExtension.photoRadius,
+              ),
+            ),
+            child: Icon(Icons.construction_rounded, color: t.textPrimary),
+          ),
+          const SizedBox(width: AppTheme.spacing12),
+          Expanded(
+            child: project == null
+                ? Text(
+                    l10n.selectProject,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: t.textSecondary,
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(project!.name, style: theme.textTheme.titleMedium),
+                      Text(
+                        project!.address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: t.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          Icon(Icons.expand_more_rounded, color: t.textSecondary),
+        ],
+      ),
+    );
+  }
+}
+
+/// Active projects to report on. Pops the chosen project id.
+class _ProjectSheet extends StatelessWidget {
+  const _ProjectSheet({required this.projects, required this.selectedId});
+
+  final List<Project> projects;
+  final String? selectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = context.bfTheme;
+    final l10n = AppLocalizations.of(context);
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppTheme.screenPadding,
+              ),
+              child: Text(
+                l10n.selectProject,
+                style: theme.textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing8),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final p in projects)
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.screenPadding,
+                      ),
+                      title: Text(p.name),
+                      subtitle: Text(p.address),
+                      trailing: p.id == selectedId
+                          ? Icon(Icons.check_circle_rounded, color: t.accent)
+                          : null,
+                      onTap: () => Navigator.pop(context, p.id),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Photos ────────────────────────────────────────────────────
+
+class _PhotoGrid extends StatelessWidget {
+  const _PhotoGrid({
+    required this.paths,
+    required this.onRemove,
+    required this.onGallery,
+  });
+
+  static const _columns = 3;
+  static const _gap = 8.0;
+
+  final List<String> paths;
+  final ValueChanged<String> onRemove;
+
+  /// `null` once the photo limit is reached.
+  final VoidCallback? onGallery;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = (constraints.maxWidth - _gap * (_columns - 1)) / _columns;
+        return Wrap(
+          spacing: _gap,
+          runSpacing: _gap,
+          children: [
+            for (final path in paths)
+              _PhotoCell(
+                path: path,
+                size: size,
+                onRemove: () => onRemove(path),
+              ),
+            if (onGallery != null) _GalleryCell(size: size, onTap: onGallery!),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PhotoCell extends StatelessWidget {
+  const _PhotoCell({
+    required this.path,
+    required this.size,
+    required this.onRemove,
+  });
 
   final String path;
+  final double size;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        PhotoThumbnail(photoId: 'new-$path', url: path, size: 72),
-        Positioned(
-          top: -8,
-          right: -8,
-          child: Material(
-            color: Theme.of(context).colorScheme.error,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onRemove,
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  Icons.close,
-                  size: 14,
-                  color: Theme.of(context).colorScheme.onError,
+    final t = context.bfTheme;
+    return SizedBox.square(
+      dimension: size,
+      child: Stack(
+        children: [
+          PhotoThumbnail(photoId: 'new-$path', url: path, size: size),
+          // The visible circle is 26 px; the tap area is 44.
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Tooltip(
+              message: AppLocalizations.of(context).removePhoto,
+              child: InkResponse(
+                onTap: onRemove,
+                radius: 22,
+                child: SizedBox.square(
+                  dimension: AppTheme.iconButtonSize,
+                  child: Center(
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: t.graphite.withValues(alpha: 0.8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: t.onGraphite,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+}
+
+class _GalleryCell extends StatelessWidget {
+  const _GalleryCell({required this.size, required this.onTap});
+
+  final double size;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.bfTheme;
+    final radius = BorderRadius.circular(BuildFlowThemeExtension.photoRadius);
+    return SizedBox.square(
+      dimension: size,
+      child: CustomPaint(
+        painter: _DashedBorderPainter(
+          color: t.textTertiary,
+          radius: BuildFlowThemeExtension.photoRadius,
+        ),
+        child: Material(
+          color: t.muted.withValues(alpha: 0.5),
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: 28,
+                  color: t.textSecondary,
+                ),
+                const SizedBox(height: AppTheme.spacing4),
+                Text(
+                  AppLocalizations.of(context).fromGallery,
+                  style: Theme.of(context).textTheme.labelMedium
+                      ?.copyWith(color: t.textSecondary),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dashed rounded-rectangle outline.
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color, required this.radius});
+
+  static const _dash = 6.0;
+  static const _gap = 4.0;
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final outline = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(0.75),
+          Radius.circular(radius),
+        ),
+      );
+    for (final metric in outline.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += _dash + _gap) {
+        canvas.drawPath(metric.extractPath(d, d + _dash), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) =>
+      old.color != color || old.radius != radius;
 }

@@ -535,7 +535,7 @@ abstract class AppLocalizations {
   /// Send report button
   ///
   /// In ru, this message translates to:
-  /// **'Отправить'**
+  /// **'Отправить отчёт'**
   String get sendReport;
 
   /// Sending state text
@@ -1179,6 +1179,60 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Ещё'**
   String get more;
+
+  /// New report screen title
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчёт за сегодня'**
+  String get reportForToday;
+
+  /// Photos added out of the maximum
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} из {total}'**
+  String photoCounter(int count, int total);
+
+  /// Opens the camera on the new report screen
+  ///
+  /// In ru, this message translates to:
+  /// **'Сделать фото'**
+  String get takePhotoButton;
+
+  /// Tooltip of the remove button on a photo
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить фото'**
+  String get removePhoto;
+
+  /// Report text field label
+  ///
+  /// In ru, this message translates to:
+  /// **'Что сделано'**
+  String get reportWhatDone;
+
+  /// Quick template chip appended to the report text
+  ///
+  /// In ru, this message translates to:
+  /// **'Бетон'**
+  String get templateConcrete;
+
+  /// Quick template chip appended to the report text
+  ///
+  /// In ru, this message translates to:
+  /// **'Армирование'**
+  String get templateRebar;
+
+  /// Quick template chip appended to the report text
+  ///
+  /// In ru, this message translates to:
+  /// **'Кладка'**
+  String get templateMasonry;
+
+  /// Quick template chip appended to the report text
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужны материалы'**
+  String get templateMaterials;
 }
 
 class _AppLocalizationsDelegate
