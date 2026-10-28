@@ -33,8 +33,7 @@ class _ReadOnlyProjects extends FakeProjectRepository {
   Future<Result<Project>> createProject({
     required String name,
     required String address,
-  }) async =>
-      Err(failure);
+  }) async => Err(failure);
 
   @override
   Future<Result<Project>> updateProject(Project project) async => Err(failure);
@@ -105,6 +104,28 @@ void main() {
       expect(find.text(l10n.projectName), findsOneWidget); // sheet still open
 
       await tester.pump(const Duration(seconds: 5)); // let the snackbar go
+    });
+  });
+  group('greetingFor', () {
+    test('switches at 5, 12, 18 and midnight, with the first name', () {
+      final expected = {
+        0: l10n.greetingNight('Асан'),
+        4: l10n.greetingNight('Асан'),
+        5: l10n.greetingMorning('Асан'),
+        11: l10n.greetingMorning('Асан'),
+        12: l10n.greetingDay('Асан'),
+        17: l10n.greetingDay('Асан'),
+        18: l10n.greetingEvening('Асан'),
+        23: l10n.greetingEvening('Асан'),
+      };
+      for (final MapEntry(key: hour, value: greeting) in expected.entries) {
+        expect(
+          greetingFor(l10n, ' Асан  Бекович', hour),
+          greeting,
+          reason: 'hour $hour',
+        );
+      }
+      expect(l10n.greetingNight('Асан'), 'Доброй ночи, Асан');
     });
   });
 }

@@ -547,6 +547,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String greetingNight(String name) {
+    return 'Доброй ночи, $name';
+  }
+
+  @override
   String get summaryReportsSent => 'Отчётов сдано';
 
   @override

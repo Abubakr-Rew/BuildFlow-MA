@@ -537,7 +537,10 @@
   "@greetingDay": {"description": "Greeting above the projects title, 12:00–17:59", "placeholders": {"name": {"type": "String"}}},
 
   "greetingEvening": "Добрый вечер, {name}",
-  "@greetingEvening": {"description": "Greeting above the projects title, 18:00–4:59", "placeholders": {"name": {"type": "String"}}},
+  "@greetingEvening": {"description": "Greeting above the projects title, 18:00–23:59", "placeholders": {"name": {"type": "String"}}},
+
+  "greetingNight": "Доброй ночи, {name}",
+  "@greetingNight": {"description": "Greeting above the projects title, 0:00–4:59", "placeholders": {"name": {"type": "String"}}},
 
   "summaryReportsSent": "Отчётов сдано",
   "@summaryReportsSent": {"description": "Day summary: active projects with a report today out of all active"},

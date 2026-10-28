@@ -27,6 +27,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+/// Greeting by the hour (0–23) with the first name: «Доброе утро» 5–11,
+/// «Добрый день» 12–17, «Добрый вечер» 18–23, «Доброй ночи» 0–4.
+@visibleForTesting
+String greetingFor(AppLocalizations l10n, String fullName, int hour) {
+  final name = fullName.trim().split(RegExp(r'\s+')).first;
+  return switch (hour) {
+    >= 5 && < 12 => l10n.greetingMorning(name),
+    >= 12 && < 18 => l10n.greetingDay(name),
+    >= 18 => l10n.greetingEvening(name),
+    _ => l10n.greetingNight(name),
+  };
+}
+
 /// Project list — all projects for a director, assigned ones otherwise.
 class ProjectListScreen extends ConsumerStatefulWidget {
   const ProjectListScreen({super.key});
@@ -61,7 +74,9 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ScreenHeader(
-              overline: user == null ? null : _greeting(l10n, user.name),
+              overline: user == null
+                  ? null
+                  : greetingFor(l10n, user.name, DateTime.now().hour),
               title: l10n.projectsTitle,
             ),
             Expanded(
@@ -120,14 +135,6 @@ class _ProjectListScreenState extends ConsumerState<ProjectListScreen> {
         ),
       ),
     );
-  }
-
-  static String _greeting(AppLocalizations l10n, String fullName) {
-    final name = fullName.trim().split(RegExp(r'\s+')).first;
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return l10n.greetingMorning(name);
-    if (hour >= 12 && hour < 18) return l10n.greetingDay(name);
-    return l10n.greetingEvening(name);
   }
 
   void _showCreateSheet(BuildContext context) {

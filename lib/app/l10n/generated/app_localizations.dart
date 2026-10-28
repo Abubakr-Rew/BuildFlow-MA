@@ -1102,11 +1102,17 @@ abstract class AppLocalizations {
   /// **'Добрый день, {name}'**
   String greetingDay(String name);
 
-  /// Greeting above the projects title, 18:00–4:59
+  /// Greeting above the projects title, 18:00–23:59
   ///
   /// In ru, this message translates to:
   /// **'Добрый вечер, {name}'**
   String greetingEvening(String name);
+
+  /// Greeting above the projects title, 0:00–4:59
+  ///
+  /// In ru, this message translates to:
+  /// **'Доброй ночи, {name}'**
+  String greetingNight(String name);
 
   /// Day summary: active projects with a report today out of all active
   ///
