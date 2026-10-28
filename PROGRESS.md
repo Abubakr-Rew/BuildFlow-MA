@@ -1,13 +1,13 @@
 # BuildFlow — прогресс
 
-Обновлено: 2026-10-26. Правила работы и архитектура — в [CLAUDE.md](CLAUDE.md).
+Обновлено: 2026-10-28. Правила работы и архитектура — в [CLAUDE.md](CLAUDE.md).
 
 ## Как запустить
 ```bash
 flutter pub get
 flutter run          # на подключённом Xiaomi
 flutter analyze      # цель: "No issues found!"
-flutter test         # 130 тестов
+flutter test         # 134 теста
 ```
 
 Демо-входы (FakeAuthRepository), пароль у всех `123456`:
@@ -32,6 +32,10 @@ flutter test         # 130 тестов
 - черновики отчётов (UI нет);
 - вход по коду приглашения (UI нет);
 - applicationId и подпись Android-релиза.
+
+## Сделано 2026-10-28
+- `21e23e5` fix: prevent double submit — обработчики мутаций выходят сразу, если запрос уже идёт: новый отчёт, состав объекта, статус объекта, удаление участника, код приглашения. Пока меняется статус, редактирование состава заблокировано. В отчёт уходит копия списка фото.
+- В `docs/api-contract.md` записано, что `DELETE /team/members/:id` сам убирает участника из всех объектов. Клиентская очистка в `MembersNotifier.removeMember` остаётся до настоящего API.
 
 ## Сделано 2026-10-26
 Функциональность и исправления:
@@ -65,23 +69,20 @@ flutter test         # 130 тестов
 - Отказ в доступе к камере: должен показаться снэкбар на 8 с, а кнопка «Настройки» — открыть настройки BuildFlow.
 
 ## Следующие шаги
-1. **fix: prevent double submit.** Проверить все кнопки мутаций.
-   - У `NewReportScreen._submit` нет проверки в начале. Кнопка блокируется только после перестройки, так что двойное нажатие в одном кадре отправит отчёт дважды.
-   - То же проверить для смены статуса объекта (`PopupMenuButton`), удаления участника и сохранения состава объекта.
-   - В `docs/api-contract.md` записать, что `DELETE /team/members/:id` сам убирает участника из всех объектов. Сейчас это делает клиент в `MembersNotifier.removeMember`, и только по возможности (best-effort).
-2. **Шрифт Inter в assets вместо google_fonts** (пункт 5 уборки).
+1. **Шрифт Inter в assets вместо google_fonts** (пункт 5 уборки).
    - Сейчас google_fonts используется только в `app_text_theme.dart`.
    - В коде встречаются начертания 400, 500, 600, 700 и 800 (800 — заголовок на сплэше). Рядом со шрифтами положить лицензию OFL.
    - Удалить пакет, если он больше не нужен. Тогда виджет-тесты (`router_test`, `test/helpers/test_app.dart`) смогут поднимать настоящий `AppTheme`.
-3. **UI входа по коду приглашения.** `joinWithInviteCode` уже есть в репозитории, ошибка `invalidInviteCode` локализована. Сейчас фейк проверяет только длину кода, а роль всегда `foreman`.
-4. **README:** запуск, демо-входы, архитектура кратко, ссылка на CLAUDE.md.
-5. **Сжатие фото** через `flutter_image_compress`. Сейчас есть только `imageQuality: 85` и 1920 px в image_picker.
-6. **Офлайн-очередь отчётов:** `DraftReport` и `localStorageProvider` уже есть, нужны UI, повторная отправка и `OfflineBanner`.
-7. **Android-релиз:** `applicationId` вместо `com.example.buildflow`, подпись release-ключом (сейчас debug).
-8. **Настоящий API.**
+2. **UI входа по коду приглашения.** `joinWithInviteCode` уже есть в репозитории, ошибка `invalidInviteCode` локализована. Сейчас фейк проверяет только длину кода, а роль всегда `foreman`.
+3. **README:** запуск, демо-входы, архитектура кратко, ссылка на CLAUDE.md.
+4. **Сжатие фото** через `flutter_image_compress`. Сейчас есть только `imageQuality: 85` и 1920 px в image_picker.
+5. **Офлайн-очередь отчётов:** `DraftReport` и `localStorageProvider` уже есть, нужны UI, повторная отправка и `OfflineBanner`.
+6. **Android-релиз:** `applicationId` вместо `com.example.buildflow`, подпись release-ключом (сейчас debug).
+7. **Настоящий API.**
    - Клиент Dio с интерсепторами: при `sessionExpired` — logout. Перевод ответов в `FailureCode` — по таблице в `docs/api-contract.md`.
    - `kUseMockData` через `--dart-define`.
    - Реализации `Api*Repository`.
-9. **Обновление на Riverpod 3.** Legacy-провайдеров уже нет, всё на `Notifier`/`AsyncNotifier`. Проверить `ref.mounted` в мутациях после `await`.
+   - `PATCH /projects/:id` для частичных обновлений объекта: статус и состав отправляются отдельно, только изменённые поля. Сейчас `updateProject` шлёт объект целиком, и параллельные изменения (смена статуса и `removeMember`, который чистит составы) могут затереть друг друга. На экране объекта это закрыто блокировкой, в общем случае — нет.
+8. **Обновление на Riverpod 3.** Legacy-провайдеров уже нет, всё на `Notifier`/`AsyncNotifier`. Проверить `ref.mounted` в мутациях после `await`.
 
 При обновлении Flutter: `app_settings` и `flutter_image_compress_common` применяют Kotlin Gradle Plugin, а будущие версии Flutter такие плагины собирать не будут. Перед обновлением проверить их новые версии.
