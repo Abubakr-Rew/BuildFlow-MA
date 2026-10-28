@@ -46,7 +46,7 @@ class AvatarInitials extends StatelessWidget {
           maxLines: 1,
           style: TextStyle(
             color: tone.fg,
-            fontSize: size * 0.38,
+            fontSize: size * 0.36,
             fontWeight: FontWeight.w700,
             height: 1,
           ),
@@ -57,17 +57,24 @@ class AvatarInitials extends StatelessWidget {
 }
 
 /// Overlapping avatars; past [max] the last circle shows «+N».
+///
+/// Each circle is ringed in the card color and overlaps the previous one by
+/// [overlap] of its size, so at least 80 % of every circle, and both
+/// initials, stay visible.
 class AvatarStack extends StatelessWidget {
   const AvatarStack({
     required this.names,
-    this.size = 30,
-    this.max = 4,
+    this.size = 32,
+    this.max = 5,
     super.key,
   });
 
   final List<String> names;
   final double size;
   final int max;
+
+  /// Share of a circle hidden under the next one.
+  static const overlap = 0.2;
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +84,7 @@ class AvatarStack extends StatelessWidget {
     final count = shown.length + (overflow > 0 ? 1 : 0);
     if (count == 0) return const SizedBox.shrink();
 
-    final step = size * 0.7;
+    final step = size * (1 - overlap);
     return SizedBox(
       width: size + step * (count - 1),
       height: size,

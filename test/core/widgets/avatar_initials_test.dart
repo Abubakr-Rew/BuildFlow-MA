@@ -64,6 +64,54 @@ void main() {
   });
 
   group('AvatarStack', () {
+    testWidgets('4 avatars + «+N»: card-colored rings, each ≥ 70 % visible', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const Center(
+          child: AvatarStack(
+            names: [
+              'Анна Ли',
+              'Бакыт Касымов',
+              'Данияр Жумабеков',
+              'Ерлан Осмонов',
+              'Жамиля Кадырова',
+              'Зарина Усенова',
+            ],
+          ),
+        ),
+      );
+      for (final initials in ['АЛ', 'БК', 'ДЖ', 'ЕО']) {
+        expect(find.text(initials), findsOneWidget);
+      }
+      expect(find.text('ЖК'), findsNothing);
+      expect(find.text('+2'), findsOneWidget);
+
+      final card = BuildFlowThemeExtension.light.card;
+      final avatars = find.byType(AvatarInitials);
+      final rects = [
+        for (var i = 0; i < 4; i++) tester.getRect(avatars.at(i)),
+        tester.getRect(
+          find
+              .ancestor(of: find.text('+2'), matching: find.byType(Container))
+              .first,
+        ),
+      ];
+      for (var i = 0; i < 4; i++) {
+        expect(rects[i].width, inInclusiveRange(30, 32));
+        final visible = (rects[i + 1].left - rects[i].left) / rects[i].width;
+        expect(visible, greaterThanOrEqualTo(0.7));
+
+        final ring = tester.widget<Container>(
+          find.descendant(of: avatars.at(i), matching: find.byType(Container)),
+        );
+        final border = (ring.decoration! as BoxDecoration).border! as Border;
+        expect(border.top.color, card);
+        expect(border.top.width, 2);
+      }
+    });
+
     testWidgets('collapses names past max into +N', (tester) async {
       await _pump(
         tester,
