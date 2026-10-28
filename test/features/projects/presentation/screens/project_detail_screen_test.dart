@@ -2,14 +2,15 @@ import 'dart:async';
 
 import 'package:buildflow/app/l10n/generated/app_localizations_ru.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
-import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
+import 'package:buildflow/features/projects/presentation/screens/project_list_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -53,14 +54,21 @@ void main() {
     return projects;
   }
 
+  // The team and its editor live on the second tab.
+  Future<void> openTeamTab(WidgetTester tester) async {
+    await tester.tap(find.widgetWithText(Tab, l10n.navTeam));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('status menu and team editor are locked during a status change',
       (tester) async {
     final projects = await pumpProject(tester);
     final gate = projects.gate = Completer<void>();
+    await openTeamTab(tester);
 
     bool menuEnabled() => tester
-        .widget<PopupMenuButton<ProjectStatus>>(
-          find.byType(PopupMenuButton<ProjectStatus>),
+        .widget<PopupMenuButton<ProjectMenuAction>>(
+          find.byType(PopupMenuButton<ProjectMenuAction>),
         )
         .enabled;
     bool teamEditable() => tester
@@ -76,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(
       find.widgetWithText(
-        CheckedPopupMenuItem<ProjectStatus>,
+        CheckedPopupMenuItem<ProjectMenuAction>,
         l10n.statusPaused,
       ),
     );
@@ -98,6 +106,7 @@ void main() {
 
   testWidgets('a double tap on save updates the team once', (tester) async {
     final projects = await pumpProject(tester);
+    await openTeamTab(tester);
 
     await tester.tap(find.text(l10n.editTeam));
     await tester.pumpAndSettle();
@@ -110,5 +119,59 @@ void main() {
     expect(find.text(l10n.teamSaved), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5)); // let the snackbar go
+  });
+  testWidgets('a readiness change locks the menu, saves once and shows in '
+      'the list', (tester) async {
+    final projects = await pumpProject(tester);
+    final gate = projects.gate = Completer<void>();
+
+    bool menuEnabled() => tester
+        .widget<PopupMenuButton<ProjectMenuAction>>(
+          find.byType(PopupMenuButton<ProjectMenuAction>),
+        )
+        .enabled;
+
+    await tester.tap(find.byIcon(Icons.more_vert));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.changeProgress));
+    await tester.pumpAndSettle();
+
+    // Seeded at 65 %; the slider moves in 5 % steps.
+    expect(find.text(l10n.percentValue(65)), findsWidgets);
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(80);
+    await tester.pump();
+    expect(find.text(l10n.percentValue(80)), findsWidgets);
+    await tester.tap(find.text(l10n.save));
+    await tester.pumpAndSettle(); // the update waits for the gate
+
+    expect(projects.updates, 1);
+    expect(menuEnabled(), isFalse);
+
+    gate.complete();
+    await tester.pump(const Duration(seconds: 1));
+    expect(menuEnabled(), isTrue);
+    expect(find.text(l10n.progressSaved), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1)); // projects reload
+    expect(find.text(l10n.percentValue(80)), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5)); // let the snackbar go
+
+    // A fresh list over the same repository shows the saved value.
+    await pumpTestApp(
+      tester,
+      const ProjectListScreen(),
+      overrides: [
+        currentUserProvider.overrideWithValue(_owner),
+        projectRepositoryProvider.overrideWithValue(projects),
+      ],
+    );
+    await tester.pump(const Duration(seconds: 1));
+    final card = find.ancestor(
+      of: find.text('ЖК "Ала-Тоо Резиденс"'),
+      matching: find.byType(BfCard),
+    );
+    expect(
+      find.descendant(of: card, matching: find.text(l10n.percentValue(80))),
+      findsOneWidget,
+    );
   });
 }

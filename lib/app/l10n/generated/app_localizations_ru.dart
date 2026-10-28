@@ -109,7 +109,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get navProfile => 'Профиль';
 
   @override
-  String get projectsTitle => 'Строительные объекты';
+  String get projectsTitle => 'Объекты';
 
   @override
   String get newProject => 'Новый объект';
@@ -530,4 +530,61 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reportsCount => 'Отчётов';
+
+  @override
+  String greetingMorning(String name) {
+    return 'Доброе утро, $name';
+  }
+
+  @override
+  String greetingDay(String name) {
+    return 'Добрый день, $name';
+  }
+
+  @override
+  String greetingEvening(String name) {
+    return 'Добрый вечер, $name';
+  }
+
+  @override
+  String get summaryReportsSent => 'Отчётов сдано';
+
+  @override
+  String get summaryNewPhotos => 'Новых фото';
+
+  @override
+  String get summaryActiveProjects => 'Объектов в работе';
+
+  @override
+  String summaryWithoutReport(int count) {
+    return '$count без отчёта';
+  }
+
+  @override
+  String get filterAll => 'Все';
+
+  @override
+  String get progressLabel => 'Готовность';
+
+  @override
+  String percentValue(int value) {
+    return '$value%';
+  }
+
+  @override
+  String reportAt(String time) {
+    return 'Отчёт в $time';
+  }
+
+  @override
+  String get noReportForToday => 'Нет отчёта за сегодня';
+
+  @override
+  String get changeProgress => 'Изменить готовность';
+
+  @override
+  String get progressSaved => 'Готовность сохранена';
+
+  @override
+  String get more => 'Ещё';
 }

@@ -16,24 +16,25 @@ final reportRepositoryProvider = Provider<ReportRepository>(
 
 /// Reports visible to the current user: everything for a director,
 /// otherwise only reports for the user's own projects.
-final reportsProvider =
-    AsyncNotifierProvider<ReportsNotifier, List<Report>>(
+final reportsProvider = AsyncNotifierProvider<ReportsNotifier, List<Report>>(
   ReportsNotifier.new,
 );
 
 /// Reports of a single project, newest first.
 final projectReportsProvider =
     Provider.family<AsyncValue<List<Report>>, String>(
-  (ref, projectId) => ref.watch(reportsProvider).whenData(
-        (list) => list.where((r) => r.projectId == projectId).toList(),
-      ),
-);
+      (ref, projectId) => ref
+          .watch(reportsProvider)
+          .whenData(
+            (list) => list.where((r) => r.projectId == projectId).toList(),
+          ),
+    );
 
 /// A single visible report, or `null` if it doesn't exist / isn't visible.
 final reportByIdProvider = Provider.family<AsyncValue<Report?>, String>(
-  (ref, id) => ref.watch(reportsProvider).whenData(
-        (list) => list.where((r) => r.id == id).firstOrNull,
-      ),
+  (ref, id) => ref
+      .watch(reportsProvider)
+      .whenData((list) => list.where((r) => r.id == id).firstOrNull),
 );
 
 class ReportsNotifier extends AsyncNotifier<List<Report>> {
@@ -42,8 +43,9 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
     final user = ref.watch(currentUserProvider);
     if (user == null) return const [];
 
-    final visibleProjectIds =
-        (await ref.watch(projectsProvider.future)).map((p) => p.id).toSet();
+    final visibleProjectIds = (await ref.watch(projectsProvider.future))
+        .map((p) => p.id)
+        .toSet();
 
     final repo = ref.watch(reportRepositoryProvider);
     final result = await repo.getReports();
@@ -96,3 +98,53 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
     return result;
   }
 }
+
+// ── Today ─────────────────────────────────────────────────────
+
+bool _isToday(DateTime date, DateTime now) =>
+    date.year == now.year && date.month == now.month && date.day == now.day;
+
+/// Time of today's latest report for a project, or `null` if there is none.
+final todayReportTimeProvider = Provider.family<DateTime?, String>((
+  ref,
+  projectId,
+) {
+  final reports = ref.watch(reportsProvider).valueOrNull ?? const [];
+  final now = DateTime.now();
+  DateTime? latest;
+  for (final r in reports) {
+    if (r.projectId != projectId || !_isToday(r.createdAt, now)) continue;
+    if (latest == null || r.createdAt.isAfter(latest)) latest = r.createdAt;
+  }
+  return latest;
+});
+
+/// Day summary on the projects screen, over the visible projects.
+typedef DaySummary = ({
+  /// Active projects with at least one report today.
+  int reportsSent,
+
+  /// Active projects.
+  int activeProjects,
+
+  /// Photos in today's reports.
+  int newPhotos,
+});
+
+final daySummaryProvider = Provider<AsyncValue<DaySummary>>((ref) {
+  final projects = ref.watch(projectsProvider);
+  // Until reports load every project would look like it has no report.
+  final reports = ref.watch(reportsProvider).valueOrNull;
+  if (reports == null) return const AsyncLoading();
+  return projects.whenData((list) {
+    final now = DateTime.now();
+    final today = reports.where((r) => _isToday(r.createdAt, now)).toList();
+    final reported = today.map((r) => r.projectId).toSet();
+    final active = list.where((p) => p.status.isActive);
+    return (
+      reportsSent: active.where((p) => reported.contains(p.id)).length,
+      activeProjects: active.length,
+      newPhotos: today.fold(0, (sum, r) => sum + r.photos.length),
+    );
+  });
+});

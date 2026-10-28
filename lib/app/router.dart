@@ -1,5 +1,6 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
+import 'package:buildflow/core/widgets/bf_bottom_nav.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/screens/join_screen.dart';
@@ -158,28 +159,28 @@ class _RoleShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
 
-    final projects = NavigationDestination(
-      icon: const Icon(Icons.construction_outlined),
-      selectedIcon: const Icon(Icons.construction),
+    final projects = BfNavItem(
+      icon: Icons.construction_outlined,
+      selectedIcon: Icons.construction,
       label: l10n.navProjects,
     );
-    final reports = NavigationDestination(
-      icon: const Icon(Icons.article_outlined),
-      selectedIcon: const Icon(Icons.article),
+    final reports = BfNavItem(
+      icon: Icons.article_outlined,
+      selectedIcon: Icons.article,
       label: l10n.navReports,
     );
-    final profile = NavigationDestination(
-      icon: const Icon(Icons.person_outlined),
-      selectedIcon: const Icon(Icons.person),
+    final profile = BfNavItem(
+      icon: Icons.person_outlined,
+      selectedIcon: Icons.person,
       label: l10n.navProfile,
     );
 
     final destinations = switch (role) {
       _ShellRole.owner => [
           projects,
-          NavigationDestination(
-            icon: const Icon(Icons.group_outlined),
-            selectedIcon: const Icon(Icons.group),
+          BfNavItem(
+            icon: Icons.group_outlined,
+            selectedIcon: Icons.group,
             label: l10n.navTeam,
           ),
           reports,
@@ -187,9 +188,9 @@ class _RoleShell extends ConsumerWidget {
         ],
       _ShellRole.foreman => [
           projects,
-          NavigationDestination(
-            icon: const Icon(Icons.add_a_photo_outlined),
-            selectedIcon: const Icon(Icons.add_a_photo),
+          BfNavItem(
+            icon: Icons.add_a_photo_outlined,
+            selectedIcon: Icons.add_a_photo,
             label: l10n.navNewReport,
           ),
           reports,
@@ -200,13 +201,14 @@ class _RoleShell extends ConsumerWidget {
 
     return Scaffold(
       body: shell,
-      bottomNavigationBar: NavigationBar(
+      // A chats tab will pass its unread count as BfNavItem.badgeCount.
+      bottomNavigationBar: BfBottomNav(
         selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) => shell.goBranch(
+        onSelected: (i) => shell.goBranch(
           i,
           initialLocation: i == shell.currentIndex,
         ),
-        destinations: destinations,
+        items: destinations,
       ),
     );
   }

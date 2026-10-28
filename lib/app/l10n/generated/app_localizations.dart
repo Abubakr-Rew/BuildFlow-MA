@@ -295,7 +295,7 @@ abstract class AppLocalizations {
   /// Projects screen title
   ///
   /// In ru, this message translates to:
-  /// **'Строительные объекты'**
+  /// **'Объекты'**
   String get projectsTitle;
 
   /// New project button
@@ -1089,6 +1089,96 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Отчётов'**
   String get reportsCount;
+
+  /// Greeting above the projects title, 5:00–11:59
+  ///
+  /// In ru, this message translates to:
+  /// **'Доброе утро, {name}'**
+  String greetingMorning(String name);
+
+  /// Greeting above the projects title, 12:00–17:59
+  ///
+  /// In ru, this message translates to:
+  /// **'Добрый день, {name}'**
+  String greetingDay(String name);
+
+  /// Greeting above the projects title, 18:00–4:59
+  ///
+  /// In ru, this message translates to:
+  /// **'Добрый вечер, {name}'**
+  String greetingEvening(String name);
+
+  /// Day summary: active projects with a report today out of all active
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчётов сдано'**
+  String get summaryReportsSent;
+
+  /// Day summary: photos in today's reports
+  ///
+  /// In ru, this message translates to:
+  /// **'Новых фото'**
+  String get summaryNewPhotos;
+
+  /// Day summary: active projects
+  ///
+  /// In ru, this message translates to:
+  /// **'Объектов в работе'**
+  String get summaryActiveProjects;
+
+  /// Day summary badge: active projects without a report today
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} без отчёта'**
+  String summaryWithoutReport(int count);
+
+  /// Project filter chip: all statuses
+  ///
+  /// In ru, this message translates to:
+  /// **'Все'**
+  String get filterAll;
+
+  /// Project readiness label
+  ///
+  /// In ru, this message translates to:
+  /// **'Готовность'**
+  String get progressLabel;
+
+  /// A percentage
+  ///
+  /// In ru, this message translates to:
+  /// **'{value}%'**
+  String percentValue(int value);
+
+  /// Project card: time of today's latest report
+  ///
+  /// In ru, this message translates to:
+  /// **'Отчёт в {time}'**
+  String reportAt(String time);
+
+  /// Project card: active project without a report today
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет отчёта за сегодня'**
+  String get noReportForToday;
+
+  /// Project menu item and dialog title
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить готовность'**
+  String get changeProgress;
+
+  /// Snackbar after the readiness is saved
+  ///
+  /// In ru, this message translates to:
+  /// **'Готовность сохранена'**
+  String get progressSaved;
+
+  /// Tooltip of the overflow menu button
+  ///
+  /// In ru, this message translates to:
+  /// **'Ещё'**
+  String get more;
 }
 
 class _AppLocalizationsDelegate

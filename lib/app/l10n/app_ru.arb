@@ -100,7 +100,7 @@
   "navProfile": "Профиль",
   "@navProfile": {"description": "Profile nav label"},
 
-  "projectsTitle": "Строительные объекты",
+  "projectsTitle": "Объекты",
   "@projectsTitle": {"description": "Projects screen title"},
 
   "newProject": "Новый объект",
@@ -528,5 +528,50 @@
   "@workersCount": {"description": "Workers count label"},
 
   "reportsCount": "Отчётов",
-  "@reportsCount": {"description": "Reports count label"}
+  "@reportsCount": {"description": "Reports count label"},
+
+  "greetingMorning": "Доброе утро, {name}",
+  "@greetingMorning": {"description": "Greeting above the projects title, 5:00–11:59", "placeholders": {"name": {"type": "String"}}},
+
+  "greetingDay": "Добрый день, {name}",
+  "@greetingDay": {"description": "Greeting above the projects title, 12:00–17:59", "placeholders": {"name": {"type": "String"}}},
+
+  "greetingEvening": "Добрый вечер, {name}",
+  "@greetingEvening": {"description": "Greeting above the projects title, 18:00–4:59", "placeholders": {"name": {"type": "String"}}},
+
+  "summaryReportsSent": "Отчётов сдано",
+  "@summaryReportsSent": {"description": "Day summary: active projects with a report today out of all active"},
+
+  "summaryNewPhotos": "Новых фото",
+  "@summaryNewPhotos": {"description": "Day summary: photos in today's reports"},
+
+  "summaryActiveProjects": "Объектов в работе",
+  "@summaryActiveProjects": {"description": "Day summary: active projects"},
+
+  "summaryWithoutReport": "{count} без отчёта",
+  "@summaryWithoutReport": {"description": "Day summary badge: active projects without a report today", "placeholders": {"count": {"type": "int"}}},
+
+  "filterAll": "Все",
+  "@filterAll": {"description": "Project filter chip: all statuses"},
+
+  "progressLabel": "Готовность",
+  "@progressLabel": {"description": "Project readiness label"},
+
+  "percentValue": "{value}%",
+  "@percentValue": {"description": "A percentage", "placeholders": {"value": {"type": "int"}}},
+
+  "reportAt": "Отчёт в {time}",
+  "@reportAt": {"description": "Project card: time of today's latest report", "placeholders": {"time": {"type": "String"}}},
+
+  "noReportForToday": "Нет отчёта за сегодня",
+  "@noReportForToday": {"description": "Project card: active project without a report today"},
+
+  "changeProgress": "Изменить готовность",
+  "@changeProgress": {"description": "Project menu item and dialog title"},
+
+  "progressSaved": "Готовность сохранена",
+  "@progressSaved": {"description": "Snackbar after the readiness is saved"},
+
+  "more": "Ещё",
+  "@more": {"description": "Tooltip of the overflow menu button"}
 }
