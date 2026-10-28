@@ -97,8 +97,27 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `routerProvider` создаёт `GoRouter` один раз. `refreshListenable` срабатывает, когда в `authProvider` меняется
   `(status, user)`. После login, register, join, logout и restoreSession **не вызывать `context.go`**: достаточно сменить
   состояние в `AuthNotifier`.
-- `/projects/:id` и `/reports/:id` — роуты верхнего уровня вне shell, поэтому открываются поверх навигации.
-  Открывать через `context.push(Routes.project(id))` / `Routes.report(id)`.
+- `/projects/:id`, `/reports/:id` и `/people` (поиск людей) — роуты верхнего уровня вне shell, поэтому
+  открываются поверх навигации. Открывать через `context.push(Routes.project(id))` / `Routes.report(id)` /
+  `Routes.peopleSearch`.
+- Поиск людей ([people_search_screen.dart](lib/features/team/presentation/screens/people_search_screen.dart)).
+  Вход — `BfIconButton(Icons.person_search_rounded)` в шапке: у директора на вкладке «Команда», у прораба
+  и строителя на списке объектов (своей вкладки команды у них нет). Если на список объектов добавят поиск
+  объектов, у него будет лупа, а не `person_search`.
+  - Сопоставление — чистые `matchName()` / `searchMembers()` в
+    [member_search.dart](lib/features/team/domain/member_search.dart). Правила:
+    - начало любого слова, регистр не важен;
+    - ё = е, ң/ө/ү = н/о/у;
+    - латиница читается как кириллица, й/ы/и и э/е склеиваются.
+
+    Свёртка имени посимвольная: диапазоны совпадений сразу ложатся на исходную строку и идут в подсветку.
+    Те же правила записаны для сервера в api-contract.md (`GET /team/members?query=&role=`).
+  - Ищет на клиенте по `membersProvider`, себя не показывает. Запрос короче `minPeopleSearchLength` (2) без
+    выбранной роли показывает «Недавние»: `recentPeopleProvider`, до 5 id, только в памяти, сбрасывается
+    при смене пользователя.
+  - Объекты человека — `memberProjectsProvider(userId)` по `Project.foremanIds/workerIds` из видимых
+    объектов. Прораб и строитель видят только общие объекты. `Member.assignedProjectIds` не обновляется
+    при смене состава, на него не опираться.
 - Видимость данных по ролям — в провайдерах, а не в роутере: `canSeeProject()` в project_provider.dart.
   `reportsProvider` отдаёт отчёты только по видимым объектам.
   Обложка шапки объекта — `projectCoverProvider` (последнее фото последнего отчёта с фото); без фото шапка
@@ -149,7 +168,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
   репозитория доходит до экрана со своим кодом), защита от двойной отправки, сохранение темы, `describePhotoPickError`,
   валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер, контраст токенов
-  (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса. Виджет-тесты: `test/app/router_test.dart`
+  (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса, правила поиска людей и «Недавние». Виджет-тесты: `test/app/router_test.dart`
   (`MaterialApp.router`) и экраны через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart).
   Тема в них — настоящая `AppTheme.light` (параметр `theme:` подменяет её). `screens_smoke_test.dart` рендерит каждый
   экран в обеих темах; новый экран добавлять туда. Шрифты из assets flutter_test не грузит, текст рисуется тестовым шрифтом Ahem.
@@ -174,7 +193,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   бейджи непрочитанного, прогресс. Удаление и прочие разрушительные действия — `danger`, не акцент;
 - графит: `graphite`, `onGraphite`, `onGraphiteSecondary` (сводка дня, вторичная кнопка, активный чип, шапка объекта);
 - статусы — пары `ToneColors(fg, bg)`: `active` (в работе, отчёт сдан), `paused`, `danger` (ошибка, нет отчёта), `finished`;
-- `avatarFor(name)` — пастельная пара для аватара, `photoPlaceholders` — фон `fake:`-фото.
+- `avatarFor(name)` — пастельная пара для аватара, `photoPlaceholders` — фон `fake:`-фото;
+- `matchHighlight` — подложка совпадения в поиске: полупрозрачный акцент поверх `card`, текст на ней `textPrimary`.
 
 `ColorScheme` выводится из тех же токенов (`primary` = accent, `error` = danger.fg, `surface` = canvas,
 `surfaceContainer*` = card / muted), так что диалоги, меню и снэкбары Material уже в стиле.
@@ -211,7 +231,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `explicit_to_json: true` включён глобально в [build.yaml](build.yaml): вложенные модели (`Report.photos`) сериализуются
   через `.toJson()`. Отдельная аннотация `@JsonSerializable(explicitToJson: true)` на моделях не нужна.
 - После любой правки freezed- или json-модели обязательно запускать build_runner. `*.g.dart` и `*.freezed.dart` лежат в git.
-- Демо-входы (пароль у всех `123456`): `owner@buildflow.kg`, `foreman1@`, `foreman2@`, `worker1@`, `worker2@buildflow.kg`.
+- Демо-входы (пароль у всех `123456`): `owner@buildflow.kg`, `foreman1@`, `foreman2@`, `worker1@`, `worker2@`, `worker3@buildflow.kg`
+  (Азамат Асанов есть для демо поиска: «асан» находит и его, и директора Асана Бековича; работает на «Байтике»).
 - Secure storage — только через `SecureStorageService`: в нём таймауты, потому что на Xiaomi/MIUI KeyStore может зависнуть.
   Напрямую `FlutterSecureStorage` не вызывать. Сплэш тоже страхуется таймаутом (`forceUnauthenticated`).
 - `NewReportScreen` подставляет фото `fake:demo-<ts>`, если пользователь ничего не выбрал.
@@ -246,7 +267,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 
 ## Текущее состояние
 Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
-детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
+детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, поиск людей по имени и фамилии, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
 (сохраняется между запусками), три роли. Визуальный стиль — см. «Дизайн-токены и компоненты».
 Заглушки и пробелы: Api-репозитории (все четыре — заглушки), клиент Dio, сжатие фото (flutter_image_compress),
 загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),
