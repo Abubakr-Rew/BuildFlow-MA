@@ -8,8 +8,8 @@ import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
 import 'package:flutter/material.dart';
 
-/// A text message. The user's own are graphite on the right with the time
-/// and delivery ticks; others' are white cards on the left. In a project
+/// A text message. The user's own are `bubbleOwn` on the right with the
+/// time and delivery ticks; others' are white cards on the left. In a project
 /// chat others' messages carry the author's name above the first message
 /// of a group and the avatar beside the last one.
 class MessageBubble extends StatelessWidget {
@@ -68,14 +68,14 @@ class MessageBubble extends StatelessWidget {
             bottomLeft: bottom,
           );
 
-    final textColor = mine ? t.onGraphite : t.textPrimary;
+    final textColor = mine ? t.onBubbleOwn : t.textPrimary;
     final bubble = Container(
       constraints: BoxConstraints(
         maxWidth: MediaQuery.sizeOf(context).width * _maxWidthShare,
       ),
       padding: const EdgeInsets.fromLTRB(12, 8, 10, 6),
       decoration: BoxDecoration(
-        color: mine ? t.graphite : t.card,
+        color: mine ? t.bubbleOwn : t.card,
         borderRadius: radius,
         border: mine ? null : Border.all(color: t.border),
       ),
@@ -106,7 +106,7 @@ class MessageBubble extends StatelessWidget {
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: supported
                       ? textColor
-                      : (mine ? t.onGraphiteSecondary : t.textSecondary),
+                      : (mine ? t.onBubbleOwnSecondary : t.textSecondary),
                   fontStyle: supported ? null : FontStyle.italic,
                 ),
               ),
@@ -153,7 +153,7 @@ class _Meta extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = context.bfTheme;
     final l10n = AppLocalizations.of(context);
-    final quiet = mine ? t.onGraphiteSecondary : t.textTertiary;
+    final quiet = mine ? t.onBubbleOwnSecondary : t.textTertiary;
 
     final status = !mine
         ? null

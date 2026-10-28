@@ -50,6 +50,15 @@ abstract final class AppColors {
   static const accentTextDark = Color(0xFFFF9A5C);
   static const graphiteDark = Color(0xFF2A2F36);
 
+  /// Selected chip, inverted: graphite is too close to muted in the dark.
+  static const chipSelectedDark = Color(0xFFF2F1ED);
+  static const onChipSelectedDark = Color(0xFF15171A);
+
+  /// Own chat bubble: warm and clearly lighter than the card of others'.
+  static const bubbleOwnDark = Color(0xFF3A2E26);
+  static const onBubbleOwnDark = Color(0xFFF2F1ED);
+  static const onBubbleOwnSecondaryDark = Color(0xFFBCB0A6);
+
   static const activeFgDark = Color(0xFF7FD49B);
   static const activeBgDark = Color(0xFF16301F);
   static const pausedFgDark = Color(0xFFF2C46B);

@@ -3,7 +3,8 @@ import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:flutter/material.dart';
 
 /// Fully rounded chip for filters and quick templates.
-/// Selected: graphite with white text; otherwise a muted fill.
+/// Selected: `chipSelected` from the theme (graphite in the light theme, an
+/// inverted light pill in the dark); otherwise a muted fill.
 class BfChip extends StatelessWidget {
   const BfChip({
     required this.label,
@@ -21,7 +22,7 @@ class BfChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.bfTheme;
-    final fg = selected ? t.onGraphite : t.textPrimary;
+    final fg = selected ? t.onChipSelected : t.textPrimary;
     return Semantics(
       selected: selected,
       button: true,
@@ -31,7 +32,7 @@ class BfChip extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           child: Material(
-            color: selected ? t.graphite : t.muted,
+            color: selected ? t.chipSelected : t.muted,
             shape: const StadiumBorder(),
             clipBehavior: Clip.antiAlias,
             child: InkWell(

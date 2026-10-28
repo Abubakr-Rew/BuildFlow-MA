@@ -34,6 +34,11 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     required this.graphite,
     required this.onGraphite,
     required this.onGraphiteSecondary,
+    required this.chipSelected,
+    required this.onChipSelected,
+    required this.bubbleOwn,
+    required this.onBubbleOwn,
+    required this.onBubbleOwnSecondary,
     required this.matchHighlight,
     required this.active,
     required this.paused,
@@ -63,10 +68,21 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
   /// Accent used as a text or link color.
   final Color accentText;
 
-  /// Dark summary card, secondary button, active filter chip.
+  /// Dark summary card, secondary button, project header.
   final Color graphite;
   final Color onGraphite;
   final Color onGraphiteSecondary;
+
+  /// Selected `BfChip`: graphite in the light theme, an inverted light pill
+  /// in the dark one, where graphite is hardly different from [muted].
+  final Color chipSelected;
+  final Color onChipSelected;
+
+  /// The user's own chat bubble, its text and its time and ticks.
+  /// Others' bubbles are [card] with a [border].
+  final Color bubbleOwn;
+  final Color onBubbleOwn;
+  final Color onBubbleOwnSecondary;
 
   /// Background of the matched part of a name in search results:
   /// translucent [accent] over the card, under [textPrimary].
@@ -117,6 +133,11 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     graphite: AppColors.graphiteLight,
     onGraphite: AppColors.onGraphite,
     onGraphiteSecondary: AppColors.onGraphiteSecondary,
+    chipSelected: AppColors.graphiteLight,
+    onChipSelected: AppColors.onGraphite,
+    bubbleOwn: AppColors.graphiteLight,
+    onBubbleOwn: AppColors.onGraphite,
+    onBubbleOwnSecondary: AppColors.onGraphiteSecondary,
     matchHighlight: AppColors.accent.withValues(
       alpha: AppColors.matchHighlightOpacityLight,
     ),
@@ -156,6 +177,11 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     graphite: AppColors.graphiteDark,
     onGraphite: AppColors.onGraphite,
     onGraphiteSecondary: AppColors.onGraphiteSecondary,
+    chipSelected: AppColors.chipSelectedDark,
+    onChipSelected: AppColors.onChipSelectedDark,
+    bubbleOwn: AppColors.bubbleOwnDark,
+    onBubbleOwn: AppColors.onBubbleOwnDark,
+    onBubbleOwnSecondary: AppColors.onBubbleOwnSecondaryDark,
     matchHighlight: AppColors.accent.withValues(
       alpha: AppColors.matchHighlightOpacityDark,
     ),
@@ -196,6 +222,11 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
     Color? graphite,
     Color? onGraphite,
     Color? onGraphiteSecondary,
+    Color? chipSelected,
+    Color? onChipSelected,
+    Color? bubbleOwn,
+    Color? onBubbleOwn,
+    Color? onBubbleOwnSecondary,
     Color? matchHighlight,
     ToneColors? active,
     ToneColors? paused,
@@ -218,6 +249,11 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
       graphite: graphite ?? this.graphite,
       onGraphite: onGraphite ?? this.onGraphite,
       onGraphiteSecondary: onGraphiteSecondary ?? this.onGraphiteSecondary,
+      chipSelected: chipSelected ?? this.chipSelected,
+      onChipSelected: onChipSelected ?? this.onChipSelected,
+      bubbleOwn: bubbleOwn ?? this.bubbleOwn,
+      onBubbleOwn: onBubbleOwn ?? this.onBubbleOwn,
+      onBubbleOwnSecondary: onBubbleOwnSecondary ?? this.onBubbleOwnSecondary,
       matchHighlight: matchHighlight ?? this.matchHighlight,
       active: active ?? this.active,
       paused: paused ?? this.paused,
@@ -249,6 +285,11 @@ class BuildFlowThemeExtension extends ThemeExtension<BuildFlowThemeExtension> {
       graphite: c(graphite, other.graphite),
       onGraphite: c(onGraphite, other.onGraphite),
       onGraphiteSecondary: c(onGraphiteSecondary, other.onGraphiteSecondary),
+      chipSelected: c(chipSelected, other.chipSelected),
+      onChipSelected: c(onChipSelected, other.onChipSelected),
+      bubbleOwn: c(bubbleOwn, other.bubbleOwn),
+      onBubbleOwn: c(onBubbleOwn, other.onBubbleOwn),
+      onBubbleOwnSecondary: c(onBubbleOwnSecondary, other.onBubbleOwnSecondary),
       matchHighlight: c(matchHighlight, other.matchHighlight),
       active: active.lerpTo(other.active, t),
       paused: paused.lerpTo(other.paused, t),

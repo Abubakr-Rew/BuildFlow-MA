@@ -43,6 +43,14 @@ void main() {
         'onGraphiteSecondary on graphite': (t.onGraphiteSecondary, t.graphite),
         // Snack bar action; read ticks and the building on chat avatars.
         'accent on graphite': (t.accent, t.graphite),
+        'onChipSelected on chipSelected': (t.onChipSelected, t.chipSelected),
+        'onBubbleOwn on bubbleOwn': (t.onBubbleOwn, t.bubbleOwn),
+        'onBubbleOwnSecondary on bubbleOwn (time)': (
+          t.onBubbleOwnSecondary,
+          t.bubbleOwn,
+        ),
+        // Read ticks on the user's own message.
+        'accent on bubbleOwn': (t.accent, t.bubbleOwn),
         'danger on canvas (unsent message icon)': (t.danger.fg, t.canvas),
         'active': (t.active.fg, t.active.bg),
         'paused': (t.paused.fg, t.paused.bg),
