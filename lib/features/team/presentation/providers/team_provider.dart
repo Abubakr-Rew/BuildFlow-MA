@@ -7,11 +7,14 @@ import 'package:buildflow/features/team/data/api_team_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_repository.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/domain/repositories/team_repository.dart';
+import 'package:buildflow/features/team/presentation/providers/fake_team_store_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final teamRepositoryProvider = Provider<TeamRepository>(
-  (ref) => kUseMockData ? FakeTeamRepository() : ApiTeamRepository(),
+  (ref) => kUseMockData
+      ? FakeTeamRepository(store: ref.watch(fakeTeamStoreProvider))
+      : ApiTeamRepository(),
 );
 
 final membersProvider =

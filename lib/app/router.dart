@@ -2,6 +2,7 @@ import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/auth/presentation/screens/join_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/login_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/register_screen.dart';
 import 'package:buildflow/features/auth/presentation/screens/splash_screen.dart';
@@ -33,7 +34,8 @@ String? authRedirect(AuthState auth, String path) {
   }
 
   final user = auth.user;
-  final isAuthPage = path == Routes.login || path == Routes.register;
+  final isAuthPage =
+      path == Routes.login || path == Routes.register || path == Routes.join;
   if (user == null) return isAuthPage ? null : Routes.login;
   if (isSplash || isAuthPage) return Routes.homeFor(user.role);
 
@@ -75,6 +77,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.register,
         builder: (_, __) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: Routes.join,
+        builder: (_, __) => const JoinScreen(),
       ),
 
       // Shared detail screens

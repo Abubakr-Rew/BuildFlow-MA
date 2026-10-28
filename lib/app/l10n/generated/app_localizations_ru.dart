@@ -49,6 +49,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get createCompany => 'Создать компанию';
 
   @override
+  String get haveInviteCode => 'Есть код приглашения?';
+
+  @override
+  String get joinTitle => 'Вход по приглашению';
+
+  @override
+  String get joinSubtitle => 'Роль и компанию задаёт код от директора';
+
+  @override
+  String get inviteCodeFieldHint => '6 символов, например K7M2QX';
+
+  @override
+  String get joinButton => 'Присоединиться';
+
+  @override
+  String get validationInviteCodeRequired => 'Введите код приглашения';
+
+  @override
   String get emailHint => 'example@mail.com';
 
   @override
@@ -151,7 +169,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get inviteCodeTitle => 'Код приглашения';
 
   @override
-  String get inviteCodeHint => 'Отправьте этот код прорабу';
+  String get inviteCodeHint =>
+      'Код действует 7 дней и подходит для одного входа';
 
   @override
   String get copyCode => 'Скопировать';
@@ -363,7 +382,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorEmailTaken => 'Пользователь с таким email уже существует';
 
   @override
-  String get errorInvalidInviteCode => 'Неверный код приглашения';
+  String get errorInvalidInviteCode =>
+      'Код приглашения неверный, уже использован или истёк';
 
   @override
   String get errorSessionExpired => 'Сессия истекла. Войдите снова';
@@ -376,6 +396,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorValidation => 'Проверьте введённые данные';
+
+  @override
+  String get errorTooManyRequests =>
+      'Слишком много попыток. Подождите минуту и попробуйте снова';
 
   @override
   String get errorUnknown => 'Что-то пошло не так';

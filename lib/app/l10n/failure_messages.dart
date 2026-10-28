@@ -23,6 +23,7 @@ extension FailureMessages on AppLocalizations {
         FailureCode.forbidden => errorForbidden,
         FailureCode.notFound => errorNotFound,
         FailureCode.validation => errorValidation,
+        FailureCode.tooManyRequests => errorTooManyRequests,
         FailureCode.unknown => errorUnknown,
       };
 }

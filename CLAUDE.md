@@ -39,7 +39,7 @@ lib/features/<фича>/data/          Fake*Repository, Api*Repository
 `Failure` ([failures.dart](lib/core/error/failures.dart)) — один класс. Что увидит пользователь, решает `code`
 (enum `FailureCode`). `message` нужен только для логов и отладки и в UI не показывается. Есть ещё `statusCode`
 и `stackTrace`. Коды: `network`, `timeout`, `server`, `invalidCredentials`, `emailTaken`, `invalidInviteCode`,
-`sessionExpired`, `forbidden`, `notFound`, `validation`, `unknown`. Соответствие HTTP-ответам — в docs/api-contract.md.
+`sessionExpired`, `forbidden`, `notFound`, `validation`, `tooManyRequests`, `unknown`. Соответствие HTTP-ответам — в docs/api-contract.md.
 ```dart
 Future<Result<Project>> createProject(...);                                  // интерфейс репозитория
 return Err(Failure(FailureCode.notFound, message: 'Project $id not found')); // ошибка
@@ -78,6 +78,12 @@ Text(l10n.failureMessage(error))                                             // 
   `Err(Failure(FailureCode.server, message: 'API not implemented'))`. Контракт: [docs/api-contract.md](docs/api-contract.md).
 - Fake-репозитории изолированы друг от друга, но используют общие ID (`user-owner-1`, `user-foreman-1`, `project-1`…).
   Есть искусственная задержка. Данные живут только в памяти и при перезапуске сбрасываются.
+  Исключение — участники и коды приглашения. Они лежат в общем
+  [FakeTeamStore](lib/features/team/data/fake_team_store.dart) (in-memory «сервер» компании), который
+  `fakeTeamStoreProvider` отдаёт и `FakeTeamRepository`, и `FakeAuthRepository`. Поэтому код, созданный директором,
+  работает на экране присоединения, а новый участник появляется в команде. Провайдер лежит в отдельном
+  `team/presentation/providers/fake_team_store_provider.dart`: его читает auth_provider, а team_provider уже импортирует
+  auth_provider, так что в team_provider был бы цикл. Пользователи и пароли хранятся только в `FakeAuthRepository`.
 
 **Роли:** `UserRole { owner, foreman, worker }` ([user_role.dart](lib/features/auth/domain/entities/user_role.dart)).
 UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_label.dart](lib/features/auth/presentation/role_label.dart).
@@ -86,10 +92,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Worker: объекты, отчёты, профиль.
 - Пути — в [routes.dart](lib/app/routes.dart): `/owner/*`, `/foreman/*`, `/worker/*`, плюс `Routes.homeFor(role)` и `prefixFor(role)`.
 - Навигацию по авторизации делает только роутер. Чистая функция `authRedirect(AuthState, path)` в router.dart:
-  статус `initial` → остаёмся на сплэше; нет пользователя → `/login`; сплэш, login или register → home роли;
+  статус `initial` → остаёмся на сплэше; нет пользователя → `/login`; сплэш, login, register или join → home роли;
   префикс чужой роли → home роли. Тесты лежат в `test/app/router_test.dart`.
 - `routerProvider` создаёт `GoRouter` один раз. `refreshListenable` срабатывает, когда в `authProvider` меняется
-  `(status, user)`. После login, register, logout и restoreSession **не вызывать `context.go`**: достаточно сменить
+  `(status, user)`. После login, register, join, logout и restoreSession **не вызывать `context.go`**: достаточно сменить
   состояние в `AuthNotifier`.
 - `/projects/:id` и `/reports/:id` — роуты верхнего уровня вне shell, поэтому открываются поверх навигации.
   Открывать через `context.push(Routes.project(id))` / `Routes.report(id)`.
@@ -152,8 +158,16 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   бывает только этот код, потому что галерее разрешение не нужно; `photo_access_denied` приходит только на iOS.
   Текст ошибки выбирает `describePhotoPickError()` в new_report_screen.dart. При отказе в доступе снэкбар
   предлагает действие «Настройки», которое вызывает `AppSettings.openAppSettings()`.
-- `joinWithInviteCode` есть в репозитории, но UI его не вызывает. В фейке код проверяется только по длине ≥ 6,
-  а роль всегда `foreman`.
+- Вход по коду приглашения: ссылка «Есть код приглашения?» на экране входа ведёт на `/join` (`JoinScreen`):
+  код, имя, email, пароль. Роль и компанию задаёт код (`InviteCode.role`, `companyId`), пользователь их не выбирает.
+  - `generateInviteCode(role:)` принимает только `foreman` и `worker`.
+  - Код: 6 символов из `inviteCodeAlphabet` (без 0/O, 1/I/L). Одноразовый, действует 7 дней.
+  - Ввод нормализует `normalizeInviteCode()` (trim, верхний регистр, без пробелов и дефисов). Её вызывают
+    `AuthNotifier.joinWithInviteCode` и `FakeTeamStore.redeemInvite`.
+  - Ошибки: неизвестный, использованный или истёкший код → `invalidInviteCode`; занятый email → `emailTaken`,
+    причём email проверяется до того, как код гасится.
+  - Сервер ограничивает попытки (429 → `tooManyRequests`) и гасит код атомарно. Fake этого не моделирует.
+  - Удалённый участник в Fake всё ещё может войти. Как должен вести себя сервер — в api-contract.md.
 - Если в shell одной роли несколько вкладок с `FloatingActionButton`, у них должен быть `heroTag: null`.
   `StatefulShellRoute` держит все вкладки живыми, и два одинаковых hero-тега роняют любой переход между страницами.
 - Название приложения — `l10n.appName`, в том числе в `MaterialApp.onGenerateTitle`. Можно склеивать строки l10n
@@ -169,8 +183,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Семейство задаётся в `AppTextTheme` на каждом стиле, а не только в `ThemeData`: AppBar и кнопки берут стили прямо оттуда.
 
 ## Текущее состояние
-Готово на Fake-данных: вход и регистрация, сплэш, объекты (список, детали, статус, команда объекта), команда
-и коды приглашения, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
+Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список, детали, статус,
+команда объекта), команда и коды приглашения по ролям, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
 (сохраняется между запусками), три роли.
 Заглушки и пробелы: Api-репозитории (все четыре — заглушки), клиент Dio, сжатие фото (flutter_image_compress),
 загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),

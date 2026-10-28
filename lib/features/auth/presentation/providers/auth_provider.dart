@@ -7,13 +7,18 @@ import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
+import 'package:buildflow/features/team/domain/entities/invite_code.dart';
+import 'package:buildflow/features/team/presentation/providers/fake_team_store_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // ── DI providers ─────────────────────────────────────────────
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => kUseMockData
-      ? FakeAuthRepository(secureStorage: ref.watch(secureStorageProvider))
+      ? FakeAuthRepository(
+          secureStorage: ref.watch(secureStorageProvider),
+          teamStore: ref.watch(fakeTeamStoreProvider),
+        )
       : ApiAuthRepository(),
 );
 
@@ -110,6 +115,24 @@ class AuthNotifier extends Notifier<AuthState> {
           password: password,
           name: name,
           companyName: companyName,
+        ),
+      );
+
+  /// Joins the company of [inviteCode] with the role it was issued for.
+  /// The code is normalized here, so both repositories get `ABC234`
+  /// whether the member typed `abc 234` or `ABC-234`.
+  Future<Result<User>> joinWithInviteCode({
+    required String inviteCode,
+    required String name,
+    required String email,
+    required String password,
+  }) =>
+      _signIn(
+        () => _repo.joinWithInviteCode(
+          email: email,
+          password: password,
+          name: name,
+          inviteCode: normalizeInviteCode(inviteCode),
         ),
       );
 

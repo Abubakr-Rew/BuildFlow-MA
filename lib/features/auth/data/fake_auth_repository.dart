@@ -7,16 +7,23 @@ import 'package:buildflow/features/auth/domain/entities/company.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
+import 'package:buildflow/features/team/data/fake_team_store.dart';
+import 'package:buildflow/features/team/domain/entities/member.dart';
 
 /// In-memory fake auth repository with seeded demo data.
 /// Simulates 300-800ms latency and occasional failures.
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({
     required this.secureStorage,
+    required this.teamStore,
     this.simulateFailures = false,
   });
 
   final SecureStorageService secureStorage;
+
+  /// Invite codes to redeem and the member list to join, shared with
+  /// FakeTeamRepository.
+  final FakeTeamStore teamStore;
   final bool simulateFailures;
 
   final _random = Random();
@@ -171,26 +178,51 @@ class FakeAuthRepository implements AuthRepository {
     required String inviteCode,
   }) async {
     await _simulateLatency();
-    if (inviteCode.length < 6) {
+    if (_shouldFail()) {
+      return const Err(
+        Failure(FailureCode.network, message: 'Simulated network error'),
+      );
+    }
+
+    // Checked before the code is spent, so the member can retry with
+    // another email and the same code.
+    final lowerEmail = email.trim().toLowerCase();
+    if (_users.containsKey(lowerEmail)) {
+      return const Err(
+        Failure(FailureCode.emailTaken, message: 'Email already registered'),
+      );
+    }
+
+    final invite = teamStore.redeemInvite(inviteCode);
+    if (invite == null) {
       return const Err(
         Failure(
           FailureCode.invalidInviteCode,
-          message: 'Invite code shorter than 6 characters',
+          message: 'Invite code unknown, used or expired',
         ),
       );
     }
 
-    final lowerEmail = email.trim().toLowerCase();
     final userId = 'user-${DateTime.now().millisecondsSinceEpoch}';
     final user = User(
       id: userId,
       email: lowerEmail,
       name: name.trim(),
-      role: UserRole.foreman,
-      companyId: _companyId,
+      role: invite.role,
+      companyId: invite.companyId,
     );
 
     _users[lowerEmail] = FakeUserRecord(user: user, password: password);
+    teamStore.addMember(
+      Member(
+        id: 'member-$userId',
+        userId: userId,
+        name: user.name,
+        email: lowerEmail,
+        role: invite.role,
+        companyId: invite.companyId,
+      ),
+    );
     _currentUser = user;
     await secureStorage.saveToken('fake-token-$userId');
     await secureStorage.saveUserId(userId);

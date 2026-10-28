@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/app/l10n/generated/app_localizations_ru.dart';
 import 'package:buildflow/app/router.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
@@ -9,6 +10,7 @@ import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:buildflow/features/reports/presentation/screens/report_detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -72,9 +74,10 @@ void main() {
       expect(authRedirect(_signedOut, Routes.report('report-1')), Routes.login);
     });
 
-    test('lets a signed-out user stay on login and register', () {
+    test('lets a signed-out user stay on login, register and join', () {
       expect(authRedirect(_signedOut, Routes.login), isNull);
       expect(authRedirect(_signedOut, Routes.register), isNull);
+      expect(authRedirect(_signedOut, Routes.join), isNull);
     });
 
     for (final role in UserRole.values) {
@@ -82,10 +85,11 @@ void main() {
         final auth = _signedIn(role);
         final home = Routes.homeFor(role);
 
-        test('leaves splash, login and register for the role home', () {
+        test('leaves splash, login, register and join for the role home', () {
           expect(authRedirect(auth, Routes.splash), home);
           expect(authRedirect(auth, Routes.login), home);
           expect(authRedirect(auth, Routes.register), home);
+          expect(authRedirect(auth, Routes.join), home);
         });
 
         test('stays inside its own section', () {
@@ -196,6 +200,65 @@ void main() {
 
       // Auth changes refresh the same router instead of rebuilding it.
       expect(container.read(routerProvider), same(router));
+
+      await tearDownApp(tester);
+    });
+
+    testWidgets('a worker invited by the director joins with the code', (
+      tester,
+    ) async {
+      final l10n = AppLocalizationsRu();
+      await pumpApp(tester);
+
+      // The director creates a code for a worker on the team screen.
+      await login(tester, 'owner@buildflow.kg');
+      router.go(Routes.ownerTeam);
+      await settle(tester);
+      await tester.tap(find.byType(FloatingActionButton));
+      await settle(tester);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text(UserRole.worker.label(l10n)),
+        ),
+      );
+      await settle(tester);
+
+      final codeText = tester.widget<Text>(
+        find.byWidgetPredicate(
+          (w) => w is Text && RegExp(r'^[A-Z2-9]{6}$').hasMatch(w.data ?? ''),
+        ),
+      );
+      final code = codeText.data!;
+      await tester.tap(find.text(l10n.done));
+      await settle(tester);
+
+      await logout(tester);
+      expect(location(), Routes.login);
+
+      // The worker opens the join screen from login and enters the code.
+      await tester.tap(find.text(l10n.haveInviteCode));
+      await settle(tester);
+      expect(location(), Routes.join);
+
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), code.toLowerCase());
+      await tester.enterText(fields.at(1), 'Азамат Новиков');
+      await tester.enterText(fields.at(2), 'azamat@buildflow.kg');
+      await tester.enterText(fields.at(3), '123456');
+      await tester.tap(find.text(l10n.joinButton));
+      await settle(tester);
+
+      // The redirect, not the screen, opens the worker's home.
+      expect(location(), Routes.workerProjects);
+      expect(container.read(currentUserProvider)?.role, UserRole.worker);
+
+      // The director now sees the new worker in the team.
+      await logout(tester);
+      await login(tester, 'owner@buildflow.kg');
+      router.go(Routes.ownerTeam);
+      await settle(tester);
+      expect(find.text('Азамат Новиков'), findsOneWidget);
 
       await tearDownApp(tester);
     });

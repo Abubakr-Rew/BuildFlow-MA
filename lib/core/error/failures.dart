@@ -16,10 +16,11 @@ enum FailureCode {
   /// Wrong email or password (login, 401).
   invalidCredentials,
 
-  /// An account with this email already exists (register, 409).
+  /// An account with this email already exists (register or join, 409).
   emailTaken,
 
-  /// The invite code doesn't exist or has expired (join, 404).
+  /// The invite code doesn't exist, was already used or has expired
+  /// (join, 404).
   invalidInviteCode,
 
   /// No valid session; the user has to log in again (401).
@@ -33,6 +34,10 @@ enum FailureCode {
 
   /// The server rejected the submitted data (400).
   validation,
+
+  /// Too many attempts in a short time; the user should wait a minute
+  /// before trying again (429, e.g. repeated invite codes on join).
+  tooManyRequests,
 
   /// Anything else.
   unknown,

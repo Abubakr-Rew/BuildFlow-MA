@@ -19,6 +19,7 @@ void main() {
     FailureCode.forbidden: l10n.errorForbidden,
     FailureCode.notFound: l10n.errorNotFound,
     FailureCode.validation: l10n.errorValidation,
+    FailureCode.tooManyRequests: l10n.errorTooManyRequests,
     FailureCode.unknown: l10n.errorUnknown,
   };
 
@@ -65,7 +66,7 @@ void main() {
       );
       expect(
         l10n.failureMessage(const Failure(FailureCode.invalidInviteCode)),
-        'Неверный код приглашения',
+        'Код приглашения неверный, уже использован или истёк',
       );
     });
   });

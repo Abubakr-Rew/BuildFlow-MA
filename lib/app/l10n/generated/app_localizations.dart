@@ -172,6 +172,42 @@ abstract class AppLocalizations {
   /// **'Создать компанию'**
   String get createCompany;
 
+  /// Login screen link to the join screen
+  ///
+  /// In ru, this message translates to:
+  /// **'Есть код приглашения?'**
+  String get haveInviteCode;
+
+  /// Join screen title
+  ///
+  /// In ru, this message translates to:
+  /// **'Вход по приглашению'**
+  String get joinTitle;
+
+  /// Join screen subtitle: role and company come from the code
+  ///
+  /// In ru, this message translates to:
+  /// **'Роль и компанию задаёт код от директора'**
+  String get joinSubtitle;
+
+  /// Invite code field hint on the join screen
+  ///
+  /// In ru, this message translates to:
+  /// **'6 символов, например K7M2QX'**
+  String get inviteCodeFieldHint;
+
+  /// Join screen submit button
+  ///
+  /// In ru, this message translates to:
+  /// **'Присоединиться'**
+  String get joinButton;
+
+  /// Validation: invite code is empty
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите код приглашения'**
+  String get validationInviteCodeRequired;
+
   /// Email hint text
   ///
   /// In ru, this message translates to:
@@ -376,10 +412,10 @@ abstract class AppLocalizations {
   /// **'Код приглашения'**
   String get inviteCodeTitle;
 
-  /// Invite code dialog hint
+  /// Invite code sheet hint: lifetime and single use
   ///
   /// In ru, this message translates to:
-  /// **'Отправьте этот код прорабу'**
+  /// **'Код действует 7 дней и подходит для одного входа'**
   String get inviteCodeHint;
 
   /// Copy code button
@@ -766,10 +802,10 @@ abstract class AppLocalizations {
   /// **'Пользователь с таким email уже существует'**
   String get errorEmailTaken;
 
-  /// FailureCode.invalidInviteCode: unknown or expired invite code
+  /// FailureCode.invalidInviteCode: unknown, used or expired invite code
   ///
   /// In ru, this message translates to:
-  /// **'Неверный код приглашения'**
+  /// **'Код приглашения неверный, уже использован или истёк'**
   String get errorInvalidInviteCode;
 
   /// FailureCode.sessionExpired: the user must log in again
@@ -795,6 +831,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Проверьте введённые данные'**
   String get errorValidation;
+
+  /// FailureCode.tooManyRequests: rate limit hit (429)
+  ///
+  /// In ru, this message translates to:
+  /// **'Слишком много попыток. Подождите минуту и попробуйте снова'**
+  String get errorTooManyRequests;
 
   /// FailureCode.unknown and unexpected exceptions
   ///

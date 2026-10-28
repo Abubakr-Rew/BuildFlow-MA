@@ -40,6 +40,24 @@
   "createCompany": "Создать компанию",
   "@createCompany": {"description": "Create company subtitle"},
 
+  "haveInviteCode": "Есть код приглашения?",
+  "@haveInviteCode": {"description": "Login screen link to the join screen"},
+
+  "joinTitle": "Вход по приглашению",
+  "@joinTitle": {"description": "Join screen title"},
+
+  "joinSubtitle": "Роль и компанию задаёт код от директора",
+  "@joinSubtitle": {"description": "Join screen subtitle: role and company come from the code"},
+
+  "inviteCodeFieldHint": "6 символов, например K7M2QX",
+  "@inviteCodeFieldHint": {"description": "Invite code field hint on the join screen"},
+
+  "joinButton": "Присоединиться",
+  "@joinButton": {"description": "Join screen submit button"},
+
+  "validationInviteCodeRequired": "Введите код приглашения",
+  "@validationInviteCodeRequired": {"description": "Validation: invite code is empty"},
+
   "emailHint": "example@mail.com",
   "@emailHint": {"description": "Email hint text"},
 
@@ -142,8 +160,8 @@
   "inviteCodeTitle": "Код приглашения",
   "@inviteCodeTitle": {"description": "Invite code dialog title"},
 
-  "inviteCodeHint": "Отправьте этот код прорабу",
-  "@inviteCodeHint": {"description": "Invite code dialog hint"},
+  "inviteCodeHint": "Код действует 7 дней и подходит для одного входа",
+  "@inviteCodeHint": {"description": "Invite code sheet hint: lifetime and single use"},
 
   "copyCode": "Скопировать",
   "@copyCode": {"description": "Copy code button"},
@@ -358,8 +376,8 @@
   "errorEmailTaken": "Пользователь с таким email уже существует",
   "@errorEmailTaken": {"description": "FailureCode.emailTaken: email already registered"},
 
-  "errorInvalidInviteCode": "Неверный код приглашения",
-  "@errorInvalidInviteCode": {"description": "FailureCode.invalidInviteCode: unknown or expired invite code"},
+  "errorInvalidInviteCode": "Код приглашения неверный, уже использован или истёк",
+  "@errorInvalidInviteCode": {"description": "FailureCode.invalidInviteCode: unknown, used or expired invite code"},
 
   "errorSessionExpired": "Сессия истекла. Войдите снова",
   "@errorSessionExpired": {"description": "FailureCode.sessionExpired: the user must log in again"},
@@ -372,6 +390,9 @@
 
   "errorValidation": "Проверьте введённые данные",
   "@errorValidation": {"description": "FailureCode.validation: the server rejected the data"},
+
+  "errorTooManyRequests": "Слишком много попыток. Подождите минуту и попробуйте снова",
+  "@errorTooManyRequests": {"description": "FailureCode.tooManyRequests: rate limit hit (429)"},
 
   "errorUnknown": "Что-то пошло не так",
   "@errorUnknown": {"description": "FailureCode.unknown and unexpected exceptions"},

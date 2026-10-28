@@ -1,6 +1,11 @@
 import 'package:buildflow/core/error/failures.dart';
+import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/storage/secure_storage.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
+import 'package:buildflow/features/auth/domain/entities/user.dart';
+import 'package:buildflow/features/auth/domain/entities/user_role.dart';
+import 'package:buildflow/features/team/data/fake_team_repository.dart';
+import 'package:buildflow/features/team/data/fake_team_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Minimal stub so tests run without platform channels.
@@ -26,10 +31,12 @@ class FakeSecureStorage extends SecureStorageService {
 void main() {
   late FakeAuthRepository repo;
   late FakeSecureStorage storage;
+  late FakeTeamStore teamStore;
 
   setUp(() {
     storage = FakeSecureStorage();
-    repo = FakeAuthRepository(secureStorage: storage);
+    teamStore = FakeTeamStore();
+    repo = FakeAuthRepository(secureStorage: storage, teamStore: teamStore);
   });
 
   group('FakeAuthRepository', () {
@@ -82,27 +89,6 @@ void main() {
       expect(result.failure.code, FailureCode.emailTaken);
     });
 
-    test('joinWithInviteCode rejects an invalid code', () async {
-      final result = await repo.joinWithInviteCode(
-        email: 'new@company.kg',
-        password: '123456',
-        name: 'Foreman',
-        inviteCode: 'ABC',
-      );
-      expect(result.failure.code, FailureCode.invalidInviteCode);
-      expect(repo.currentUser, isNull);
-    });
-
-    test('joinWithInviteCode signs in with a valid code', () async {
-      final result = await repo.joinWithInviteCode(
-        email: 'new@company.kg',
-        password: '123456',
-        name: 'Foreman',
-        inviteCode: 'ABC123',
-      );
-      expect(result.isSuccess, isTrue);
-    });
-
     test('logout clears user and storage', () async {
       await repo.login(email: 'owner@buildflow.kg', password: '123456');
       expect(repo.currentUser, isNotNull);
@@ -117,7 +103,8 @@ void main() {
       await repo.login(email: 'owner@buildflow.kg', password: '123456');
 
       // Create a new repo instance with same storage
-      final repo2 = FakeAuthRepository(secureStorage: storage);
+      final repo2 =
+          FakeAuthRepository(secureStorage: storage, teamStore: teamStore);
       final result = await repo2.restoreSession();
       expect(result.isSuccess, isTrue);
       expect(result.value.email, 'owner@buildflow.kg');
@@ -134,6 +121,90 @@ void main() {
         password: 'wrong',
       );
       expect(result.failure.message, isNot(matches(RegExp('[А-Яа-яЁё]'))));
+    });
+  });
+
+  group('FakeAuthRepository.joinWithInviteCode', () {
+    Future<Result<User>> join(
+      String code, {
+      String email = 'new@company.kg',
+    }) =>
+        repo.joinWithInviteCode(
+          email: email,
+          password: '123456',
+          name: 'Новый Сотрудник',
+          inviteCode: code,
+        );
+
+    String invite(UserRole role) =>
+        teamStore.createInvite(companyId: 'company-1', role: role).code;
+
+    test('takes the role and the company from the code', () async {
+      for (final (role, email) in [
+        (UserRole.worker, 'w@company.kg'),
+        (UserRole.foreman, 'f@company.kg'),
+      ]) {
+        final result = await join(invite(role), email: email);
+        expect(result.value.role, role);
+        expect(result.value.companyId, 'company-1');
+        expect(repo.currentUser, result.value);
+      }
+    });
+
+    test('a code works only once', () async {
+      final code = invite(UserRole.worker);
+      expect((await join(code)).isSuccess, isTrue);
+
+      final again = await join(code, email: 'other@company.kg');
+      expect(again.failure.code, FailureCode.invalidInviteCode);
+    });
+
+    test('rejects an unknown code', () async {
+      final result = await join('ZZZZZZ');
+      expect(result.failure.code, FailureCode.invalidInviteCode);
+      expect(repo.currentUser, isNull);
+    });
+
+    test('rejects an expired code', () async {
+      var now = DateTime(2026, 10, 28);
+      teamStore = FakeTeamStore(now: () => now);
+      repo = FakeAuthRepository(secureStorage: storage, teamStore: teamStore);
+      final code = invite(UserRole.worker);
+
+      now = now.add(const Duration(days: 8));
+      expect((await join(code)).failure.code, FailureCode.invalidInviteCode);
+    });
+
+    test('accepts a code typed with spaces, dashes and lower case', () async {
+      final code = invite(UserRole.foreman);
+      final typed = ' ${code.substring(0, 3).toLowerCase()}-'
+          '${code.substring(3)} ';
+      expect((await join(typed)).value.role, UserRole.foreman);
+    });
+
+    test('a taken email keeps the code valid', () async {
+      final code = invite(UserRole.worker);
+      final taken = await join(code, email: 'worker1@buildflow.kg');
+      expect(taken.failure.code, FailureCode.emailTaken);
+
+      expect((await join(code)).isSuccess, isTrue);
+    });
+
+    test('the new member shows up in the team and can log in', () async {
+      final user = (await join(invite(UserRole.worker))).value;
+
+      final team = FakeTeamRepository(store: teamStore);
+      final member = (await team.getMembers())
+          .value
+          .where((m) => m.userId == user.id)
+          .single;
+      expect(member.role, UserRole.worker);
+      expect(member.email, 'new@company.kg');
+
+      await repo.logout();
+      final login =
+          await repo.login(email: 'new@company.kg', password: '123456');
+      expect(login.value.id, user.id);
     });
   });
 }

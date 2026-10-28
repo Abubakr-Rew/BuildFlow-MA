@@ -18,7 +18,9 @@ abstract class AuthRepository {
     required String companyName,
   });
 
-  /// Register a foreman using an invite code.
+  /// Register a member with an invite code. The role and company come from
+  /// the code; an unknown, used or expired code is `invalidInviteCode`,
+  /// a registered email is `emailTaken` (the code stays valid then).
   Future<Result<User>> joinWithInviteCode({
     required String email,
     required String password,

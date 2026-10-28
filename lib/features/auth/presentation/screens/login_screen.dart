@@ -20,7 +20,7 @@ const _demoAccounts = [
   (UserRole.worker, 'worker1@buildflow.kg'),
 ];
 
-/// Login screen — email + password, link to register.
+/// Login screen — email + password, links to register and to join by code.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -167,6 +167,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           child: Text(l10n.registerButton),
                         ),
                       ],
+                    ),
+                    TextButton(
+                      onPressed: () => context.go(Routes.join),
+                      child: Text(l10n.haveInviteCode),
                     ),
                     const SizedBox(height: AppTheme.spacing32),
                     Container(

@@ -6,6 +6,7 @@ import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/team/data/fake_team_repository.dart';
+import 'package:buildflow/features/team/data/fake_team_store.dart';
 import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
 import 'package:buildflow/features/team/presentation/screens/team_list_screen.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,8 @@ const _owner = User(
 
 // Removals wait for [gate].
 class _GatedTeam extends FakeTeamRepository {
+  _GatedTeam() : super(store: FakeTeamStore());
+
   final gate = Completer<void>();
 
   @override

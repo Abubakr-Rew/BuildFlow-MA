@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$InviteCode {
 
- String get code; String get companyId; DateTime get createdAt; DateTime? get expiresAt; bool get isUsed;
+ String get code; String get companyId; UserRole get role; DateTime get createdAt; DateTime? get expiresAt; bool get isUsed;
 /// Create a copy of InviteCode
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $InviteCodeCopyWith<InviteCode> get copyWith => _$InviteCodeCopyWithImpl<InviteC
 @override
 bool operator ==(Object other) {
   final _this = this as InviteCode;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is InviteCode&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.companyId, _this.companyId) || other.companyId == _this.companyId)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.expiresAt, _this.expiresAt) || other.expiresAt == _this.expiresAt)&&(identical(other.isUsed, _this.isUsed) || other.isUsed == _this.isUsed));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InviteCode&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.companyId, _this.companyId) || other.companyId == _this.companyId)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.expiresAt, _this.expiresAt) || other.expiresAt == _this.expiresAt)&&(identical(other.isUsed, _this.isUsed) || other.isUsed == _this.isUsed));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as InviteCode;
-  return Object.hash(runtimeType,_this.code,_this.companyId,_this.createdAt,_this.expiresAt,_this.isUsed);
+  return Object.hash(runtimeType,_this.code,_this.companyId,_this.role,_this.createdAt,_this.expiresAt,_this.isUsed);
 }
 
 @override
 String toString() {
   final _this = this as InviteCode;
-  return 'InviteCode(code: ${_this.code}, companyId: ${_this.companyId}, createdAt: ${_this.createdAt}, expiresAt: ${_this.expiresAt}, isUsed: ${_this.isUsed})';
+  return 'InviteCode(code: ${_this.code}, companyId: ${_this.companyId}, role: ${_this.role}, createdAt: ${_this.createdAt}, expiresAt: ${_this.expiresAt}, isUsed: ${_this.isUsed})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $InviteCodeCopyWith<$Res>  {
   factory $InviteCodeCopyWith(InviteCode value, $Res Function(InviteCode) _then) = _$InviteCodeCopyWithImpl;
 @useResult
 $Res call({
- String code, String companyId, DateTime createdAt, DateTime? expiresAt, bool isUsed
+ String code, String companyId, UserRole role, DateTime createdAt, DateTime? expiresAt, bool isUsed
 });
 
 
@@ -71,11 +71,12 @@ class _$InviteCodeCopyWithImpl<$Res>
 
 /// Create a copy of InviteCode
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? companyId = null,Object? createdAt = null,Object? expiresAt = freezed,Object? isUsed = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? companyId = null,Object? role = null,Object? createdAt = null,Object? expiresAt = freezed,Object? isUsed = null,}) {
   return _then(InviteCode(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String,companyId: null == companyId ? _self.companyId : companyId // ignore: cast_nullable_to_non_nullable
-as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as UserRole,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,expiresAt: freezed == expiresAt ? _self.expiresAt : expiresAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,isUsed: null == isUsed ? _self.isUsed : isUsed // ignore: cast_nullable_to_non_nullable
 as bool,
@@ -163,10 +164,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code,  String companyId,  DateTime createdAt,  DateTime? expiresAt,  bool isUsed)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code,  String companyId,  UserRole role,  DateTime createdAt,  DateTime? expiresAt,  bool isUsed)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _InviteCode() when $default != null:
-return $default(_that.code,_that.companyId,_that.createdAt,_that.expiresAt,_that.isUsed);case _:
+return $default(_that.code,_that.companyId,_that.role,_that.createdAt,_that.expiresAt,_that.isUsed);case _:
   return orElse();
 
 }
@@ -184,10 +185,10 @@ return $default(_that.code,_that.companyId,_that.createdAt,_that.expiresAt,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code,  String companyId,  DateTime createdAt,  DateTime? expiresAt,  bool isUsed)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code,  String companyId,  UserRole role,  DateTime createdAt,  DateTime? expiresAt,  bool isUsed)  $default,) {final _that = this;
 switch (_that) {
 case _InviteCode():
-return $default(_that.code,_that.companyId,_that.createdAt,_that.expiresAt,_that.isUsed);case _:
+return $default(_that.code,_that.companyId,_that.role,_that.createdAt,_that.expiresAt,_that.isUsed);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +205,10 @@ return $default(_that.code,_that.companyId,_that.createdAt,_that.expiresAt,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code,  String companyId,  DateTime createdAt,  DateTime? expiresAt,  bool isUsed)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code,  String companyId,  UserRole role,  DateTime createdAt,  DateTime? expiresAt,  bool isUsed)?  $default,) {final _that = this;
 switch (_that) {
 case _InviteCode() when $default != null:
-return $default(_that.code,_that.companyId,_that.createdAt,_that.expiresAt,_that.isUsed);case _:
+return $default(_that.code,_that.companyId,_that.role,_that.createdAt,_that.expiresAt,_that.isUsed);case _:
   return null;
 
 }
@@ -219,11 +220,12 @@ return $default(_that.code,_that.companyId,_that.createdAt,_that.expiresAt,_that
 @JsonSerializable()
 
 class _InviteCode implements InviteCode {
-  const _InviteCode({required this.code, required this.companyId, required this.createdAt, this.expiresAt, this.isUsed = false});
+  const _InviteCode({required this.code, required this.companyId, required this.role, required this.createdAt, this.expiresAt, this.isUsed = false});
   factory _InviteCode.fromJson(Map<String, dynamic> json) => _$InviteCodeFromJson(json);
 
 @override final  String code;
 @override final  String companyId;
+@override final  UserRole role;
 @override final  DateTime createdAt;
 @override final  DateTime? expiresAt;
 @override@JsonKey() final  bool isUsed;
@@ -241,18 +243,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InviteCode&&(identical(other.code, code) || other.code == code)&&(identical(other.companyId, companyId) || other.companyId == companyId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt)&&(identical(other.isUsed, isUsed) || other.isUsed == isUsed));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InviteCode&&(identical(other.code, code) || other.code == code)&&(identical(other.companyId, companyId) || other.companyId == companyId)&&(identical(other.role, role) || other.role == role)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt)&&(identical(other.isUsed, isUsed) || other.isUsed == isUsed));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,code,companyId,createdAt,expiresAt,isUsed);
+    return Object.hash(runtimeType,code,companyId,role,createdAt,expiresAt,isUsed);
 }
 
 @override
 String toString() {
-    return 'InviteCode(code: $code, companyId: $companyId, createdAt: $createdAt, expiresAt: $expiresAt, isUsed: $isUsed)';
+    return 'InviteCode(code: $code, companyId: $companyId, role: $role, createdAt: $createdAt, expiresAt: $expiresAt, isUsed: $isUsed)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$InviteCodeCopyWith<$Res> implements $InviteCodeCopyWith<$
   factory _$InviteCodeCopyWith(_InviteCode value, $Res Function(_InviteCode) _then) = __$InviteCodeCopyWithImpl;
 @override @useResult
 $Res call({
- String code, String companyId, DateTime createdAt, DateTime? expiresAt, bool isUsed
+ String code, String companyId, UserRole role, DateTime createdAt, DateTime? expiresAt, bool isUsed
 });
 
 
@@ -280,11 +282,12 @@ class __$InviteCodeCopyWithImpl<$Res>
 
 /// Create a copy of InviteCode
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? companyId = null,Object? createdAt = null,Object? expiresAt = freezed,Object? isUsed = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? companyId = null,Object? role = null,Object? createdAt = null,Object? expiresAt = freezed,Object? isUsed = null,}) {
   return _then(_InviteCode(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String,companyId: null == companyId ? _self.companyId : companyId // ignore: cast_nullable_to_non_nullable
-as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as UserRole,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as DateTime,expiresAt: freezed == expiresAt ? _self.expiresAt : expiresAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,isUsed: null == isUsed ? _self.isUsed : isUsed // ignore: cast_nullable_to_non_nullable
 as bool,

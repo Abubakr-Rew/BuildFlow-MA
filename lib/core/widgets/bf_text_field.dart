@@ -9,6 +9,7 @@ class BfTextField extends StatelessWidget {
     this.obscureText = false,
     this.validator,
     this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
     this.textInputAction,
     this.maxLines = 1,
     this.minLines,
@@ -28,6 +29,7 @@ class BfTextField extends StatelessWidget {
   final bool obscureText;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
   final TextInputAction? textInputAction;
   final int maxLines;
   final int? minLines;
@@ -48,6 +50,7 @@ class BfTextField extends StatelessWidget {
         obscureText: obscureText,
         validator: validator,
         keyboardType: keyboardType,
+        textCapitalization: textCapitalization,
         textInputAction: textInputAction,
         maxLines: maxLines,
         minLines: minLines,

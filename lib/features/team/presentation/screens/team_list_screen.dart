@@ -143,7 +143,8 @@ class _TeamListScreenState extends ConsumerState<TeamListScreen> {
     );
     if (role == null || !mounted) return;
 
-    final result = await ref.read(teamRepositoryProvider).generateInviteCode();
+    final result =
+        await ref.read(teamRepositoryProvider).generateInviteCode(role: role);
     if (!mounted) return;
 
     result.when(
