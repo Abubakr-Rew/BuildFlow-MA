@@ -8,13 +8,24 @@ import 'package:buildflow/features/projects/domain/repositories/project_reposito
 
 /// In-memory fake project repository with seeded demo data.
 class FakeProjectRepository implements ProjectRepository {
-  FakeProjectRepository({this.companyId = 'company-1'});
+  FakeProjectRepository({
+    this.companyId = 'company-1',
+    this.onProjectChanged,
+  });
 
   final String companyId;
+
+  /// Called after a project is created or updated, the way the server
+  /// updates the project chat: the provider passes
+  /// `FakeChatStore.syncProject`.
+  final void Function(Project project)? onProjectChanged;
   final _random = Random();
 
-  final List<Project> _projects = [
-    const Project(
+  late final List<Project> _projects = [...seed];
+
+  /// The demo projects. FakeChatStore starts the project chats from them.
+  static const seed = <Project>[
+    Project(
       id: 'project-1',
       name: 'ЖК «Ала-Тоо Резиденс»',
       address: 'ул. Токтогула 125, Бишкек',
@@ -24,7 +35,7 @@ class FakeProjectRepository implements ProjectRepository {
       workerIds: ['user-worker-1'],
       progress: 65,
     ),
-    const Project(
+    Project(
       id: 'project-2',
       name: 'Коттеджный посёлок «Горный»',
       address: 'с. Кок-Жар, Чуйская обл.',
@@ -34,7 +45,7 @@ class FakeProjectRepository implements ProjectRepository {
       workerIds: ['user-worker-1', 'user-worker-2'],
       progress: 30,
     ),
-    const Project(
+    Project(
       id: 'project-3',
       name: 'Офис «Байтик»',
       address: 'пр. Чуй 55А, Бишкек',
@@ -44,7 +55,7 @@ class FakeProjectRepository implements ProjectRepository {
       workerIds: ['user-worker-2', 'user-worker-3'],
       progress: 45,
     ),
-    const Project(
+    Project(
       id: 'project-4',
       name: 'Склад на Дэн Сяопина',
       address: 'ул. Дэн Сяопина 200, Бишкек',
@@ -95,7 +106,7 @@ class FakeProjectRepository implements ProjectRepository {
       companyId: companyId,
     );
     _projects.add(project);
-    return Success(project);
+    return Success(_changed(project));
   }
 
   @override
@@ -106,7 +117,7 @@ class FakeProjectRepository implements ProjectRepository {
       return Err(_notFound(project.id));
     }
     _projects[index] = project;
-    return Success(project);
+    return Success(_changed(project));
   }
 
   @override
@@ -127,7 +138,7 @@ class FakeProjectRepository implements ProjectRepository {
       foremanIds: [...project.foremanIds, foremanId],
     );
     _projects[index] = updated;
-    return Success(updated);
+    return Success(_changed(updated));
   }
 
   @override
@@ -145,6 +156,11 @@ class FakeProjectRepository implements ProjectRepository {
       foremanIds: project.foremanIds.where((id) => id != foremanId).toList(),
     );
     _projects[index] = updated;
-    return Success(updated);
+    return Success(_changed(updated));
+  }
+
+  Project _changed(Project project) {
+    onProjectChanged?.call(project);
+    return project;
   }
 }

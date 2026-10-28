@@ -82,13 +82,39 @@ class FakeTeamStore {
   List<Member> membersOf(String companyId) =>
       _members.where((m) => m.companyId == companyId).toList();
 
-  void addMember(Member member) => _members.add(member);
+  /// The member with [userId], or `null` if they aren't (any longer) in a
+  /// company.
+  Member? memberByUserId(String userId) =>
+      _members.where((m) => m.userId == userId).firstOrNull;
+
+  void addMember(Member member) {
+    _members.add(member);
+    _notifyMembers();
+  }
 
   /// Whether a member was removed.
   bool removeMember(String memberId) {
     final before = _members.length;
     _members.removeWhere((m) => m.id == memberId);
-    return _members.length < before;
+    final removed = _members.length < before;
+    if (removed) _notifyMembers();
+    return removed;
+  }
+
+  final List<void Function()> _listeners = [];
+
+  /// Called after a member joins or is removed. FakeChatStore listens to
+  /// take the chats away from removed members, as the server does.
+  void addMembersListener(void Function() listener) =>
+      _listeners.add(listener);
+
+  void removeMembersListener(void Function() listener) =>
+      _listeners.remove(listener);
+
+  void _notifyMembers() {
+    for (final listener in [..._listeners]) {
+      listener();
+    }
   }
 
   // ── Invite codes ───────────────────────────────────────────

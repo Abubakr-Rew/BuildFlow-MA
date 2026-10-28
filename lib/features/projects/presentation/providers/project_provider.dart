@@ -3,6 +3,7 @@ import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
+import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_provider.dart';
 import 'package:buildflow/features/projects/data/api_project_repository.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
@@ -11,7 +12,13 @@ import 'package:buildflow/features/projects/domain/repositories/project_reposito
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => kUseMockData ? FakeProjectRepository() : ApiProjectRepository(),
+  (ref) => kUseMockData
+      ? FakeProjectRepository(
+          // The server keeps each project chat's team in line with the
+          // project; the fake store needs to be told.
+          onProjectChanged: ref.watch(fakeChatStoreProvider).syncProject,
+        )
+      : ApiProjectRepository(),
 );
 
 /// Whether [user] can see [project]: directors see everything,
