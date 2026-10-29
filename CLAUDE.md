@@ -24,12 +24,15 @@ flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, ve
 Шрифт Inter лежит в `assets/fonts/inter/`, google_fonts не используется.
 `app_settings` нужен только для того, чтобы открыть системные настройки приложения после отказа в разрешении.
 `uuid` генерирует `clientId` сообщений чата.
-Подключены, но в `lib/` не используются: dio, flutter_image_compress, cached_network_image.
+Подключены, но в `lib/` не используются: dio, cached_network_image. Сжатие фото — свой Kotlin-канал
+(см. «Фото»), `flutter_image_compress` удалён.
 
 ```
 lib/main.dart  ProviderContainer, восстановление темы до первого кадра, runApp
 lib/app/       app.dart (MaterialApp.router), router.dart, routes.dart, theme/, l10n/
-lib/core/      config.dart, error/ (Result, Failure), storage/ (secure, local, storage_providers), utils/, widgets/
+lib/core/      config.dart, error/ (Result, Failure), photos/ (сжатие, выбор, черновики фото),
+               storage/ (secure, local, storage_providers), utils/, widgets/
+android/app/src/main/kotlin/…/PhotoCompressor.kt   нативное сжатие фото (канал buildflow/photos)
 lib/features/<фича>/data/          Fake*Repository, Api*Repository
                     domain/        entities/ (freezed), repositories/ (абстрактные интерфейсы)
                     presentation/  providers/, screens/, widgets/
@@ -40,7 +43,8 @@ lib/features/<фича>/data/          Fake*Repository, Api*Repository
 `Failure` ([failures.dart](lib/core/error/failures.dart)) — один класс. Что увидит пользователь, решает `code`
 (enum `FailureCode`). `message` нужен только для логов и отладки и в UI не показывается. Есть ещё `statusCode`
 и `stackTrace`. Коды: `network`, `timeout`, `server`, `invalidCredentials`, `emailTaken`, `invalidInviteCode`,
-`sessionExpired`, `forbidden`, `notFound`, `validation`, `tooManyRequests`, `unknown`. Соответствие HTTP-ответам — в docs/api-contract.md.
+`sessionExpired`, `forbidden`, `notFound`, `validation`, `tooManyRequests`, `photoProcessing` (только клиент: фото
+не сжалось на устройстве), `unknown`. Соответствие HTTP-ответам — в docs/api-contract.md.
 ```dart
 Future<Result<Project>> createProject(...);                                  // интерфейс репозитория
 return Err(Failure(FailureCode.notFound, message: 'Project $id not found')); // ошибка
@@ -88,12 +92,38 @@ Text(l10n.failureMessage(error))                                             // 
   auth_provider, так что в team_provider был бы цикл. Пользователи и пароли хранятся только в `FakeAuthRepository`.
   `FakeTeamStore.addMembersListener` сообщает об уходе и приходе участников, его слушает `FakeChatStore`.
 
-**Чат** (`lib/features/chat/`, этап 1 из 4: основа и текст; дальше фото, голосовые, карточки отчётов):
+**Фото** (`lib/core/photos/`, общее для отчётов и чата):
+- `PhotoCompressor` (`photoCompressorProvider`) — `compress(sourcePath)` → `Result<CompressedPhoto>` (путь копии,
+  размеры, байты, `takenAt`), `delete(paths)`, `sweep()`. Реализация `PlatformPhotoCompressor` — канал
+  `buildflow/photos` к [PhotoCompressor.kt](android/app/src/main/kotlin/com/example/buildflow/PhotoCompressor.kt):
+  декод с `inSampleSize`, поворот по EXIF в пиксели, масштаб длинной стороны до `kPhotoMaxSide` (1600) с фильтрацией,
+  JPEG с качеством из `kPhotoQualitySteps` (82 → 74 → 66), пока не влезет в `kPhotoTargetBytes` (450 КБ), иначе
+  последнее. `Bitmap.compress` не пишет EXIF: GPS, модель и серийники не уходят; назад читается только
+  `DateTimeOriginal` + `OffsetTimeOriginal` (`parseExifDateTime`). Копии — в `cacheDir/photos`; `delete` и `sweep`
+  трогают только `cacheDir`. Один фоновый поток. Любой сбой (HEIC до Android 9, битый файл, OOM, не Android) —
+  `FailureCode.photoProcessing`, без исключений. В лог пишется «Photo compressed in N ms: 1600×1200, 380 KB, quality 82».
+  Для iOS реализации пока нет (нужна такая же на Swift).
+- `pickPhotos(context, source:, limit:)` и `describePhotoPickError()` — [photo_picking.dart](lib/core/photos/photo_picking.dart):
+  берёт оригиналы без ресайза (галерея — `pickMultiImage(limit:)`, при `limit == 1` — `pickImage`), лишние сверх
+  лимита отбрасывает со снэкбаром, при отказе в доступе — снэкбар с «Настройки».
+- `photoDraftsProvider(scope)` (autoDispose family, `PhotoDraftsNotifier`) — выбранные фото одного места: `report:<uuid>`
+  у каждого экрана нового отчёта, `chat:<id>` у поля ввода чата. Сжатие стартует сразу после выбора; `PhotoDraft` —
+  `processing` / `ready` / `failed`. `retry`, `remove` (удаляет оригинал и копию), `takeAll()` (отдаёт фото с ещё
+  идущим сжатием, например сообщению), `whenReady()` (ждёт все, для отчёта), `clear()` (после отправки: удаляет
+  только оригиналы). Уход с места удаляет файлы оставшихся фото.
+- Жизнь файлов: оригинал из кэша image_picker живёт, пока фото не отправлено или не убрано (из него повторяют
+  сжатие и показывают превью); сжатая копия после отправки — это и есть фото (в Fake её путь служит URL).
+  При запуске после первого кадра `sweep()` удаляет копии и остатки image_picker старше суток.
+- `PhotoImage` декодирует локальные файлы под размер на экране (`cacheWidth`), а не все 12 Мп оригинала.
+
+**Чат** (`lib/features/chat/`, этапы 1–2 из 4: основа, текст, фото; дальше голосовые, карточки отчётов):
 - Сущности `Chat` (`direct` | `project`) и `Message` (`kind`: `text`, `photo`, `voice`, `report`, `system`).
-  `attachments`, `reportId`, `systemEvent`/`subjectUserId` — задел на этапы 2–4. Чего клиент не умеет показать
+  `photo` — до `maxPhotosPerMessage` (10) вложений в `attachments` (`url`, `width`, `height`), `text` — подпись.
+  `reportId` и `durationMs` — задел на этапы 3–4. Чего клиент не умеет показать
   (`!kind.isSupported`), то рисуется пузырём «Неподдерживаемое сообщение».
 - `ChatRepository` — потоки `watchChats()` / `watchMessages(chatId)` (последние `chatPageSize` = 50) и `Result`-методы
-  `loadOlder`, `send` (идемпотентно по `clientId`), `getOrCreateDirect`, `markRead`. Потоки не бросают: отказ —
+  `loadOlder`, `uploadPhoto(CompressedPhoto, onProgress:)` → вложение, `send(text:, attachmentIds:)` (идемпотентно
+  по `clientId`), `getOrCreateDirect`, `markRead`. Потоки не бросают: отказ —
   событие ошибки с `Failure` (`forbidden`, когда пользователя исключили), оно попадает в `AsyncValue.error`.
 - [FakeChatStore](lib/features/chat/data/fake_chat_store.dart) — общий in-memory «сервер» всех пользователей
   процесса (broadcast `StreamController`), поэтому после выхода и входа другим человеком сообщения на месте.
@@ -105,20 +135,34 @@ Text(l10n.failureMessage(error))                                             // 
     остаются у собеседника только для чтения.
   - Демо-история: чаты объектов 1–4 (в «Ала-Тоо» 66 сообщений, чтобы листать страницы), личные директор ↔ Бакыт
     и Бакыт ↔ Эрлан. У директора на старте 3 непрочитанных. Id личного чата — `FakeChatStore.directChatId(a, b)`.
+  - Фото: `FakeChatRepository.uploadPhoto` отчитывается о прогрессе 10 шагами около секунды, путь сжатой копии
+    становится URL. `FakeChatStore.registerUpload` + `send(attachmentIds:)`: прикрепить вложение может только
+    загрузивший и только один раз, иначе `forbidden`. В демо-истории есть сообщения с 1, 2, 3 и 6 фото (`fake:`).
   - Флаги в config.dart (только при `kUseMockData`): `kFakeChatEcho` — собеседник в личном чате «читает» через 1–2 с
-    и отвечает через 2–4 с; `kFakeChatSendFailureRate` (0–1) — доля отправок с ошибкой `network`, для ручной
-    проверки «Повторить / Удалить».
+    и отвечает через 2–4 с; `kFakeChatSendFailureRate` (0–1) — доля отправок и загрузок фото с ошибкой `network`
+    (загрузка обрывается на середине), для ручной проверки «Повторить / Удалить».
 - Провайдеры в chat_provider.dart: `chatsProvider` (`StreamNotifierProvider`, сырые чаты), `chatListProvider`
   (с именами собеседников, loading до загрузки участников), `chatByIdProvider`, `projectChatProvider(projectId)`,
   `totalUnreadProvider` (бейдж вкладки), `memberNamesProvider`, `chatThreadProvider(chatId)` (autoDispose family).
   `ChatThreadNotifier` держит все виденные сообщения по id (сообщение, выпавшее из живой страницы, не пропадает)
-  и очередь своих `sending`/`failed` по `clientId`; `send` / `retry` / `discard` / `loadOlder` / `markRead`.
+  и очередь своих `sending`/`failed` по `clientId`; `send` / `sendPhotos` / `retry` / `discard` / `loadOlder` / `markRead`.
   Повтор идёт с тем же `clientId`. `markRead` шлёт отметку, только если последнее сообщение чужое и ещё не отмечено.
+  `sendPhotos(takeAll(), caption:)`: сообщение сразу «отправляется» с оригиналами, ждёт сжатие, грузит фото по
+  одному (`ChatThread.uploadProgress` по id вложения), потом `send`. Сбой сжатия или загрузки — `failed`; повтор
+  сжимает заново только упавшее и не грузит уже загруженные. `discard` удаляет файлы, успех — только оригиналы.
 - Экран чата — `CustomScrollView(reverse: true, center: история)`: история растёт вверх, сообщения, пришедшие, пока
   человек читает выше, — в отдельный sliver ниже центра, поэтому не сдвигают текст; вместо этого плашка
   «Новые сообщения ↓». Своё сообщение или новое, когда пользователь внизу, переносит якорь и прыгает вниз.
   Ленту строит чистая `buildTimeline()` (chat_timeline.dart): разделители дней, группы одного автора (пауза ≤ 10 мин).
-- Поле ввода `ChatComposer`: слоты `leading` (этап 2 — «+») и `trailingWhenEmpty` (этап 3 — микрофон вместо отправки).
+- Поле ввода `ChatComposer`: `leading` («+» → «Камера / Галерея», галерея до 10), `fieldSuffix` (камера в поле), `top`
+  (полоса `PhotoDraftTile` выбранных фото), `hasAttachments` (кнопка отправки без текста, подсказка «Подпись»),
+  `trailingWhenEmpty` (этап 3 — микрофон). `onSend` возвращает `bool`: поле очищается, только если ушло, поэтому
+  при фото с ошибкой сжатия подпись остаётся, а снэкбар просит повторить или убрать фото.
+- Фото в ленте — `MessagePhotos` (message_photos.dart): раскладка `photoGridRows()` — 1 по пропорциям (0.6–1.8),
+  2 рядом, 3 как 1 + 2, от 4 — 2 × 2 и «+N» на последней ячейке. Подпись под фото в пузыре; без подписи время
+  и галочки на графитовой плашке поверх фото. Нажатие открывает `PhotoViewer` на этом фото (Hero —
+  `chatPhotoHeroTag`). В списке чатов — «Фото» / «3 фото · подпись» с иконкой камеры (`chatPreview` отдаёт
+  `prefix`, `text`, `isPhoto`).
 - Поиск по чатам — `searchChats()` (chat_search.dart) по правилам `matchName`, кавычки и знаки читаются как пробелы.
 - Тексты (превью «Бакыт: …», «Вы: …», системные, «Бывший сотрудник») — расширение `ChatTexts` на `AppLocalizations`.
 - Входы: вкладка «Чаты», плитка «Чат объекта» с бейджем на карточке объекта (видна, если пользователь в команде),
@@ -159,6 +203,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   - Объекты человека — `memberProjectsProvider(userId)` по `Project.foremanIds/workerIds` из видимых
     объектов. Прораб и строитель видят только общие объекты. `Member.assignedProjectIds` не обновляется
     при смене состава, на него не опираться.
+- Фото отчёта: `ReportRepository.submitReport(photos: List<CompressedPhoto>)`, `NewReportScreen` ждёт сжатие
+  (`whenReady`) и не отправляет отчёт с несжатым фото. `ReportPhoto.takenAt` — время съёмки из EXIF;
+  `takenOnAnotherDay()` (reports/domain/photo_capture.dart) — снято в другой день, чем отправлен отчёт; в просмотрщике
+  «Снято 11:42» и бейдж «Снято не сегодня». GPS не извлекается и не хранится.
 - Видимость данных по ролям — в провайдерах, а не в роутере: `canSeeProject()` в project_provider.dart.
   `reportsProvider` отдаёт отчёты только по видимым объектам.
   Обложка шапки объекта — `projectCoverProvider` (последнее фото последнего отчёта с фото); без фото шапка
@@ -206,16 +254,25 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   **Все строки UI — только через l10n**, без хардкода.
 - Готовое из core, вместо того чтобы писать своё: компоненты из «Дизайн-токены и компоненты», а также `EmptyState`,
   `ErrorState`, `LoadingShimmer` / `LoadingShimmerList`, `OfflineBanner`, `PhotoThumbnail` (понимает `fake:`,
-  локальный путь и http; `PhotoImage` — то же фото, растянутое на родителя), `DateFormatter` (ru; время отчёта —
+  локальный путь и http; `PhotoImage` — то же фото, растянутое на родителя, `fit` по умолчанию `cover`),
+  `showPhotoViewer` / `PhotoViewer` (полноэкранный просмотр: свайп вбок, зум щипком и двойным тапом через
+  `InteractiveViewer`, свайп вниз закрывает, внизу подпись, автор, время и бейдж `warning`; одна реализация для
+  отчётов и чата), `PhotoDraftTile` (выбранное фото: спиннер, красная метка, крестик), `showRetryDeleteSheet`
+  («Повторить / Удалить» для неотправленного сообщения и несжатого фото), `DateFormatter` (ru; время отчёта —
   `reportDateTime`: «Сегодня, 11:47», «Вчера, …», «Пн, …», «27 октября, …», год только не текущий; в списке чатов
   `chatListTime`: «14:05», «Вчера», «Пн», «27 окт.»; разделитель дня в чате — `chatDay`), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
   перевод `Failure` в текст (`failure_messages_test.dart`), `AuthNotifier`, мутации отчётов и объектов (ошибка
   репозитория доходит до экрана со своим кодом), защита от двойной отправки, сохранение темы, `describePhotoPickError`,
-  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер, контраст токенов
+  валидаторы, форматтер дат и JSON-сущности, `authRedirect` и роутер, контраст токенов, `PlatformPhotoCompressor`
+  (канал подменён через `setMockMethodCallHandler`: параметры, ответ, сбой → `photoProcessing`), `parseExifDateTime`,
+  `PhotoDraftsNotifier`, `takenOnAnotherDay`, просмотрщик фото отчёта, отправка фото в чате (успех, сбой загрузки
+  и сжатия, повтор без повторной загрузки), сетка 1/2/4/6 фото, просмотрщик чата на нужном фото
   (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса, правила поиска людей и «Недавние»,
-  `FakeChatStore` (доставка, идемпотентность, непрочитанные, доступ при смене состава, эхо), `ChatThreadNotifier`,
-  лента и поиск чатов. Виджет-тесты: `test/app/router_test.dart`
+  `FakeChatStore` (доставка, идемпотентность, непрочитанные, доступ при смене состава, эхо, вложения), `ChatThreadNotifier`,
+  лента и поиск чатов. Компрессор в тестах — `FakePhotoCompressor` из test/helpers (копия `x.jpg` → `x.jpg.small.jpg`,
+  `failing` — какие оригиналы не сжимаются, `compressed` / `deleted` — что вызывали); выбор фото в виджет-тестах
+  имитируется через `photoDraftsProvider(scope).notifier.add(...)`, сам image_picker не вызывается. Виджет-тесты: `test/app/router_test.dart`
   (`MaterialApp.router`) и экраны через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart).
   Сценарии на всём приложении (вход, выход, переходы) — через `FullApp.pump()` из
   [test/helpers/full_app.dart](test/helpers/full_app.dart), пример — `test/features/chat/presentation/chat_flow_test.dart`.
@@ -230,6 +287,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   Пока на экране крутится индикатор, `pumpAndSettle` не завершится. В таких местах нужен `pump(duration)`, а Riverpod
   перезагружает провайдер после `invalidate` только на следующем кадре, так что одного длинного `pump` мало.
   Fake-репозитории в виджет-тестах ждут до 0,8 с, поэтому после действий нужен `tester.pump(Duration(seconds: 1))`.
+  Таймер задержки, оставшийся к концу теста, роняет его («Pending timers»), поэтому `FullApp.dispose()` и
+  `tearDownApp` в router_test после размонтирования прокручивают ещё 3 с и только потом закрывают контейнер.
   `test/widget_test.dart` — заглушка.
 - Не менять провайдеры синхронно в `initState` или `build`: на `authProvider` подписан роутер, и Riverpod падает
   на assert. Откладывать через `addPostFrameCallback`, как в splash_screen.dart.
@@ -295,12 +354,17 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   (Азамат Асанов есть для демо поиска: «асан» находит и его, и директора Асана Бековича; работает на «Байтике»).
 - Secure storage — только через `SecureStorageService`: в нём таймауты, потому что на Xiaomi/MIUI KeyStore может зависнуть.
   Напрямую `FlutterSecureStorage` не вызывать. Сплэш тоже страхуется таймаутом (`forceUnauthenticated`).
-- `NewReportScreen` подставляет фото `fake:demo-<ts>`, если пользователь ничего не выбрал.
-  Сжатие сейчас только через `imageQuality: 85` и `maxWidth/Height: 1920` в image_picker.
+- `FakeReportRepository` добавляет фото `fake:demo-<ts>` в отчёт без фото.
+  image_picker вызывается без `maxWidth`/`imageQuality`: его собственный ресайз — без фильтрации (трещины и швы
+  «лесенкой»), без потолка размера, PNG с прозрачностью и HEIC на Android 7–8 проходят как есть, EXIF копируется
+  весь (с GPS и серийниками). Поэтому сжимает только `PhotoCompressor`. Снимок камеры через интент в галерею
+  телефона не попадает: после отправки остаётся только сжатая копия.
   Отказ в разрешении image_picker присылает как `PlatformException(code: 'camera_access_denied')`. На Android
   бывает только этот код, потому что галерее разрешение не нужно; `photo_access_denied` приходит только на iOS.
-  Текст ошибки выбирает `describePhotoPickError()` в new_report_screen.dart. При отказе в доступе снэкбар
+  Текст ошибки выбирает `describePhotoPickError()` в core/photos/photo_picking.dart. При отказе в доступе снэкбар
   предлагает действие «Настройки», которое вызывает `AppSettings.openAppSettings()`.
+- `pickMultiImage(limit:)` требует `limit >= 2`, а старые Android лимит системного пикера игнорируют — `pickPhotos`
+  обрабатывает оба случая.
 - Вход по коду приглашения: ссылка «Есть код приглашения?» на экране входа ведёт на `/join` (`JoinScreen`):
   код, имя, email, пароль. Роль и компанию задаёт код (`InviteCode.role`, `companyId`), пользователь их не выбирает.
   - `generateInviteCode(role:)` принимает только `foreman` и `worker`.
@@ -317,8 +381,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   с разделителями (`'${l10n.foremenCount}: $n'`), но новые слова в такие строки не добавлять.
 - В `build.gradle.kts` стоит `minSdk = flutter.minSdkVersion` (в Flutter 3.47.5 это 24), хотя в коммите было `23`.
   flutter_secure_storage нужен ≥ 23, так что работает, но если сменить версию Flutter, проверь.
-- `flutter build apk` предупреждает, что `app_settings` и `flutter_image_compress_common` применяют Kotlin Gradle Plugin,
-  и будущие версии Flutter такие плагины собирать не будут. Перед обновлением Flutter проверь их новые версии.
+- `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
+  такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
 - AndroidManifest: только `INTERNET` и `CAMERA`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
 - Inter 4.1 (статические TTF из релиза rsms/inter) лежит в `assets/fonts/inter/`, начертания 400, 500, 600, 700 и 800,
   рядом лицензия `OFL.txt`. main.dart регистрирует её в `LicenseRegistry`. Для нового начертания (например, 300) нужно
@@ -327,12 +391,13 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 
 ## Текущее состояние
 Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
-детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, поиск людей по имени и фамилии, отчёты (создание с камерой или галереей, список по дням, детали), профиль и тема
-(сохраняется между запусками), три роли, чат этапа 1 (чаты объектов и личные, текст, статусы, непрочитанные).
+детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, поиск людей по имени и фамилии, отчёты (создание с камерой или галереей, список по дням, детали, время съёмки фото), профиль и тема
+(сохраняется между запусками), три роли, чат этапов 1–2 (чаты объектов и личные, текст, фото, статусы, непрочитанные),
+сжатие фото на устройстве (Android), общий полноэкранный просмотр фото.
 Визуальный стиль — см. «Дизайн-токены и компоненты».
-Заглушки и пробелы: Api-репозитории (все пять — заглушки), WebSocket-клиент чата, клиент Dio, сжатие фото (flutter_image_compress),
-загрузка сетевых фото (cached_network_image), черновики отчётов (`DraftReport` есть в репозитории, но UI нет),
-applicationId и подпись Android-релиза.
+Заглушки и пробелы: Api-репозитории (все пять — заглушки), WebSocket-клиент чата, клиент Dio, загрузка в хранилище
+по `POST /uploads`, показ сетевых фото (cached_network_image), сжатие фото на iOS, черновики отчётов (`DraftReport`
+есть в репозитории, но UI нет), applicationId и подпись Android-релиза.
 Подробности и этапы — в [PROGRESS.md](PROGRESS.md); он отстаёт от кода, сверяйся с кодом.
 
 ## Правила работы
