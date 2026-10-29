@@ -417,6 +417,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 ## Правила работы
 - После изменений запускать `flutter analyze` и `flutter test`. Не завершать задачу с ошибками анализатора
   или упавшими тестами.
+- Если задача затрагивает нативный код (`android/`), плагины (pubspec.yaml, pubspec.lock) или хранилище
+  (`shared_preferences`, secure storage), перед её завершением проверить release-сборку на устройстве
+  (`flutter run --release`): тесты и debug не проходят через R8, и такие ошибки видны только в release.
 - Не коммитить без явной просьбы.
 - Не добавлять пакеты в pubspec.yaml без согласования.
 - Новый код следует существующей архитектуре (feature / data / domain / presentation) и возвращает `Result<T>` из репозиториев.
