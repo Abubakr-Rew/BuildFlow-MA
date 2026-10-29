@@ -24,6 +24,7 @@ extension FailureMessages on AppLocalizations {
         FailureCode.notFound => errorNotFound,
         FailureCode.validation => errorValidation,
         FailureCode.tooManyRequests => errorTooManyRequests,
+        FailureCode.photoProcessing => errorPhotoProcessing,
         FailureCode.unknown => errorUnknown,
       };
 }

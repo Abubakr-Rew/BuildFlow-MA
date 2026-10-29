@@ -402,6 +402,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Слишком много попыток. Подождите минуту и попробуйте снова';
 
   @override
+  String get errorPhotoProcessing =>
+      'Не удалось обработать фото. Попробуйте ещё раз или выберите другое';
+
+  @override
   String get errorUnknown => 'Что-то пошло не так';
 
   @override
@@ -775,4 +779,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get writeMessage => 'Написать';
+
+  @override
+  String photoLimitReached(int count) {
+    return 'Можно добавить не больше $count фото';
+  }
+
+  @override
+  String get photoProcessing => 'Фото обрабатывается';
+
+  @override
+  String get photoProcessingFailed => 'Фото не обработано';
 }

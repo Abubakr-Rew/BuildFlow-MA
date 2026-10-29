@@ -17,3 +17,17 @@ const bool kFakeChatEcho = true;
 /// Share of demo chat messages that fail to send (0–1), to try the
 /// «Повторить / Удалить» flow on a device. Used only with [kUseMockData].
 const double kFakeChatSendFailureRate = 0;
+
+/// Photos of reports and chat messages are scaled so the long side is at
+/// most this many pixels: seams and cracks stay visible on a phone and a
+/// laptop screen, and the file stays small for a slow mobile network.
+const int kPhotoMaxSide = 1600;
+
+/// The size a compressed photo aims for. The JPEG qualities of
+/// [kPhotoQualitySteps] are tried in turn until the photo fits.
+const int kPhotoTargetBytes = 450 * 1024;
+
+/// JPEG qualities to try, best first. If even the last one doesn't fit
+/// [kPhotoTargetBytes], the photo goes as is: lower qualities blur exactly
+/// the thin lines (cracks, joints) a report is about.
+const List<int> kPhotoQualitySteps = [82, 74, 66];

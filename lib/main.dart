@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:buildflow/app/app.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -34,5 +35,11 @@ Future<void> main() async {
       container: container,
       child: const BuildFlowApp(),
     ),
+  );
+
+  // Photo copies and picker leftovers of earlier runs: nothing waits for
+  // them, the send queues live in memory. Off the startup path.
+  WidgetsBinding.instance.addPostFrameCallback(
+    (_) => unawaited(container.read(photoCompressorProvider).sweep()),
   );
 }

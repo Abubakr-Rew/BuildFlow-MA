@@ -1,5 +1,6 @@
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -33,7 +34,7 @@ class _FailingReports extends FakeReportRepository {
     required String authorId,
     required String authorName,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   }) async => Err(failure);
 }
 
@@ -60,7 +61,7 @@ void main() {
       .submitReport(
         projectId: projectId ?? 'project-1',
         text: 'Залили фундамент',
-        photoPaths: const ['fake:test'],
+        photos: const [],
       );
 
   group('ReportsNotifier.submitReport', () {

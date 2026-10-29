@@ -394,6 +394,9 @@
   "errorTooManyRequests": "Слишком много попыток. Подождите минуту и попробуйте снова",
   "@errorTooManyRequests": {"description": "FailureCode.tooManyRequests: rate limit hit (429)"},
 
+  "errorPhotoProcessing": "Не удалось обработать фото. Попробуйте ещё раз или выберите другое",
+  "@errorPhotoProcessing": {"description": "FailureCode.photoProcessing: a picked photo couldn't be compressed on the device"},
+
   "errorUnknown": "Что-то пошло не так",
   "@errorUnknown": {"description": "FailureCode.unknown and unexpected exceptions"},
 
@@ -738,5 +741,14 @@
   "@projectChat": {"description": "Project page tile that opens the project chat"},
 
   "writeMessage": "Написать",
-  "@writeMessage": {"description": "Person sheet button that opens the direct chat"}
+  "@writeMessage": {"description": "Person sheet button that opens the direct chat"},
+
+  "photoLimitReached": "Можно добавить не больше {count} фото",
+  "@photoLimitReached": {"description": "More photos were picked than allowed; the extra ones are dropped", "placeholders": {"count": {"type": "int"}}},
+
+  "photoProcessing": "Фото обрабатывается",
+  "@photoProcessing": {"description": "Semantics of the spinner on a photo being compressed"},
+
+  "photoProcessingFailed": "Фото не обработано",
+  "@photoProcessingFailed": {"description": "Red mark on a photo that couldn't be compressed; title of its retry or remove sheet"}
 }

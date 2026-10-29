@@ -1,4 +1,5 @@
 import 'package:buildflow/core/error/failures.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';
 import 'package:buildflow/features/reports/domain/entities/draft_report.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -50,16 +51,34 @@ void main() {
         authorId: 'user-foreman-1',
         authorName: 'Бакыт Касымов',
         text: 'Тестовый отчёт',
-        photoPaths: ['path1', 'path2'],
+        photos: const [
+          CompressedPhoto(path: '/cache/photos/1.jpg', width: 1600, height: 1200, bytes: 1),
+          CompressedPhoto(path: '/cache/photos/2.jpg', width: 1200, height: 1600, bytes: 1),
+        ],
       );
       expect(result.isSuccess, isTrue);
       expect(result.value.text, 'Тестовый отчёт');
-      expect(result.value.photos.length, 2);
+      expect(result.value.photos.map((p) => p.url), [
+        '/cache/photos/1.jpg',
+        '/cache/photos/2.jpg',
+      ]);
       expect(result.value.authorName, 'Бакыт Касымов');
 
       // Verify it appears first in list (newest)
       final all = await repo.getReports();
       expect(all.value.first.text, 'Тестовый отчёт');
+    });
+
+    test('a report without photos gets a demo photo', () async {
+      final result = await repo.submitReport(
+        projectId: 'project-1',
+        projectName: 'ЖК «Ала-Тоо Резиденс»',
+        authorId: 'user-foreman-1',
+        authorName: 'Бакыт Касымов',
+        text: 'Без фото',
+        photos: const [],
+      );
+      expect(result.value.photos.single.url, startsWith('fake:demo-'));
     });
 
     test('saveDraft and getDrafts work correctly', () async {

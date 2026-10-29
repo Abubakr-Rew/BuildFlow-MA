@@ -1,5 +1,6 @@
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/reports/domain/entities/draft_report.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/repositories/report_repository.dart';
@@ -36,7 +37,7 @@ class ApiReportRepository implements ReportRepository {
     required String authorId,
     required String authorName,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   }) async {
     return const Err(
       Failure(FailureCode.server, message: 'API not implemented'),

@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/reports/domain/entities/draft_report.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/entities/report_photo.dart';
@@ -132,9 +133,10 @@ class FakeReportRepository implements ReportRepository {
     required String authorId,
     required String authorName,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   }) async {
     await _simulateLatency();
+    final now = DateTime.now();
     final report = Report(
       id: 'report-${DateTime.now().millisecondsSinceEpoch}',
       projectId: projectId,
@@ -142,17 +144,23 @@ class FakeReportRepository implements ReportRepository {
       authorId: authorId,
       authorName: authorName,
       text: text,
-      // Local file paths are kept as-is so the photos can be shown on device.
-      photos: photoPaths
-          .map(
-            (path) => ReportPhoto(
-              id: 'photo-${DateTime.now().millisecondsSinceEpoch}-'
-                  '${_random.nextInt(100000)}',
-              url: path,
-            ),
-          )
-          .toList(),
-      createdAt: DateTime.now(),
+      // The compressed copies stay where they are and serve as the
+      // «uploaded» photos. A report without photos gets a demo one, so the
+      // demo always has something to show.
+      photos: [
+        for (final photo in photos)
+          ReportPhoto(
+            id: 'photo-${now.millisecondsSinceEpoch}-'
+                '${_random.nextInt(100000)}',
+            url: photo.path,
+          ),
+        if (photos.isEmpty)
+          ReportPhoto(
+            id: 'photo-${now.millisecondsSinceEpoch}',
+            url: 'fake:demo-${now.millisecondsSinceEpoch}',
+          ),
+      ],
+      createdAt: now,
     );
     _reports.insert(0, report);
     return Success(report);

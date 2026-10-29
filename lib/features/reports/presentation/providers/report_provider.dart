@@ -1,6 +1,7 @@
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
@@ -60,7 +61,7 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
   Future<Result<Report>> submitReport({
     required String projectId,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   }) async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
@@ -92,7 +93,7 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
       authorId: user.id,
       authorName: user.name,
       text: text,
-      photoPaths: photoPaths,
+      photos: photos,
     );
     if (result.isSuccess) ref.invalidateSelf();
     return result;

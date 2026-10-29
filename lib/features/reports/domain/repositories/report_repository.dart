@@ -1,4 +1,5 @@
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/reports/domain/entities/draft_report.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 
@@ -13,14 +14,14 @@ abstract class ReportRepository {
   /// Get a single report by ID.
   Future<Result<Report>> getReport(String id);
 
-  /// Submit a new report (foreman only).
+  /// Submit a new report (foreman only) with its compressed photos.
   Future<Result<Report>> submitReport({
     required String projectId,
     required String projectName,
     required String authorId,
     required String authorName,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   });
 
   /// Save a draft report locally.

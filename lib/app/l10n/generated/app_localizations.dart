@@ -838,6 +838,12 @@ abstract class AppLocalizations {
   /// **'Слишком много попыток. Подождите минуту и попробуйте снова'**
   String get errorTooManyRequests;
 
+  /// FailureCode.photoProcessing: a picked photo couldn't be compressed on the device
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось обработать фото. Попробуйте ещё раз или выберите другое'**
+  String get errorPhotoProcessing;
+
   /// FailureCode.unknown and unexpected exceptions
   ///
   /// In ru, this message translates to:
@@ -1509,6 +1515,24 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Написать'**
   String get writeMessage;
+
+  /// More photos were picked than allowed; the extra ones are dropped
+  ///
+  /// In ru, this message translates to:
+  /// **'Можно добавить не больше {count} фото'**
+  String photoLimitReached(int count);
+
+  /// Semantics of the spinner on a photo being compressed
+  ///
+  /// In ru, this message translates to:
+  /// **'Фото обрабатывается'**
+  String get photoProcessing;
+
+  /// Red mark on a photo that couldn't be compressed; title of its retry or remove sheet
+  ///
+  /// In ru, this message translates to:
+  /// **'Фото не обработано'**
+  String get photoProcessingFailed;
 }
 
 class _AppLocalizationsDelegate

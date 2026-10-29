@@ -1,47 +1,30 @@
-import 'package:app_settings/app_settings.dart';
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/photo_draft.dart';
+import 'package:buildflow/core/photos/photo_picking.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/core/widgets/bf_button.dart';
 import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:buildflow/core/widgets/bf_chip.dart';
 import 'package:buildflow/core/widgets/bf_icon_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
-import 'package:buildflow/core/widgets/photo_thumbnail.dart';
+import 'package:buildflow/core/widgets/photo_draft_tile.dart';
+import 'package:buildflow/core/widgets/retry_delete_sheet.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
+import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 
 const _maxPhotos = 5;
-
-/// Long enough to read the access hint and reach the settings button.
-const _actionSnackBarDuration = Duration(seconds: 8);
-
-/// What to tell the user when image_picker fails. A refused permission
-/// (Android only reports the camera one) can be fixed in the app settings.
-@visibleForTesting
-({String message, bool offerSettings}) describePhotoPickError(
-  AppLocalizations l10n,
-  Object error,
-) => switch (error) {
-  PlatformException(code: 'camera_access_denied') => (
-    message: l10n.cameraAccessDenied,
-    offerSettings: true,
-  ),
-  PlatformException(code: 'photo_access_denied') => (
-    message: l10n.photoAccessDenied,
-    offerSettings: true,
-  ),
-  _ => (message: l10n.photoPickError, offerSettings: false),
-};
 
 /// Appends a quick template to the report text: «Залили» + «Бетон» →
 /// «Залили, бетон»; an empty text or a finished sentence gets the word as is.
@@ -69,8 +52,14 @@ class NewReportScreen extends ConsumerStatefulWidget {
 class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   final _textController = TextEditingController();
   late String? _selectedProjectId = widget.initialProjectId;
-  final List<String> _photoPaths = [];
+
+  /// This screen's own photos: the tab and a copy opened on top of a
+  /// project page don't share them.
+  final _photoScope = 'report:${const Uuid().v4()}';
   bool _isSubmitting = false;
+
+  PhotoDraftsNotifier get _photos =>
+      ref.read(photoDraftsProvider(_photoScope).notifier);
 
   @override
   void dispose() {
@@ -93,19 +82,18 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // Add fake photo paths if none selected (for demo purposes).
-    // A copy: photos added or removed while sending don't change this report.
-    final photos = _photoPaths.isEmpty
-        ? ['fake:demo-${DateTime.now().millisecondsSinceEpoch}']
-        : List.of(_photoPaths);
-
-    final result = await ref
-        .read(reportsProvider.notifier)
-        .submitReport(
-          projectId: _selectedProjectId!,
-          text: _textController.text.trim(),
-          photoPaths: photos,
-        );
+    // Photos still being compressed are waited for; one that failed stops
+    // the report until it's retried or removed.
+    final photos = await _photos.whenReady();
+    final result = switch (photos) {
+      Success(:final data) =>
+        await ref.read(reportsProvider.notifier).submitReport(
+              projectId: _selectedProjectId!,
+              text: _textController.text.trim(),
+              photos: data,
+            ),
+      Err(:final failure) => Err<Report>(failure),
+    };
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
@@ -114,64 +102,45 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     switch (result) {
       case Success():
         _showSnackBar(l10n.reportSent);
-        // Opened on top of a project page — go back to it.
+        // Opened on top of a project page — go back to it. The photos
+        // belong to the report now: leaving drops only the originals.
         if (widget.initialProjectId != null && Navigator.of(context).canPop()) {
+          _photos.clear();
           Navigator.of(context).pop();
           return;
         }
         _textController.clear();
-        setState(() {
-          _selectedProjectId = null;
-          _photoPaths.clear();
-        });
+        _photos.clear();
+        setState(() => _selectedProjectId = null);
       case Err(:final failure):
         // The form keeps its text and photos, so the foreman can resend.
         _showSnackBar(l10n.reportError(l10n.failureMessage(failure)));
     }
   }
 
-  void _showSnackBar(String message, {SnackBarAction? action}) {
+  void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      action == null
-          ? SnackBar(content: Text(message))
-          : SnackBar(
-              content: Text(message),
-              action: action,
-              duration: _actionSnackBarDuration,
-            ),
+      SnackBar(content: Text(message)),
     );
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
-    final l10n = AppLocalizations.of(context);
-    try {
-      final picker = ImagePicker();
-      final image = await picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-      if (image != null && mounted && _photoPaths.length < _maxPhotos) {
-        setState(() {
-          _photoPaths.add(image.path);
-        });
-      }
-    } catch (e) {
-      // The exception text is for debugging, not for the foreman.
-      debugPrint('Photo pick failed: $e');
-      if (!mounted) return;
-      final error = describePhotoPickError(l10n, e);
-      _showSnackBar(
-        error.message,
-        action: error.offerSettings
-            ? SnackBarAction(
-                label: l10n.openSettings,
-                onPressed: AppSettings.openAppSettings,
-              )
-            : null,
-      );
-    }
+    final picked = ref.read(photoDraftsProvider(_photoScope)).length;
+    final paths = await pickPhotos(
+      context,
+      source: source,
+      limit: _maxPhotos - picked,
+    );
+    if (mounted) _photos.add(paths);
+  }
+
+  Future<void> _onFailedPhoto(PhotoDraft draft) async {
+    final retry = await showRetryDeleteSheet(
+      context,
+      title: AppLocalizations.of(context).photoProcessingFailed,
+    );
+    if (!mounted || retry == null) return;
+    retry ? _photos.retry(draft.id) : _photos.remove(draft.id);
   }
 
   void _addTemplate(String word) {
@@ -198,7 +167,8 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
     final theme = Theme.of(context);
     final t = context.bfTheme;
     final projects = ref.watch(projectsProvider);
-    final canAddPhoto = _photoPaths.length < _maxPhotos;
+    final photos = ref.watch(photoDraftsProvider(_photoScope));
+    final canAddPhoto = photos.length < _maxPhotos;
     final sectionStyle = theme.textTheme.labelMedium?.copyWith(
       color: t.textSecondary,
     );
@@ -262,7 +232,7 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                           ),
                         ),
                         Text(
-                          l10n.photoCounter(_photoPaths.length, _maxPhotos),
+                          l10n.photoCounter(photos.length, _maxPhotos),
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: t.textSecondary,
                             fontFeatures: AppTextTheme.tabular,
@@ -272,9 +242,9 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
                     ),
                     const SizedBox(height: AppTheme.spacing12),
                     _PhotoGrid(
-                      paths: _photoPaths,
-                      onRemove: (path) =>
-                          setState(() => _photoPaths.remove(path)),
+                      photos: photos,
+                      onRemove: (draft) => _photos.remove(draft.id),
+                      onFailedTap: _onFailedPhoto,
                       onGallery: canAddPhoto
                           ? () => _pickPhoto(ImageSource.gallery)
                           : null,
@@ -527,16 +497,18 @@ class _ProjectSheet extends StatelessWidget {
 
 class _PhotoGrid extends StatelessWidget {
   const _PhotoGrid({
-    required this.paths,
+    required this.photos,
     required this.onRemove,
+    required this.onFailedTap,
     required this.onGallery,
   });
 
   static const _columns = 3;
   static const _gap = 8.0;
 
-  final List<String> paths;
-  final ValueChanged<String> onRemove;
+  final List<PhotoDraft> photos;
+  final ValueChanged<PhotoDraft> onRemove;
+  final ValueChanged<PhotoDraft> onFailedTap;
 
   /// `null` once the photo limit is reached.
   final VoidCallback? onGallery;
@@ -550,71 +522,18 @@ class _PhotoGrid extends StatelessWidget {
           spacing: _gap,
           runSpacing: _gap,
           children: [
-            for (final path in paths)
-              _PhotoCell(
-                path: path,
+            for (final draft in photos)
+              PhotoDraftTile(
+                key: ValueKey(draft.id),
+                draft: draft,
                 size: size,
-                onRemove: () => onRemove(path),
+                onRemove: () => onRemove(draft),
+                onFailedTap: () => onFailedTap(draft),
               ),
             if (onGallery != null) _GalleryCell(size: size, onTap: onGallery!),
           ],
         );
       },
-    );
-  }
-}
-
-class _PhotoCell extends StatelessWidget {
-  const _PhotoCell({
-    required this.path,
-    required this.size,
-    required this.onRemove,
-  });
-
-  final String path;
-  final double size;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.bfTheme;
-    return SizedBox.square(
-      dimension: size,
-      child: Stack(
-        children: [
-          PhotoThumbnail(photoId: 'new-$path', url: path, size: size),
-          // The visible circle is 26 px; the tap area is 44.
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Tooltip(
-              message: AppLocalizations.of(context).removePhoto,
-              child: InkResponse(
-                onTap: onRemove,
-                radius: 22,
-                child: SizedBox.square(
-                  dimension: AppTheme.iconButtonSize,
-                  child: Center(
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: t.graphite.withValues(alpha: 0.8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 16,
-                        color: t.onGraphite,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

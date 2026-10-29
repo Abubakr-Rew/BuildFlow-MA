@@ -20,6 +20,7 @@ void main() {
     FailureCode.notFound: l10n.errorNotFound,
     FailureCode.validation: l10n.errorValidation,
     FailureCode.tooManyRequests: l10n.errorTooManyRequests,
+    FailureCode.photoProcessing: l10n.errorPhotoProcessing,
     FailureCode.unknown: l10n.errorUnknown,
   };
 

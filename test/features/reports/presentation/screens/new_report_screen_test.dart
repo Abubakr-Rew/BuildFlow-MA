@@ -1,6 +1,7 @@
 import 'package:buildflow/app/l10n/generated/app_localizations_ru.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -9,7 +10,6 @@ import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:buildflow/features/reports/presentation/screens/new_report_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../helpers/test_app.dart';
@@ -34,7 +34,7 @@ class _FailingReports extends FakeReportRepository {
     required String authorId,
     required String authorName,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   }) async => Err(failure);
 }
 
@@ -48,7 +48,7 @@ class _CountingReports extends FakeReportRepository {
     required String authorId,
     required String authorName,
     required String text,
-    required List<String> photoPaths,
+    required List<CompressedPhoto> photos,
   }) {
     submits++;
     return super.submitReport(
@@ -57,41 +57,13 @@ class _CountingReports extends FakeReportRepository {
       authorId: authorId,
       authorName: authorName,
       text: text,
-      photoPaths: photoPaths,
+      photos: photos,
     );
   }
 }
 
 void main() {
   final l10n = AppLocalizationsRu();
-
-  group('describePhotoPickError', () {
-    test('explains a refused camera permission and offers settings', () {
-      final error = PlatformException(code: 'camera_access_denied');
-      expect(describePhotoPickError(l10n, error), (
-        message: l10n.cameraAccessDenied,
-        offerSettings: true,
-      ));
-    });
-
-    test('explains a refused photo library permission and offers settings', () {
-      final error = PlatformException(code: 'photo_access_denied');
-      expect(describePhotoPickError(l10n, error), (
-        message: l10n.photoAccessDenied,
-        offerSettings: true,
-      ));
-    });
-
-    test('falls back to the generic text without settings', () {
-      final noCamera = PlatformException(code: 'no_available_camera');
-      for (final error in [noCamera, Exception('io')]) {
-        expect(describePhotoPickError(l10n, error), (
-          message: l10n.photoPickError,
-          offerSettings: false,
-        ));
-      }
-    });
-  });
 
   group('appendTemplate', () {
     test('an empty text gets the word as is', () {

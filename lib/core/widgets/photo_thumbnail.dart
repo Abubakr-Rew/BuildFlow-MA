@@ -42,15 +42,28 @@ class PhotoThumbnail extends StatelessWidget {
 
 }
 
-/// A photo filling its parent, cropped to cover it: a `fake:` placeholder,
-/// a local file or (later) a network image. No hero, no rounding.
+/// A photo filling its parent, cropped to cover it by default: a `fake:`
+/// placeholder, a local file or (later) a network image. No hero, no
+/// rounding.
+///
+/// Local files are decoded at about the size shown, not at the camera's
+/// 12 MP: a picked original is shown until its compressed copy is sent.
 class PhotoImage extends StatelessWidget {
-  const PhotoImage({required this.url, this.iconSize = 32, super.key});
+  const PhotoImage({
+    required this.url,
+    this.iconSize = 32,
+    this.fit = BoxFit.cover,
+    super.key,
+  });
 
   final String url;
 
   /// Icon size on a `fake:` placeholder.
   final double iconSize;
+  final BoxFit fit;
+
+  /// Largest decode width; enough for a full-screen zoom.
+  static const _maxDecodeWidth = 4096;
 
   @override
   Widget build(BuildContext context) {
@@ -59,13 +72,31 @@ class PhotoImage extends StatelessWidget {
     }
     // Photos taken on this device are stored as local file paths.
     if (!url.startsWith('http')) {
-      return Image.file(
-        File(url),
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, __, ___) =>
-            _FakePlaceholder(seed: url, iconSize: iconSize),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final side = max(constraints.maxWidth, constraints.maxHeight);
+          // A cropped photo needs more than the box's width: twice the
+          // longer side covers photos up to 2:1.
+          final factor = fit == BoxFit.cover ? 2 : 1;
+          final decodeWidth = side.isFinite
+              ? min(
+                  (side * MediaQuery.devicePixelRatioOf(context) * factor)
+                      .round(),
+                  _maxDecodeWidth,
+                )
+              : null;
+          return Image.file(
+            File(url),
+            fit: fit,
+            width: double.infinity,
+            height: double.infinity,
+            cacheWidth: decodeWidth,
+            // The original gives way to its copy without a blank frame.
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) =>
+                _FakePlaceholder(seed: url, iconSize: iconSize),
+          );
+        },
       );
     }
     // Real images will use CachedNetworkImage in the future

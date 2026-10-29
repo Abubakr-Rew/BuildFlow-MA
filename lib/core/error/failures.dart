@@ -39,6 +39,11 @@ enum FailureCode {
   /// before trying again (429, e.g. repeated invite codes on join).
   tooManyRequests,
 
+  /// A picked photo couldn't be compressed on the device: an unsupported
+  /// format (HEIC before Android 9), a damaged file or not enough memory.
+  /// Comes from the client only, never from the API.
+  photoProcessing,
+
   /// Anything else.
   unknown,
 }
