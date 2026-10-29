@@ -85,6 +85,7 @@ class PhotoCompressor(private val context: Context) : MethodChannel.MethodCallHa
         targetBytes: Int,
         qualities: List<Int>,
     ): Map<String, Any?> {
+        val started = System.nanoTime()
         if (!File(path).isFile) throw PhotoException("not_found", "No file at $path")
 
         // Size and type only; nothing is decoded yet.
@@ -141,6 +142,12 @@ class PhotoCompressor(private val context: Context) : MethodChannel.MethodCallHa
             "height" to height,
             "bytes" to jpeg.size(),
             "quality" to quality,
+            // For the log: the original as stored (not turned upright) and
+            // the time of the work itself, without waiting in the queue.
+            "sourceWidth" to bounds.outWidth,
+            "sourceHeight" to bounds.outHeight,
+            "sourceBytes" to File(path).length(),
+            "elapsedMs" to (System.nanoTime() - started) / 1_000_000,
             // «2026:10:28 11:42:05» and «+06:00»; parsed on the Dart side.
             "takenAt" to exif?.getAttribute("DateTimeOriginal"),
             "takenAtOffset" to exif?.getAttribute("OffsetTimeOriginal"),

@@ -54,12 +54,19 @@ class PlatformPhotoCompressor implements PhotoCompressor {
           ),
         );
       }
-      // For checking speed and size on a device: `flutter logs`.
-      debugPrint(
-        'Photo compressed in ${watch.elapsedMilliseconds} ms: '
-        '${photo.width}×${photo.height}, ${photo.bytes ~/ 1024} KB, '
-        'quality ${reply!['quality']}',
-      );
+      // For checking speed and size on a device (`flutter logs`) in debug
+      // and profile builds; release builds stay quiet. Work is the native
+      // time; the rest was waiting in the queue.
+      if (!kReleaseMode) {
+        debugPrint(
+          'Photo compressed in ${watch.elapsedMilliseconds} ms '
+          '(work ${reply!['elapsedMs']} ms): '
+          '${reply['sourceWidth']}×${reply['sourceHeight']}, '
+          '${(reply['sourceBytes'] as int? ?? 0) ~/ 1024} KB → '
+          '${photo.width}×${photo.height}, ${photo.bytes ~/ 1024} KB, '
+          'quality ${reply['quality']}',
+        );
+      }
       return Success(photo);
     } on PlatformException catch (e, stackTrace) {
       return Err(
