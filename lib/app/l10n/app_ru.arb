@@ -759,5 +759,26 @@
   "@photoTakenNotToday": {"description": "Badge on a report photo taken on another day than the report was sent"},
 
   "photoViewerClose": "Закрыть просмотр",
-  "@photoViewerClose": {"description": "Close button of the full-screen photo viewer"}
+  "@photoViewerClose": {"description": "Close button of the full-screen photo viewer"},
+
+  "photoMessage": "Фото",
+  "@photoMessage": {"description": "Chat list preview of a message with one photo"},
+
+  "attachPhoto": "Прикрепить фото",
+  "@attachPhoto": {"description": "The «+» button left of the chat message field"},
+
+  "takePhotoNow": "Сфотографировать",
+  "@takePhotoNow": {"description": "Camera button inside the chat message field"},
+
+  "photoCaptionHint": "Подпись",
+  "@photoCaptionHint": {"description": "Hint of the chat message field while photos are attached: the text becomes their caption"},
+
+  "morePhotos": "+{count}",
+  "@morePhotos": {"description": "Last cell of a photo grid in a chat message: how many more photos the message has", "placeholders": {"count": {"type": "int"}}},
+
+  "photoFailedBeforeSend": "Одно из фото не обработано. Повторите его или уберите",
+  "@photoFailedBeforeSend": {"description": "Snack bar when sending while an attached photo failed to compress"},
+
+  "photoUploading": "Фото загружается",
+  "@photoUploading": {"description": "Semantics of the progress ring on a photo being sent"}
 }

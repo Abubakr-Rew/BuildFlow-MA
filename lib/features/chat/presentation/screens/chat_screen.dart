@@ -1,28 +1,39 @@
+import 'dart:async';
+
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/error/failures.dart';
+import 'package:buildflow/core/photos/photo_draft.dart';
+import 'package:buildflow/core/photos/photo_picking.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
+import 'package:buildflow/core/widgets/photo_draft_tile.dart';
+import 'package:buildflow/core/widgets/photo_viewer.dart';
+import 'package:buildflow/core/widgets/retry_delete_sheet.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/chat/domain/chat_timeline.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
 import 'package:buildflow/features/chat/presentation/chat_texts.dart';
 import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
 import 'package:buildflow/features/chat/presentation/widgets/chat_avatar.dart';
 import 'package:buildflow/features/chat/presentation/widgets/chat_composer.dart';
 import 'package:buildflow/features/chat/presentation/widgets/message_bubble.dart';
+import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// One chat: messages with day dividers and author groups, the message
 /// field below.
@@ -76,6 +87,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   ChatThreadNotifier get _notifier =>
       ref.read(chatThreadProvider(widget.chatId).notifier);
+
+  /// The photos picked for the next message of this chat.
+  String get _photoScope => 'chat:${widget.chatId}';
+
+  PhotoDraftsNotifier get _photos =>
+      ref.read(photoDraftsProvider(_photoScope).notifier);
 
   bool get _atBottom =>
       !_scroll.hasClients ||
@@ -146,42 +163,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _openFailedMenu(Message message) async {
-    final l10n = AppLocalizations.of(context);
-    final t = context.bfTheme;
-    final retry = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppTheme.screenPadding,
-                0,
-                AppTheme.screenPadding,
-                AppTheme.spacing8,
-              ),
-              child: Text(
-                l10n.messageFailed,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.refresh_rounded),
-              title: Text(l10n.retry),
-              onTap: () => Navigator.pop(sheetContext, true),
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline_rounded, color: t.danger.fg),
-              title: Text(
-                l10n.delete,
-                style: TextStyle(color: t.danger.fg),
-              ),
-              onTap: () => Navigator.pop(sheetContext, false),
-            ),
-          ],
-        ),
-      ),
+    final retry = await showRetryDeleteSheet(
+      context,
+      title: AppLocalizations.of(context).messageFailed,
     );
     if (!mounted || retry == null) return;
     if (retry) {
@@ -191,6 +175,111 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  // ── Photos ──────────────────────────────────────────────────
+
+  /// «Камера» or «Галерея» under the «+».
+  Future<void> _chooseSource() async {
+    final l10n = AppLocalizations.of(context);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(l10n.takePhoto),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(l10n.fromGallery),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source != null && mounted) await _pickPhotos(source);
+  }
+
+  Future<void> _pickPhotos(ImageSource source) async {
+    final left =
+        maxPhotosPerMessage - ref.read(photoDraftsProvider(_photoScope)).length;
+    if (left <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).photoLimitReached(maxPhotosPerMessage),
+          ),
+        ),
+      );
+      return;
+    }
+    final paths = await pickPhotos(context, source: source, limit: left);
+    if (mounted) _photos.add(paths);
+  }
+
+  Future<void> _onFailedPhoto(PhotoDraft draft) async {
+    final retry = await showRetryDeleteSheet(
+      context,
+      title: AppLocalizations.of(context).photoProcessingFailed,
+    );
+    if (!mounted || retry == null) return;
+    retry ? _photos.retry(draft.id) : _photos.remove(draft.id);
+  }
+
+  /// The text alone, or the picked photos with the text as their caption.
+  /// Photos still compressing go along; a failed one holds the message.
+  bool _send(String text) {
+    final photos = ref.read(photoDraftsProvider(_photoScope));
+    if (photos.isEmpty) {
+      _notifier.send(text);
+      return true;
+    }
+    if (photos.any((p) => p.isFailed)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).photoFailedBeforeSend),
+        ),
+      );
+      return false;
+    }
+    _notifier.sendPhotos(_photos.takeAll(), caption: text);
+    return true;
+  }
+
+  void _openPhoto(Message message, int index) {
+    final l10n = AppLocalizations.of(context);
+    final names = ref.read(memberNamesProvider);
+    final time = DateFormatter.reportDateTime(
+      message.createdAt.toLocal(),
+      today: l10n.today,
+      yesterday: l10n.yesterday,
+    );
+    final caption = message.text?.trim() ?? '';
+    unawaited(
+      showPhotoViewer(
+        context,
+        initialIndex: index,
+        photos: [
+          for (final (i, photo) in message.attachments.indexed)
+            ViewerPhoto(
+              url: photo.url,
+              heroTag: chatPhotoHeroTag(message, i),
+              aspectRatio: switch ((photo.width, photo.height)) {
+                (final w?, final h?) when w > 0 && h > 0 => w / h,
+                _ => null,
+              },
+              caption: caption.isEmpty ? null : caption,
+              author: l10n.memberName(names, message.senderId),
+              time: time,
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -198,6 +287,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chat = ref.watch(chatByIdProvider(widget.chatId)).valueOrNull;
     final me = ref.watch(currentUserProvider)?.id;
     final members = ref.watch(membersProvider).valueOrNull;
+    final photos = ref.watch(photoDraftsProvider(_photoScope));
     final peerId = me == null ? null : chat?.peerOf(me);
     final peer = peerId == null
         ? null
@@ -256,7 +346,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               _ReadOnlyNote(text: l10n.peerLeftCompany)
             else
               ChatComposer(
-                onSend: (text) => _notifier.send(text),
+                onSend: _send,
+                hasAttachments: photos.isNotEmpty,
+                hintText: photos.isEmpty ? null : l10n.photoCaptionHint,
+                leading: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppTheme.spacing4),
+                    child: IconButton(
+                      tooltip: l10n.attachPhoto,
+                      onPressed: _chooseSource,
+                      icon: const Icon(Icons.add_rounded),
+                    ),
+                  ),
+                ],
+                fieldSuffix: IconButton(
+                  tooltip: l10n.takePhotoNow,
+                  onPressed: () => _pickPhotos(ImageSource.camera),
+                  icon: const Icon(Icons.photo_camera_outlined),
+                ),
+                top: photos.isEmpty
+                    ? null
+                    : _PickedPhotos(
+                        photos: photos,
+                        onRemove: (draft) => _photos.remove(draft.id),
+                        onFailedTap: _onFailedPhoto,
+                      ),
               ),
           ],
         ),
@@ -280,7 +394,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           item: item,
           me: me,
           isProject: isProject,
+          uploadProgress: thread.uploadProgress,
           onFailedTap: _openFailedMenu,
+          onPhotoTap: _openPhoto,
         );
 
     return CustomScrollView(
@@ -330,13 +446,17 @@ class _TimelineRow extends ConsumerWidget {
     required this.item,
     required this.me,
     required this.isProject,
+    required this.uploadProgress,
     required this.onFailedTap,
+    required this.onPhotoTap,
   });
 
   final TimelineItem item;
   final String? me;
   final bool isProject;
+  final Map<String, double> uploadProgress;
   final ValueChanged<Message> onFailedTap;
+  final void Function(Message message, int index) onPhotoTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -380,6 +500,8 @@ class _TimelineRow extends ConsumerWidget {
                 ? l10n.memberName(names, message.senderId)
                 : null,
             onFailedTap: () => onFailedTap(message),
+            onPhotoTap: (index) => onPhotoTap(message, index),
+            uploadProgress: message.status.isPending ? uploadProgress : const {},
           ),
         ),
     };
@@ -476,6 +598,46 @@ class _NewMessagesPill extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The photos picked for the next message, above the field.
+class _PickedPhotos extends StatelessWidget {
+  const _PickedPhotos({
+    required this.photos,
+    required this.onRemove,
+    required this.onFailedTap,
+  });
+
+  static const _size = 72.0;
+
+  final List<PhotoDraft> photos;
+  final ValueChanged<PhotoDraft> onRemove;
+  final ValueChanged<PhotoDraft> onFailedTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: _size + AppTheme.spacing12,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(
+          AppTheme.spacing12,
+          AppTheme.spacing12,
+          AppTheme.spacing12,
+          0,
+        ),
+        itemCount: photos.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppTheme.spacing8),
+        itemBuilder: (_, i) => PhotoDraftTile(
+          key: ValueKey(photos[i].id),
+          draft: photos[i],
+          size: _size,
+          onRemove: () => onRemove(photos[i]),
+          onFailedTap: () => onFailedTap(photos[i]),
         ),
       ),
     );

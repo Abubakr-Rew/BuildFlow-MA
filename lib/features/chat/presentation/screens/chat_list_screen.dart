@@ -220,7 +220,7 @@ class _ChatRow extends StatelessWidget {
 
   final Chat chat;
   final List<({int start, int end})> ranges;
-  final String preview;
+  final ({String prefix, String text, bool isPhoto}) preview;
   final VoidCallback onTap;
 
   @override
@@ -277,10 +277,8 @@ class _ChatRow extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          preview,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: _Preview(
+                          preview: preview,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: unread ? t.textPrimary : t.textSecondary,
                           ),
@@ -298,6 +296,48 @@ class _ChatRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// «Бакыт: текст», or «Бакыт: 📷 3 фото · подпись» with a photo icon.
+class _Preview extends StatelessWidget {
+  const _Preview({required this.preview, required this.style});
+
+  final ({String prefix, String text, bool isPhoto}) preview;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!preview.isPhoto) {
+      return Text(
+        '${preview.prefix}${preview.text}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      );
+    }
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(text: preview.prefix),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.only(right: AppTheme.spacing4),
+              child: Icon(
+                Icons.photo_camera_outlined,
+                size: 16,
+                color: style?.color,
+              ),
+            ),
+          ),
+          TextSpan(text: preview.text),
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style,
     );
   }
 }

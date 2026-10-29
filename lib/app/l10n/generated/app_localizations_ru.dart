@@ -801,4 +801,28 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get photoViewerClose => 'Закрыть просмотр';
+
+  @override
+  String get photoMessage => 'Фото';
+
+  @override
+  String get attachPhoto => 'Прикрепить фото';
+
+  @override
+  String get takePhotoNow => 'Сфотографировать';
+
+  @override
+  String get photoCaptionHint => 'Подпись';
+
+  @override
+  String morePhotos(int count) {
+    return '+$count';
+  }
+
+  @override
+  String get photoFailedBeforeSend =>
+      'Одно из фото не обработано. Повторите его или уберите';
+
+  @override
+  String get photoUploading => 'Фото загружается';
 }

@@ -6,12 +6,16 @@ import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/core/widgets/avatar_initials.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
 import 'package:flutter/material.dart';
 
-/// A text message. The user's own are `bubbleOwn` on the right with the
-/// time and delivery ticks; others' are white cards on the left. In a project
-/// chat others' messages carry the author's name above the first message
-/// of a group and the avatar beside the last one.
+/// A text or photo message. The user's own are `bubbleOwn` on the right
+/// with the time and delivery ticks; others' are white cards on the left.
+/// In a project chat others' messages carry the author's name above the
+/// first message of a group and the avatar beside the last one.
+///
+/// Photos fill the bubble with a thin frame, the caption goes under them;
+/// without a caption the time sits on the photo.
 class MessageBubble extends StatelessWidget {
   const MessageBubble({
     required this.message,
@@ -21,6 +25,8 @@ class MessageBubble extends StatelessWidget {
     required this.lastInGroup,
     this.senderName,
     this.onFailedTap,
+    this.onPhotoTap,
+    this.uploadProgress = const {},
     super.key,
   });
 
@@ -39,11 +45,24 @@ class MessageBubble extends StatelessWidget {
   /// Opens «Повторить / Удалить» for a message that failed to send.
   final VoidCallback? onFailedTap;
 
+  /// Opens the photo at the given index full screen.
+  final ValueChanged<int>? onPhotoTap;
+
+  /// Upload progress of the photos while the message is being sent.
+  final Map<String, double> uploadProgress;
+
   static const _radius = Radius.circular(18);
   static const _joined = Radius.circular(6);
 
   /// Widest a bubble gets, as a share of the screen.
   static const _maxWidthShare = 0.78;
+
+  /// Width of the photos: a share of the screen, at most [_maxPhotoWidth].
+  static const _photoWidthShare = 0.72;
+  static const _maxPhotoWidth = 300.0;
+
+  /// The frame of bubble color around photos.
+  static const _photoInset = 3.0;
 
   @override
   Widget build(BuildContext context) {
@@ -69,55 +88,123 @@ class MessageBubble extends StatelessWidget {
           );
 
     final textColor = mine ? t.onBubbleOwn : t.textPrimary;
-    final bubble = Container(
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.sizeOf(context).width * _maxWidthShare,
-      ),
-      padding: const EdgeInsets.fromLTRB(12, 8, 10, 6),
-      decoration: BoxDecoration(
-        color: mine ? t.bubbleOwn : t.card,
-        borderRadius: radius,
-        border: mine ? null : Border.all(color: t.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (senderName != null && firstInGroup)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                senderName!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: t.accentText,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+    final failed = mine && message.status.isFailed;
+    final photos =
+        message.kind == MessageKind.photo && message.attachments.isNotEmpty;
+
+    final name = senderName != null && firstInGroup
+        ? Text(
+            senderName!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: t.accentText,
+              fontWeight: FontWeight.w700,
             ),
-          Wrap(
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            spacing: AppTheme.spacing8,
-            children: [
-              Text(
-                text,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: supported
-                      ? textColor
-                      : (mine ? t.onBubbleOwnSecondary : t.textSecondary),
-                  fontStyle: supported ? null : FontStyle.italic,
-                ),
-              ),
-              _Meta(message: message, mine: mine),
-            ],
+          )
+        : null;
+    Widget textWithMeta(String value) => Wrap(
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.end,
+      spacing: AppTheme.spacing8,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: supported
+                ? textColor
+                : (mine ? t.onBubbleOwnSecondary : t.textSecondary),
+            fontStyle: supported ? null : FontStyle.italic,
           ),
-        ],
-      ),
+        ),
+        _Meta(message: message, mine: mine),
+      ],
     );
 
-    final failed = mine && message.status.isFailed;
+    final decoration = BoxDecoration(
+      color: mine ? t.bubbleOwn : t.card,
+      borderRadius: radius,
+      border: mine ? null : Border.all(color: t.border),
+    );
+    final Widget bubble;
+    if (photos) {
+      final width = (MediaQuery.sizeOf(context).width * _photoWidthShare).clamp(
+        0.0,
+        _maxPhotoWidth,
+      );
+      final caption = message.text?.trim() ?? '';
+      bubble = Container(
+        // Others' bubbles have a 1 px border on each side.
+        width: width + _photoInset * 2 + (mine ? 0 : 2),
+        padding: const EdgeInsets.all(_photoInset),
+        decoration: decoration,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (name != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(9, 4, 9, 4),
+                child: name,
+              ),
+            Stack(
+              children: [
+                MessagePhotos(
+                  message: message,
+                  width: width,
+                  // Inside the bubble's corners, less the frame.
+                  radius: BorderRadius.only(
+                    topLeft:
+                        radius.topLeft - const Radius.circular(_photoInset),
+                    topRight:
+                        radius.topRight - const Radius.circular(_photoInset),
+                    bottomLeft: caption.isEmpty
+                        ? radius.bottomLeft - const Radius.circular(_photoInset)
+                        : const Radius.circular(4),
+                    bottomRight: caption.isEmpty
+                        ? radius.bottomRight -
+                              const Radius.circular(_photoInset)
+                        : const Radius.circular(4),
+                  ),
+                  uploadProgress: uploadProgress,
+                  // A failed message's tap opens «Повторить / Удалить».
+                  onTap: failed ? null : onPhotoTap,
+                ),
+                if (caption.isEmpty)
+                  Positioned(
+                    right: 6,
+                    bottom: 6,
+                    child: _Meta(message: message, mine: mine, onPhoto: true),
+                  ),
+              ],
+            ),
+            if (caption.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(9, 6, 7, 3),
+                child: textWithMeta(caption),
+              ),
+          ],
+        ),
+      );
+    } else {
+      bubble = Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * _maxWidthShare,
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 8, 10, 6),
+        decoration: decoration,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (name != null)
+              Padding(padding: const EdgeInsets.only(bottom: 2), child: name),
+            textWithMeta(text),
+          ],
+        ),
+      );
+    }
+
     return Row(
       mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -142,49 +229,57 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-/// Time and, on the user's own messages, the delivery ticks.
+/// Time and, on the user's own messages, the delivery ticks. [onPhoto]
+/// puts them on a graphite pill over a photo without a caption.
 class _Meta extends StatelessWidget {
-  const _Meta({required this.message, required this.mine});
+  const _Meta({
+    required this.message,
+    required this.mine,
+    this.onPhoto = false,
+  });
 
   final Message message;
   final bool mine;
+  final bool onPhoto;
 
   @override
   Widget build(BuildContext context) {
     final t = context.bfTheme;
     final l10n = AppLocalizations.of(context);
-    final quiet = mine ? t.onBubbleOwnSecondary : t.textTertiary;
+    final quiet = onPhoto
+        ? t.onGraphite
+        : (mine ? t.onBubbleOwnSecondary : t.textTertiary);
 
     final status = !mine
         ? null
         : switch (message.status) {
             MessageStatus.sending => (
-                Icons.schedule_rounded,
-                quiet,
-                l10n.messageSending,
-              ),
+              Icons.schedule_rounded,
+              quiet,
+              l10n.messageSending,
+            ),
             MessageStatus.sent => (Icons.done_rounded, quiet, l10n.messageSent),
             MessageStatus.read => (
-                Icons.done_all_rounded,
-                t.accent,
-                l10n.messageRead,
-              ),
+              Icons.done_all_rounded,
+              t.accent,
+              l10n.messageRead,
+            ),
             // The red button beside the bubble says it.
             MessageStatus.failed => null,
           };
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
+    final meta = Padding(
+      padding: EdgeInsets.only(top: onPhoto ? 0 : 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             DateFormatter.time(message.createdAt.toLocal()),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: quiet,
-                  fontWeight: FontWeight.w500,
-                  fontFeatures: AppTextTheme.tabular,
-                ),
+              color: quiet,
+              fontWeight: FontWeight.w500,
+              fontFeatures: AppTextTheme.tabular,
+            ),
           ),
           if (status != null) ...[
             const SizedBox(width: 3),
@@ -196,6 +291,17 @@ class _Meta extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+    if (!onPhoto) return meta;
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: t.graphite,
+        shape: const StadiumBorder(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        child: meta,
       ),
     );
   }
@@ -234,10 +340,8 @@ class DayDividerPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: t.textSecondary,
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(context).textTheme.labelSmall
+              ?.copyWith(color: t.textSecondary, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -257,9 +361,8 @@ class SystemMessageLine extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: context.bfTheme.textTertiary,
-            ),
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: context.bfTheme.textTertiary),
       ),
     );
   }

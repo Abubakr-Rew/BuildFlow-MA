@@ -1,23 +1,30 @@
 import 'package:buildflow/app/l10n/generated/app_localizations_ru.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/core/utils/date_formatter.dart';
+import 'package:buildflow/core/widgets/photo_draft_tile.dart';
+import 'package:buildflow/core/widgets/photo_thumbnail.dart';
+import 'package:buildflow/core/widgets/photo_viewer.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/chat/data/fake_chat_repository.dart';
 import 'package:buildflow/features/chat/data/fake_chat_store.dart';
+import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
 import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
 import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_provider.dart';
 import 'package:buildflow/features/chat/presentation/screens/chat_list_screen.dart';
 import 'package:buildflow/features/chat/presentation/screens/chat_screen.dart';
+import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../../helpers/fake_photo_compressor.dart';
 import '../../../../helpers/test_app.dart';
 
 const _owner = User(
@@ -119,6 +126,25 @@ void main() {
       );
       expect(find.text('2'), findsOneWidget); // «Горный»
       expect(find.text('1'), findsOneWidget); // Бакыт
+    });
+
+    testWidgets('a photo message is previewed with an icon and its caption',
+        (tester) async {
+      await pumpList(tester);
+      final preview = find.byWidgetPredicate(
+        (w) =>
+            w is RichText &&
+            w.text.toPlainText().startsWith('Азамат: ') &&
+            w.text.toPlainText().endsWith('2 фото · Леса вывезли'),
+      );
+      expect(preview, findsOneWidget);
+      expect(
+        find.descendant(
+          of: preview,
+          matching: find.byIcon(Icons.photo_camera_outlined),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('chips filter by type, the field by project or name',
@@ -296,6 +322,139 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.text(l10n.chatUnavailable), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
+    });
+  });
+
+  group('photos in a chat', () {
+    late FakePhotoCompressor compressor;
+
+    Future<ProviderContainer> pumpChat(
+      WidgetTester tester, {
+      required FakeChatStore store,
+      User user = _foreman,
+      String chatId = 'chat-project-1',
+    }) async {
+      compressor = FakePhotoCompressor();
+      await pumpTestApp(
+        tester,
+        ChatScreen(chatId: chatId),
+        overrides: [
+          currentUserProvider.overrideWithValue(user),
+          fakeChatStoreProvider.overrideWithValue(store),
+          photoCompressorProvider.overrideWithValue(compressor),
+        ],
+      );
+      await settle(tester);
+      return ProviderScope.containerOf(tester.element(find.byType(ChatScreen)));
+    }
+
+    /// As if picked with «+»: the picker itself is the platform's.
+    Future<void> pick(
+      WidgetTester tester,
+      ProviderContainer container,
+      List<String> paths,
+    ) async {
+      container
+          .read(photoDraftsProvider('chat:chat-project-1').notifier)
+          .add(paths);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+
+    testWidgets('picked photos go out as one message with the caption',
+        (tester) async {
+      final store = quietStore(demoHistory: false);
+      final container = await pumpChat(tester, store: store);
+      expect(find.byTooltip(l10n.attachPhoto), findsOneWidget);
+      expect(find.byTooltip(l10n.takePhotoNow), findsOneWidget);
+
+      await pick(tester, container, ['/c/1.jpg', '/c/2.jpg']);
+      expect(find.byType(PhotoDraftTile), findsNWidgets(2));
+      // Photos can go without a caption: the send button is there at once.
+      expect(find.byTooltip(l10n.sendMessage), findsOneWidget);
+      expect(find.text(l10n.photoCaptionHint), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Плита готова');
+      await tester.pump();
+      await tester.tap(find.byTooltip(l10n.sendMessage));
+      await tester.pump();
+
+      expect(find.byType(PhotoDraftTile), findsNothing);
+      expect(find.byType(MessagePhotos), findsOneWidget);
+      expect(find.text('Плита готова'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsWidgets);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 1));
+      final sent = store.messagesFor('chat-project-1', _foreman.id).value.last;
+      expect(sent.kind, MessageKind.photo);
+      expect(sent.text, 'Плита готова');
+      expect(sent.attachments.map((a) => a.url), [
+        FakePhotoCompressor.copyOf('/c/1.jpg'),
+        FakePhotoCompressor.copyOf('/c/2.jpg'),
+      ]);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(compressor.deleted, ['/c/1.jpg', '/c/2.jpg']);
+    });
+
+    testWidgets('a photo that failed to compress holds the message',
+        (tester) async {
+      final store = quietStore(demoHistory: false);
+      final container = await pumpChat(tester, store: store);
+      compressor.failing.add('/c/bad.heic');
+      await pick(tester, container, ['/c/bad.heic']);
+      expect(find.bySemanticsLabel(l10n.photoProcessingFailed), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Подпись к фото');
+      await tester.pump();
+      await tester.tap(find.byTooltip(l10n.sendMessage));
+      await tester.pump();
+      expect(find.text(l10n.photoFailedBeforeSend), findsOneWidget);
+      // Nothing is lost: the caption and the photo stay.
+      expect(find.text('Подпись к фото'), findsOneWidget);
+      expect(find.byType(PhotoDraftTile), findsOneWidget);
+
+      compressor.failing.clear();
+      await tester.tap(find.bySemanticsLabel(l10n.photoProcessingFailed));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.retry));
+      // The sheet, titled the same as the mark, slides away meanwhile.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.bySemanticsLabel(l10n.photoProcessingFailed), findsNothing);
+      expect(compressor.compressed, ['/c/bad.heic', '/c/bad.heic']);
+      expect(store.messagesFor('chat-project-1', _foreman.id).value, isEmpty);
+    });
+
+    testWidgets('a photo opens the viewer on it, «+3» on the fourth',
+        (tester) async {
+      await pumpChat(
+        tester,
+        store: quietStore(),
+        user: _owner,
+        chatId: 'chat-project-2',
+      );
+      final grid = find.byType(MessagePhotos);
+      expect(grid, findsOneWidget);
+      final cells = find.descendant(of: grid, matching: find.byType(PhotoImage));
+      expect(cells, findsNWidgets(4));
+
+      await tester.ensureVisible(grid);
+      await tester.tap(cells.at(1));
+      await tester.pumpAndSettle();
+      expect(find.byType(PhotoViewer), findsOneWidget);
+      expect(find.text(l10n.photoOf(2, 6)), findsOneWidget);
+      expect(
+        find.text('Итоги дня: фундамент №4 и кладка №5'),
+        findsWidgets,
+      );
+      expect(find.textContaining('${l10n.yesterday}, 17:40'), findsOneWidget);
+
+      await tester.tap(find.byTooltip(l10n.photoViewerClose));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.morePhotos(3)));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.photoOf(4, 6)), findsOneWidget);
     });
   });
 }

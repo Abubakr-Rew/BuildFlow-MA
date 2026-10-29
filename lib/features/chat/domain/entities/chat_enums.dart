@@ -30,7 +30,10 @@ enum MessageKind {
   system;
 
   /// Whether this app version can render the kind.
-  bool get isSupported => this == MessageKind.text || this == MessageKind.system;
+  bool get isSupported =>
+      this == MessageKind.text ||
+      this == MessageKind.photo ||
+      this == MessageKind.system;
 }
 
 /// Delivery state of the user's own message. The server only reports

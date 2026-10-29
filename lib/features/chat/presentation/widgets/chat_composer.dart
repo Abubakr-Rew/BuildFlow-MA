@@ -7,24 +7,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// The message field under a chat: up to 5 lines, the send button appears
-/// with the first non-blank character.
+/// with the first non-blank character, or at once while photos are
+/// attached ([hasAttachments]).
 ///
-/// Laid out as `[leading] [field] [trailing]` so later stages can add
-/// buttons without rebuilding it: the «+» for photos goes into [leading],
-/// the microphone into [trailingWhenEmpty], which shows in place of the
-/// send button while the field is empty.
+/// Laid out as `[leading] [field [fieldSuffix]] [trailing]` with [top]
+/// above: the «+» for photos goes into [leading], the camera into
+/// [fieldSuffix], the picked photos into [top], the microphone (stage 3)
+/// into [trailingWhenEmpty], which shows in place of the send button while
+/// there is nothing to send.
 class ChatComposer extends StatefulWidget {
   const ChatComposer({
     required this.onSend,
     this.leading = const [],
     this.trailingWhenEmpty,
+    this.fieldSuffix,
+    this.top,
+    this.hasAttachments = false,
+    this.hintText,
     super.key,
   });
 
-  /// Gets the text as typed; the field is cleared already.
-  final ValueChanged<String> onSend;
+  /// Gets the text as typed. Returns whether it went: the field is cleared
+  /// only then, so a caption isn't lost when the photos can't go yet.
+  final bool Function(String text) onSend;
   final List<Widget> leading;
   final Widget? trailingWhenEmpty;
+  final Widget? fieldSuffix;
+  final Widget? top;
+  final bool hasAttachments;
+
+  /// In place of «Сообщение», e.g. «Подпись» while photos are attached.
+  final String? hintText;
 
   @override
   State<ChatComposer> createState() => _ChatComposerState();
@@ -53,11 +66,11 @@ class _ChatComposerState extends State<ChatComposer> {
 
   void _send() {
     final text = _controller.text;
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty && !widget.hasAttachments) return;
+    if (!widget.onSend(text)) return;
     Haptics.light();
     // Keeps the keyboard open for the next message.
     _controller.clear();
-    widget.onSend(text);
   }
 
   @override
@@ -69,7 +82,7 @@ class _ChatComposerState extends State<ChatComposer> {
       borderSide: BorderSide.none,
     );
 
-    final trailing = _hasText
+    final trailing = _hasText || widget.hasAttachments
         ? Padding(
             key: const ValueKey('send'),
             padding: const EdgeInsets.only(left: AppTheme.spacing8),
@@ -84,49 +97,56 @@ class _ChatComposerState extends State<ChatComposer> {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppTheme.spacing12,
-            AppTheme.spacing8,
-            AppTheme.spacing12,
-            AppTheme.spacing8,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              ...widget.leading,
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  minLines: 1,
-                  maxLines: 5,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(maxMessageLength),
-                  ],
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  decoration: InputDecoration(
-                    hintText: l10n.messageHint,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.spacing16,
-                      vertical: 12,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ?widget.top,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppTheme.spacing12,
+                AppTheme.spacing8,
+                AppTheme.spacing12,
+                AppTheme.spacing8,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  ...widget.leading,
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 5,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(maxMessageLength),
+                      ],
+                      style: Theme.of(context).textTheme.bodyLarge,
+                      decoration: InputDecoration(
+                        hintText: widget.hintText ?? l10n.messageHint,
+                        isDense: true,
+                        suffixIcon: widget.fieldSuffix,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppTheme.spacing16,
+                          vertical: 12,
+                        ),
+                        border: border,
+                        enabledBorder: border,
+                        focusedBorder: border,
+                      ),
                     ),
-                    border: border,
-                    enabledBorder: border,
-                    focusedBorder: border,
                   ),
-                ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    transitionBuilder: (child, animation) =>
+                        ScaleTransition(scale: animation, child: child),
+                    child: trailing,
+                  ),
+                ],
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                transitionBuilder: (child, animation) =>
-                    ScaleTransition(scale: animation, child: child),
-                child: trailing,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

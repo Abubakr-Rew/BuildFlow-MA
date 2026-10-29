@@ -1551,6 +1551,48 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Закрыть просмотр'**
   String get photoViewerClose;
+
+  /// Chat list preview of a message with one photo
+  ///
+  /// In ru, this message translates to:
+  /// **'Фото'**
+  String get photoMessage;
+
+  /// The «+» button left of the chat message field
+  ///
+  /// In ru, this message translates to:
+  /// **'Прикрепить фото'**
+  String get attachPhoto;
+
+  /// Camera button inside the chat message field
+  ///
+  /// In ru, this message translates to:
+  /// **'Сфотографировать'**
+  String get takePhotoNow;
+
+  /// Hint of the chat message field while photos are attached: the text becomes their caption
+  ///
+  /// In ru, this message translates to:
+  /// **'Подпись'**
+  String get photoCaptionHint;
+
+  /// Last cell of a photo grid in a chat message: how many more photos the message has
+  ///
+  /// In ru, this message translates to:
+  /// **'+{count}'**
+  String morePhotos(int count);
+
+  /// Snack bar when sending while an attached photo failed to compress
+  ///
+  /// In ru, this message translates to:
+  /// **'Одно из фото не обработано. Повторите его или уберите'**
+  String get photoFailedBeforeSend;
+
+  /// Semantics of the progress ring on a photo being sent
+  ///
+  /// In ru, this message translates to:
+  /// **'Фото загружается'**
+  String get photoUploading;
 }
 
 class _AppLocalizationsDelegate

@@ -6,8 +6,10 @@ import 'package:buildflow/core/widgets/photo_thumbnail.dart';
 import 'package:flutter/material.dart';
 
 /// A picked photo on the new report and above the chat message field: the
-/// photo, a spinner while it's compressed, a red mark if that failed (tap:
-/// [onFailedTap]), and a remove button in the corner.
+/// photo, a spinner while it's compressed, and a remove button in the
+/// corner. If compressing failed, a red mark covers it instead and the
+/// whole tile opens [onFailedTap] («Повторить / Удалить»): on a small tile
+/// the corner button's tap area would cover the mark.
 class PhotoDraftTile extends StatelessWidget {
   const PhotoDraftTile({
     required this.draft,
@@ -80,35 +82,36 @@ class PhotoDraftTile extends StatelessWidget {
             ),
           ),
           // The visible circle is 26 px; the tap area is 44.
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Tooltip(
-              message: l10n.removePhoto,
-              child: InkResponse(
-                onTap: onRemove,
-                radius: 22,
-                child: SizedBox.square(
-                  dimension: AppTheme.iconButtonSize,
-                  child: Center(
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: t.graphite.withValues(alpha: 0.8),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: 16,
-                        color: t.onGraphite,
+          if (!draft.isFailed)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Tooltip(
+                message: l10n.removePhoto,
+                child: InkResponse(
+                  onTap: onRemove,
+                  radius: 22,
+                  child: SizedBox.square(
+                    dimension: AppTheme.iconButtonSize,
+                    child: Center(
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: t.graphite.withValues(alpha: 0.8),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: t.onGraphite,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
