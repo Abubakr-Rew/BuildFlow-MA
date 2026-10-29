@@ -40,13 +40,14 @@ class VoiceWaveform extends StatelessWidget {
     );
     final seek = onSeek;
     if (seek == null) {
-      return Semantics(label: semanticsLabel, child: paint);
+      return Semantics(container: true, label: semanticsLabel, child: paint);
     }
     return LayoutBuilder(
       builder: (context, constraints) {
         void seekTo(double dx) =>
             seek((dx / constraints.maxWidth).clamp(0.0, 1.0));
         return Semantics(
+          container: true,
           label: semanticsLabel,
           slider: true,
           value: '${(progress * 100).round()}%',

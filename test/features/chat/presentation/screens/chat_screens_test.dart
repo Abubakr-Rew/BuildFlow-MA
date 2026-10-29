@@ -19,6 +19,7 @@ import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_p
 import 'package:buildflow/features/chat/presentation/screens/chat_list_screen.dart';
 import 'package:buildflow/features/chat/presentation/screens/chat_screen.dart';
 import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
+import 'package:buildflow/features/chat/presentation/widgets/voice_message.dart';
 import 'package:buildflow/features/chat/presentation/widgets/voice_recorder_bar.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_store.dart';
@@ -562,7 +563,7 @@ void main() {
       await tester.tap(find.byTooltip(l10n.voiceStop));
       await tester.pump();
       expect(find.byType(VoiceDraftBar), findsOneWidget);
-      expect(find.bySemanticsLabel(l10n.voicePlay), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
       expect(store.messagesFor('chat-project-1', _foreman.id).value, isEmpty);
 
       await tester.tap(find.byTooltip(l10n.sendMessage));
@@ -587,6 +588,105 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       expect(store.messagesFor('chat-project-1', _foreman.id).value, isEmpty);
       expect(recorder.calls.last, 'cancel');
+    });
+  });
+
+  group('voice notes in the chat', () {
+    late FakeVoicePlayer player;
+
+    Future<FakeChatStore> pumpChat(WidgetTester tester) async {
+      player = FakeVoicePlayer();
+      final store = quietStore();
+      await pumpTestApp(
+        tester,
+        const ChatScreen(chatId: 'chat-project-1'),
+        overrides: [
+          currentUserProvider.overrideWithValue(_owner),
+          fakeChatStoreProvider.overrideWithValue(store),
+          voicePlayerProvider.overrideWithValue(player),
+          voiceRecorderProvider.overrideWithValue(FakeVoiceRecorder()),
+        ],
+      );
+      await settle(tester);
+      return store;
+    }
+
+    /// The demo note of [seconds] in «Ала-Тоо». By its length: a playing
+    /// note shows its position instead.
+    Finder note(int seconds) => find.byWidgetPredicate(
+          (w) =>
+              w is VoiceNotePlayer && w.duration == Duration(seconds: seconds),
+        );
+
+    Finder inNote(int seconds, Finder finder) =>
+        find.descendant(of: note(seconds), matching: finder);
+
+    testWidgets('an unplayed note has a dot until it is played',
+        (tester) async {
+      final store = await pumpChat(tester);
+      await tester.ensureVisible(note(42));
+      expect(inNote(42, find.bySemanticsLabel(l10n.voiceUnheard)),
+          findsOneWidget);
+
+      await tester.tap(inNote(42, find.byIcon(Icons.play_arrow_rounded)));
+      await tester.pump();
+      expect(player.calls.single, startsWith('play demo-voice:'));
+      expect(inNote(42, find.bySemanticsLabel(l10n.voiceUnheard)),
+          findsNothing);
+      expect(inNote(42, find.byIcon(Icons.pause_rounded)),
+          findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 1));
+      final voice = store
+          .messagesFor('chat-project-1', _owner.id)
+          .value
+          .lastWhere((m) => m.kind == MessageKind.voice);
+      expect(voice.listened, isTrue);
+    });
+
+    testWidgets('the speed goes 1× → 1.5× → 2× while it plays',
+        (tester) async {
+      await pumpChat(tester);
+      await tester.ensureVisible(note(42));
+      expect(find.text(l10n.voiceSpeed('1')), findsNothing);
+      await tester.tap(inNote(42, find.byIcon(Icons.play_arrow_rounded)));
+      await tester.pump();
+
+      await tester.tap(find.text(l10n.voiceSpeed('1')));
+      await tester.pump();
+      await tester.tap(find.text(l10n.voiceSpeed('1.5')));
+      await tester.pump();
+      expect(find.text(l10n.voiceSpeed('2')), findsOneWidget);
+      expect(player.calls, contains('speed 2.0x'));
+      // markListened's fake latency.
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('one note plays at a time', (tester) async {
+      await pumpChat(tester);
+      await tester.ensureVisible(note(42));
+      await tester.tap(inNote(42, find.byIcon(Icons.play_arrow_rounded)));
+      await tester.pump();
+      await tester.ensureVisible(note(7));
+      await tester.tap(inNote(7, find.byIcon(Icons.play_arrow_rounded)));
+      await tester.pump();
+
+      expect(player.calls[1], 'stop');
+      expect(find.byIcon(Icons.pause_rounded), findsOneWidget);
+      expect(inNote(7, find.byIcon(Icons.pause_rounded)),
+          findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('tapping the wave seeks there', (tester) async {
+      await pumpChat(tester);
+      await tester.ensureVisible(note(42));
+      final wave = inNote(42, find.bySemanticsLabel(l10n.voiceMessage));
+      final box = tester.getRect(wave);
+      await tester.tapAt(Offset(box.left + box.width / 2, box.center.dy));
+      await tester.pump();
+      expect(player.calls.single, endsWith(' 21000'));
+      await tester.pump(const Duration(seconds: 1));
     });
   });
 }

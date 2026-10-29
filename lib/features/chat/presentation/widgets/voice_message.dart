@@ -108,6 +108,7 @@ class VoiceNotePlayer extends ConsumerWidget {
                   if (unheard) ...[
                     const SizedBox(width: AppTheme.spacing4),
                     Semantics(
+                      container: true,
                       label: l10n.voiceUnheard,
                       child: Container(
                         width: 7,

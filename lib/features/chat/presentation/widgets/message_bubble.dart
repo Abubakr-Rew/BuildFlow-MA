@@ -7,6 +7,7 @@ import 'package:buildflow/core/widgets/avatar_initials.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
 import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
+import 'package:buildflow/features/chat/presentation/widgets/voice_message.dart';
 import 'package:flutter/material.dart';
 
 /// A text or photo message. The user's own are `bubbleOwn` on the right
@@ -26,6 +27,7 @@ class MessageBubble extends StatelessWidget {
     this.senderName,
     this.onFailedTap,
     this.onPhotoTap,
+    this.onVoicePlayed,
     this.uploadProgress = const {},
     super.key,
   });
@@ -48,7 +50,11 @@ class MessageBubble extends StatelessWidget {
   /// Opens the photo at the given index full screen.
   final ValueChanged<int>? onPhotoTap;
 
-  /// Upload progress of the photos while the message is being sent.
+  /// Called when the user starts a voice note, to mark it listened.
+  final VoidCallback? onVoicePlayed;
+
+  /// Upload progress of the photos or the voice note while the message is
+  /// being sent, by attachment id.
   final Map<String, double> uploadProgress;
 
   static const _radius = Radius.circular(18);
@@ -60,6 +66,10 @@ class MessageBubble extends StatelessWidget {
   /// Width of the photos: a share of the screen, at most [_maxPhotoWidth].
   static const _photoWidthShare = 0.72;
   static const _maxPhotoWidth = 300.0;
+
+  /// Width of a voice note: a share of the screen, at most [_maxVoiceWidth].
+  static const _voiceWidthShare = 0.72;
+  static const _maxVoiceWidth = 280.0;
 
   /// The frame of bubble color around photos.
   static const _photoInset = 3.0;
@@ -91,6 +101,9 @@ class MessageBubble extends StatelessWidget {
     final failed = mine && message.status.isFailed;
     final photos =
         message.kind == MessageKind.photo && message.attachments.isNotEmpty;
+    final voice = message.kind == MessageKind.voice
+        ? message.attachments.firstOrNull
+        : null;
 
     final name = senderName != null && firstInGroup
         ? Text(
@@ -127,7 +140,45 @@ class MessageBubble extends StatelessWidget {
       border: mine ? null : Border.all(color: t.border),
     );
     final Widget bubble;
-    if (photos) {
+    if (voice != null) {
+      final width = (MediaQuery.sizeOf(context).width * _voiceWidthShare)
+          .clamp(0.0, _maxVoiceWidth);
+      bubble = Container(
+        width: width,
+        padding: const EdgeInsets.fromLTRB(8, 8, 10, 6),
+        decoration: decoration,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (name != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 0, 4),
+                child: name,
+              ),
+            VoiceNotePlayer(
+              playbackId: message.id,
+              url: voice.url,
+              duration: Duration(milliseconds: voice.durationMs ?? 0),
+              waveform: voice.waveform ?? const [],
+              playedColor: textColor,
+              color: (mine ? t.onBubbleOwnSecondary : t.textTertiary)
+                  .withValues(alpha: 0.45),
+              textColor: mine ? t.onBubbleOwnSecondary : t.textSecondary,
+              unheard: !mine && !message.listened,
+              uploadProgress: message.status.isPending
+                  ? uploadProgress[voice.id] ?? 0
+                  : null,
+              onFirstPlay: onVoicePlayed,
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _Meta(message: message, mine: mine),
+            ),
+          ],
+        ),
+      );
+    } else if (photos) {
       final width = (MediaQuery.sizeOf(context).width * _photoWidthShare).clamp(
         0.0,
         _maxPhotoWidth,

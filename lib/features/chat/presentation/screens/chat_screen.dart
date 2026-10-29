@@ -498,6 +498,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           uploadProgress: thread.uploadProgress,
           onFailedTap: _openFailedMenu,
           onPhotoTap: _openPhoto,
+          onVoicePlayed: _notifier.markListened,
         );
 
     return CustomScrollView(
@@ -550,6 +551,7 @@ class _TimelineRow extends ConsumerWidget {
     required this.uploadProgress,
     required this.onFailedTap,
     required this.onPhotoTap,
+    required this.onVoicePlayed,
   });
 
   final TimelineItem item;
@@ -558,6 +560,7 @@ class _TimelineRow extends ConsumerWidget {
   final Map<String, double> uploadProgress;
   final ValueChanged<Message> onFailedTap;
   final void Function(Message message, int index) onPhotoTap;
+  final ValueChanged<Message> onVoicePlayed;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -602,6 +605,7 @@ class _TimelineRow extends ConsumerWidget {
                 : null,
             onFailedTap: () => onFailedTap(message),
             onPhotoTap: (index) => onPhotoTap(message, index),
+            onVoicePlayed: () => onVoicePlayed(message),
             uploadProgress: message.status.isPending ? uploadProgress : const {},
           ),
         ),
