@@ -20,7 +20,8 @@ flutter build apk --release                               # APK → build/app/ou
 
 ## Архитектура
 **Стек:** Flutter 3.47 / Dart ^3.13, flutter_riverpod 2.6, go_router 14, freezed 4 + json_serializable,
-flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, very_good_analysis.
+flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, very_good_analysis,
+record (запись голосовых), audioplayers (воспроизведение).
 Шрифт Inter лежит в `assets/fonts/inter/`, google_fonts не используется.
 `app_settings` нужен только для того, чтобы открыть системные настройки приложения после отказа в разрешении.
 `uuid` генерирует `clientId` сообщений чата.
@@ -30,9 +31,10 @@ flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, ve
 ```
 lib/main.dart  ProviderContainer, восстановление темы до первого кадра, runApp
 lib/app/       app.dart (MaterialApp.router), router.dart, routes.dart, theme/, l10n/
-lib/core/      config.dart, error/ (Result, Failure), photos/ (сжатие, выбор, черновики фото),
+lib/core/      config.dart, error/ (Result, Failure), photos/ (сжатие, выбор, черновики фото), audio/ (голосовые),
                storage/ (secure, local, storage_providers), utils/, widgets/
 android/app/src/main/kotlin/…/PhotoCompressor.kt   нативное сжатие фото (канал buildflow/photos)
+android/app/src/main/kotlin/…/MainActivity.kt      каналы: buildflow/photos и buildflow/paths (cacheDir для записи)
 lib/features/<фича>/data/          Fake*Repository, Api*Repository
                     domain/        entities/ (freezed), repositories/ (абстрактные интерфейсы)
                     presentation/  providers/, screens/, widgets/
@@ -124,14 +126,39 @@ Text(l10n.failureMessage(error))                                             // 
   При запуске после первого кадра `sweep()` удаляет копии и остатки image_picker старше суток.
 - `PhotoImage` декодирует локальные файлы под размер на экране (`cacheWidth`), а не все 12 Мп оригинала.
 
-**Чат** (`lib/features/chat/`, этапы 1–2 из 4: основа, текст, фото; дальше голосовые, карточки отчётов):
+**Голосовые** (`lib/core/audio/` + чат):
+- `VoiceRecorder` (`voiceRecorderProvider`, поверх record): AAC-LC в M4A, моно, `kVoiceBitRate` 32 кбит/с,
+  `kVoiceSampleRate` 22 050 Гц, файл `cacheDir/voice-<uuid>.m4a`; громкость каждые 100 мс (`levelFromDbfs`);
+  звонок ставит запись на паузу (по умолчанию в record), это приходит в `interruptions()`.
+- `VoicePlayer` (`voicePlayerProvider`, поверх audioplayers) и `voicePlaybackProvider`: одно голосовое на всё
+  приложение, пауза помнит место, `seek`, скорость 1× / 1.5× / 2× на сессию. Звонок забирает аудиофокус:
+  audioplayers ставит голосовое на паузу и после звонка продолжает с того же места.
+- `downsampleWaveform` — 40 полос 0–100 (самая громкая = 100). `DemoVoice` — демо-голосовые, сгенерированные
+  в коде (`demo-voice:<seed>:<ms>`, WAV 8 кГц играется из байтов), в репозитории аудиофайлов нет.
+- Запись — машина состояний `VoiceRecordingNotifier` (`voiceRecordingProvider(chatId)` в chat):
+  `idle → starting → holding → locked → draft`. Удержание микрофона пишет, отпускание отправляет (меньше
+  `kVoiceMinDuration` 1 с — подсказка «Удерживайте, чтобы записать»), свайп влево на `voiceCancelDistance` отменяет,
+  вверх на `voiceLockDistance` — замок («Удалить» / стоп / «Отправить»). Стоп, `kVoiceMaxDuration` (5 мин) и звонок
+  переводят в черновик («Удалить», «Прослушать», «Отправить») с короткой вибрацией — сами ничего не отправляют.
+  Разрешение — при первом нажатии; если палец отпустили ради системного диалога, запись не начинается. Запись
+  останавливает играющее голосовое; уход из чата удаляет запись и черновик. Подсказки (`VoiceHint`) приходят
+  разовыми: `hintSeq` растёт.
+- Кнопка микрофона (`VoiceMicButton`, `Listener` с координатами от точки нажатия) стоит в `trailingWhenEmpty`;
+  на время записи `ChatComposer.replacement` заменяет «+» и поле (`VoiceHoldingBar` / `VoiceLockedBar` /
+  `VoiceDraftBar`), а `showTrailing` оставляет удерживаемый микрофон. Хвостовая кнопка в композере с ключом,
+  иначе при смене строки микрофон потерял бы палец.
+- Пузырь — `VoiceNotePlayer` (voice_message.dart): акцентная play/pause, `VoiceWaveform` с перемоткой, время
+  (длина или позиция), скорость пока играет, точка у чужого непрослушанного, кольцо загрузки при отправке.
+
+**Чат** (`lib/features/chat/`, этапы 1–3 из 4: основа, текст, фото, голосовые; дальше карточки отчётов и пуши):
 - Сущности `Chat` (`direct` | `project`) и `Message` (`kind`: `text`, `photo`, `voice`, `report`, `system`).
   `photo` — до `maxPhotosPerMessage` (10) вложений в `attachments` (`url`, `width`, `height`), `text` — подпись.
-  `reportId` и `durationMs` — задел на этапы 3–4. Чего клиент не умеет показать
+  `voice` — одно вложение (`durationMs`, `waveform`, `mime`), без текста; `Message.listened` — прослушал ли
+  текущий пользователь чужое голосовое. `reportId` — задел на этап 4. Чего клиент не умеет показать
   (`!kind.isSupported`), то рисуется пузырём «Неподдерживаемое сообщение».
 - `ChatRepository` — потоки `watchChats()` / `watchMessages(chatId)` (последние `chatPageSize` = 50) и `Result`-методы
-  `loadOlder`, `uploadPhoto(CompressedPhoto, onProgress:)` → вложение, `send(text:, attachmentIds:)` (идемпотентно
-  по `clientId`), `getOrCreateDirect`, `markRead`. Потоки не бросают: отказ —
+  `loadOlder`, `uploadPhoto(CompressedPhoto, onProgress:)` / `uploadVoice(VoiceNote, onProgress:)` → вложение,
+  `send(text:, attachmentIds:)` (идемпотентно по `clientId`), `getOrCreateDirect`, `markRead`, `markListened`. Потоки не бросают: отказ —
   событие ошибки с `Failure` (`forbidden`, когда пользователя исключили), оно попадает в `AsyncValue.error`.
 - [FakeChatStore](lib/features/chat/data/fake_chat_store.dart) — общий in-memory «сервер» всех пользователей
   процесса (broadcast `StreamController`), поэтому после выхода и входа другим человеком сообщения на месте.
@@ -145,7 +172,9 @@ Text(l10n.failureMessage(error))                                             // 
     и Бакыт ↔ Эрлан. У директора на старте 3 непрочитанных. Id личного чата — `FakeChatStore.directChatId(a, b)`.
   - Фото: `FakeChatRepository.uploadPhoto` отчитывается о прогрессе 10 шагами около секунды, путь сжатой копии
     становится URL. `FakeChatStore.registerUpload` + `send(attachmentIds:)`: прикрепить вложение может только
-    загрузивший и только один раз, иначе `forbidden`. В демо-истории есть сообщения с 1, 2, 3 и 6 фото (`fake:`).
+    загрузивший и только один раз, иначе `forbidden`; голосовое — одно и без текста, иначе `validation`. «Прослушано»
+    хранится по пользователям. В демо-истории есть сообщения с 1, 2, 3 и 6 фото (`fake:`) и три голосовых
+    (0:07 и 0:42 в «Ала-Тоо», 0:23 в личном директор ↔ Бакыт).
   - Флаги в config.dart (только при `kUseMockData`): `kFakeChatEcho` — собеседник в личном чате «читает» через 1–2 с
     и отвечает через 2–4 с; `kFakeChatSendFailureRate` (0–1) — доля отправок и загрузок фото с ошибкой `network`
     (загрузка обрывается на середине), для ручной проверки «Повторить / Удалить».
@@ -158,19 +187,21 @@ Text(l10n.failureMessage(error))                                             // 
   `sendPhotos(takeAll(), caption:)`: сообщение сразу «отправляется» с оригиналами, ждёт сжатие, грузит фото по
   одному (`ChatThread.uploadProgress` по id вложения), потом `send`. Сбой сжатия или загрузки — `failed`; повтор
   сжимает заново только упавшее и не грузит уже загруженные. `discard` удаляет файлы, успех — только оригиналы.
+  `sendVoice(note)` идёт той же очередью (прогресс под `clientId`, повтор без повторной загрузки).
+  `markListened(message)` сразу гасит точку и шлёт отметку на сервер.
 - Экран чата — `CustomScrollView(reverse: true, center: история)`: история растёт вверх, сообщения, пришедшие, пока
   человек читает выше, — в отдельный sliver ниже центра, поэтому не сдвигают текст; вместо этого плашка
   «Новые сообщения ↓». Своё сообщение или новое, когда пользователь внизу, переносит якорь и прыгает вниз.
   Ленту строит чистая `buildTimeline()` (chat_timeline.dart): разделители дней, группы одного автора (пауза ≤ 10 мин).
 - Поле ввода `ChatComposer`: `leading` («+» → «Камера / Галерея», галерея до 10), `fieldSuffix` (камера в поле), `top`
   (полоса `PhotoDraftTile` выбранных фото), `hasAttachments` (кнопка отправки без текста, подсказка «Подпись»),
-  `trailingWhenEmpty` (этап 3 — микрофон). `onSend` возвращает `bool`: поле очищается, только если ушло, поэтому
+  `trailingWhenEmpty` (микрофон), `replacement` / `showTrailing` (запись). `onSend` возвращает `bool`: поле очищается, только если ушло, поэтому
   при фото с ошибкой сжатия подпись остаётся, а снэкбар просит повторить или убрать фото.
 - Фото в ленте — `MessagePhotos` (message_photos.dart): раскладка `photoGridRows()` — 1 по пропорциям (0.6–1.8),
   2 рядом, 3 как 1 + 2, от 4 — 2 × 2 и «+N» на последней ячейке. Подпись под фото в пузыре; без подписи время
   и галочки на графитовой плашке поверх фото. Нажатие открывает `PhotoViewer` на этом фото (Hero —
   `chatPhotoHeroTag`). В списке чатов — «Фото» / «3 фото · подпись» с иконкой камеры (`chatPreview` отдаёт
-  `prefix`, `text`, `isPhoto`).
+  `prefix`, `text`, `media`). Голосовое в списке — «Голосовое · 0:42» с иконкой микрофона.
 - Поиск по чатам — `searchChats()` (chat_search.dart) по правилам `matchName`, кавычки и знаки читаются как пробелы.
 - Тексты (превью «Бакыт: …», «Вы: …», системные, «Бывший сотрудник») — расширение `ChatTexts` на `AppLocalizations`.
 - Входы: вкладка «Чаты», плитка «Чат объекта» с бейджем на карточке объекта (видна, если пользователь в команде),
@@ -279,7 +310,12 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса, правила поиска людей и «Недавние»,
   `FakeChatStore` (доставка, идемпотентность, непрочитанные, доступ при смене состава, эхо, вложения), `ChatThreadNotifier`,
   лента и поиск чатов. Компрессор в тестах — `FakePhotoCompressor` из test/helpers (копия `x.jpg` → `x.jpg.small.jpg`,
-  `failing` — какие оригиналы не сжимаются, `compressed` / `deleted` — что вызывали); камера и галерея —
+  `failing` — какие оригиналы не сжимаются, `compressed` / `deleted` — что вызывали); микрофон и динамик —
+  `FakeVoiceRecorder` / `FakeVoicePlayer` (test/helpers/fake_voice.dart: уровни, звонок, разрешение, диалог
+  разрешения, журнал вызовов). Машину записи тестировать в `testWidgets`: её время — таймер 100 мс, `pump` его
+  двигает. Метку, которую ищут `find.bySemanticsLabel`, давать в `Semantics(container: true, …)`, иначе она
+  сливается с родителем; кнопки play/pause искать по иконке. Тест, где играют чужое голосовое, в конце ждёт
+  ещё секунду: задержка `markListened` у Fake. Камера и галерея —
   `FakePhotoPicker` (`shot`, `gallery`, `lost`, `cameraError`, `whileCameraOpen`) через `photoPickerProvider`;
   local storage — `SharedPreferences.setMockInitialValues({})` и настоящий `LocalStorageService`. Выбор фото на экране
   можно имитировать и через `photoDraftsProvider(scope).notifier.add(...)`. Виджет-тесты: `test/app/router_test.dart`
@@ -354,6 +390,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `prominent` — акцентная кнопка главного действия роли (у прораба «Отчёт»).
 - `UnreadBadge(count)` — акцентный счётчик непрочитанного («99+»; при 0 ничего): вкладка, строка чата, плитка чата.
 - `HighlightedText(text, ranges)` — текст с подсветкой совпадений `matchHighlight` (поиск людей и чатов).
+- `VoiceWaveform(bars, progress, playedColor, color, onSeek)` — полосы голосового, проигранная часть своим цветом,
+  нажатие и протягивание — перемотка.
 - `AppLogo` — знак приложения на сплэше и экранах входа.
 
 ## Подводные камни
@@ -377,6 +415,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   классы, которые ищутся по имени. Так `shared_preferences_android` 2.5.1 ронял чтение и запись темы
   (`NoSuchMethodError … SharedPreferencesApiRegistrar.getAll`), исправлено в 2.5.2 (сейчас 2.5.4). Тесты и debug это
   не ловят: после обновления таких плагинов проверять release-сборку на телефоне.
+- В `ref.onDispose` нельзя читать `state` и вызывать `ref.read`: нужное захватить в `build()` и держать копию
+  состояния в поле (`_drafts` в `PhotoDraftsNotifier`, `_current` в `VoiceRecordingNotifier`).
+- `dart format` на целый файл переписывает и нетронутый код под новый стиль форматтера: форматировать только
+  свои строки, не файл целиком.
 - `pickMultiImage(limit:)` требует `limit >= 2`, а старые Android лимит системного пикера игнорируют — `pickPhotos`
   обрабатывает оба случая.
 - Вход по коду приглашения: ссылка «Есть код приглашения?» на экране входа ведёт на `/join` (`JoinScreen`):
@@ -397,7 +439,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   flutter_secure_storage нужен ≥ 23, так что работает, но если сменить версию Flutter, проверь.
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
-- AndroidManifest: только `INTERNET` и `CAMERA`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
+- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
 - Inter 4.1 (статические TTF из релиза rsms/inter) лежит в `assets/fonts/inter/`, начертания 400, 500, 600, 700 и 800,
   рядом лицензия `OFL.txt`. main.dart регистрирует её в `LicenseRegistry`. Для нового начертания (например, 300) нужно
   добавить файл и строку в `fonts:` в pubspec.yaml. Иначе Flutter возьмёт ближайшее начертание или сымитирует жирность.
@@ -406,7 +448,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 ## Текущее состояние
 Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
 детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, поиск людей по имени и фамилии, отчёты (создание с камерой или галереей, список по дням, детали, время съёмки фото), профиль и тема
-(сохраняется между запусками), три роли, чат этапов 1–2 (чаты объектов и личные, текст, фото, статусы, непрочитанные),
+(сохраняется между запусками), три роли, чат этапов 1–3 (чаты объектов и личные, текст, фото, голосовые, статусы, непрочитанные),
 сжатие фото на устройстве (Android), общий полноэкранный просмотр фото.
 Визуальный стиль — см. «Дизайн-токены и компоненты».
 Заглушки и пробелы: Api-репозитории (все пять — заглушки), WebSocket-клиент чата, клиент Dio, загрузка в хранилище
