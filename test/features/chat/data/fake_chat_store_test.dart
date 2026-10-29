@@ -291,6 +291,105 @@ void main() {
     });
   });
 
+  group('photos', () {
+    String upload(String userId, String path) => store
+        .registerUpload(userId, url: path, width: 1600, height: 1200)
+        .value
+        .id;
+
+    test('uploaded photos go out as one photo message with the caption', () {
+      final ids = [upload(_foreman1, '/c/1.jpg'), upload(_foreman1, '/c/2.jpg')];
+      final message = store
+          .send(
+            _alaToo,
+            _foreman1,
+            clientId: 'c-1',
+            text: '  Плита 8-го этажа  ',
+            attachmentIds: ids,
+          )
+          .value;
+      expect(message.kind, MessageKind.photo);
+      expect(message.text, 'Плита 8-го этажа');
+      expect(message.attachments.map((a) => a.url), ['/c/1.jpg', '/c/2.jpg']);
+      expect(message.attachments.first.width, 1600);
+      expect(chatOf(_owner, _alaToo).lastMessage?.id, message.id);
+    });
+
+    test('a photo message needs no caption', () {
+      final message = store
+          .send(
+            _alaToo,
+            _foreman1,
+            clientId: 'c-1',
+            attachmentIds: [upload(_foreman1, '/c/1.jpg')],
+          )
+          .value;
+      expect(message.text, isNull);
+    });
+
+    test("someone else's or an already used photo can't be attached", () {
+      final theirs = upload(_owner, '/c/owner.jpg');
+      expect(
+        store
+            .send(_alaToo, _foreman1, clientId: 'c-1', attachmentIds: [theirs])
+            .failure
+            .code,
+        FailureCode.forbidden,
+      );
+
+      final mine = upload(_foreman1, '/c/1.jpg');
+      store.send(_alaToo, _foreman1, clientId: 'c-2', attachmentIds: [mine]);
+      expect(
+        store
+            .send(_alaToo, _foreman1, clientId: 'c-3', attachmentIds: [mine])
+            .failure
+            .code,
+        FailureCode.forbidden,
+      );
+    });
+
+    test('a retry with the same clientId returns the same message', () {
+      final ids = [upload(_foreman1, '/c/1.jpg')];
+      final first = store
+          .send(_alaToo, _foreman1, clientId: 'c-1', attachmentIds: ids)
+          .value;
+      final again = store
+          .send(_alaToo, _foreman1, clientId: 'c-1', attachmentIds: ids)
+          .value;
+      expect(again.id, first.id);
+      expect(store.messagesFor(_alaToo, _owner).value, hasLength(1));
+    });
+
+    test('at most $maxPhotosPerMessage photos in a message', () {
+      final ids = [
+        for (var i = 0; i <= maxPhotosPerMessage; i++)
+          upload(_foreman1, '/c/$i.jpg'),
+      ];
+      expect(
+        store
+            .send(_alaToo, _foreman1, clientId: 'c-1', attachmentIds: ids)
+            .failure
+            .code,
+        FailureCode.validation,
+      );
+    });
+
+    test('the demo history has photo messages with captions', () {
+      store.dispose();
+      store = createStore(demoHistory: true);
+      final photos = [
+        for (final chat in [_alaToo, _gorny])
+          ...store
+              .messagesFor(chat, _owner)
+              .value
+              .where((m) => m.kind == MessageKind.photo),
+      ];
+      expect(photos.map((m) => m.attachments.length), containsAll([1, 3, 6]));
+      expect(photos.every((m) => m.attachments.every((a) => a.width != null)),
+          isTrue);
+    });
+  });
+
   testWidgets('the echo companion reads and answers in a direct chat',
       (tester) async {
     store.dispose();

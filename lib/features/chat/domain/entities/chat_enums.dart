@@ -10,12 +10,13 @@ enum ChatType {
   bool get isProject => this == ChatType.project;
 }
 
-/// What a message carries. Stage 1 renders [text] and [system]; the rest
-/// come with later stages and show as «unsupported» until then.
+/// What a message carries. [text], [photo] and [system] are rendered; the
+/// rest come with later stages and show as «unsupported» until then.
 enum MessageKind {
   text,
 
-  /// Stage 2: photos in `Message.attachments`.
+  /// Up to `maxPhotosPerMessage` photos in `Message.attachments`, with
+  /// an optional caption in `Message.text`.
   photo,
 
   /// Stage 3: a voice note in `Message.attachments`.

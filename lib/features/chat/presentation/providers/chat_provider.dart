@@ -3,12 +3,17 @@ import 'dart:async';
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
+import 'package:buildflow/core/photos/photo_compressor.dart';
+import 'package:buildflow/core/photos/photo_draft.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/chat/data/api_chat_repository.dart';
 import 'package:buildflow/features/chat/data/fake_chat_repository.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/domain/entities/message_attachment.dart';
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
 import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_provider.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
@@ -122,9 +127,15 @@ class ChatThread {
     required this.messages,
     this.hasMore = false,
     this.isLoadingOlder = false,
+    this.uploadProgress = const {},
   });
 
   final List<Message> messages;
+
+  /// Upload progress (0–1) of the photos of the user's messages being
+  /// sent, by attachment id. A photo missing here is still being
+  /// compressed or waits for its turn.
+  final Map<String, double> uploadProgress;
 
   /// Whether older messages can be loaded.
   final bool hasMore;
@@ -139,6 +150,7 @@ class ChatThreadNotifier
   static const _uuid = Uuid();
 
   late ChatRepository _repo;
+  late PhotoCompressor _compressor;
   String? _userId;
 
   /// Server messages by id: every live and older page seen so far, so a
@@ -147,6 +159,10 @@ class ChatThreadNotifier
 
   /// The user's messages not yet confirmed by the server, by clientId.
   final Map<String, Message> _outbox = {};
+
+  /// The photos of the photo messages in [_outbox], by clientId.
+  final Map<String, List<_OutgoingPhoto>> _photos = {};
+  final Map<String, double> _progress = {};
   bool? _hasMore;
   bool _loadingOlder = false;
   String? _lastMarked;
@@ -155,9 +171,12 @@ class ChatThreadNotifier
   @override
   Future<ChatThread> build(String chatId) {
     _repo = ref.watch(chatRepositoryProvider);
+    _compressor = ref.watch(photoCompressorProvider);
     _userId = ref.watch(currentUserProvider.select((u) => u?.id));
     _known.clear();
     _outbox.clear();
+    _photos.clear();
+    _progress.clear();
     _hasMore = null;
     _loadingOlder = false;
     _lastMarked = null;
@@ -204,6 +223,7 @@ class ChatThreadNotifier
         messages: [..._serverMessages, ..._outbox.values],
         hasMore: _hasMore ?? false,
         isLoadingOlder: _loadingOlder,
+        uploadProgress: Map.unmodifiable(_progress),
       );
 
   void _emit() {
@@ -241,8 +261,57 @@ class ChatThreadNotifier
     return _deliver(pending);
   }
 
+  /// Sends photos handed over by the message field, with [caption]. The
+  /// message shows at once as «sending» with the originals, waits for any
+  /// compression still running, then uploads the photos one by one.
+  Future<Result<Message>> sendPhotos(
+    List<PhotoHandoff> photos, {
+    String caption = '',
+  }) async {
+    final userId = _userId;
+    if (photos.isEmpty || photos.length > maxPhotosPerMessage) {
+      return Err(
+        Failure(
+          FailureCode.validation,
+          message: '${photos.length} photos, 1–$maxPhotosPerMessage allowed',
+        ),
+      );
+    }
+    if (userId == null) {
+      return const Err(
+        Failure(FailureCode.sessionExpired, message: 'Not signed in'),
+      );
+    }
+    final clientId = _uuid.v4();
+    final outgoing = [
+      for (final h in photos)
+        _OutgoingPhoto(
+          localId: h.draft.id,
+          sourcePath: h.draft.sourcePath,
+          compression: h.result,
+          photo: h.draft.photo,
+        ),
+    ];
+    final trimmed = caption.trim();
+    final pending = Message(
+      id: clientId,
+      clientId: clientId,
+      chatId: arg,
+      senderId: userId,
+      kind: MessageKind.photo,
+      text: trimmed.isEmpty ? null : trimmed,
+      attachments: [for (final p in outgoing) p.preview],
+      createdAt: DateTime.now(),
+      status: MessageStatus.sending,
+    );
+    _outbox[clientId] = pending;
+    _photos[clientId] = outgoing;
+    _emit();
+    return _deliver(pending);
+  }
+
   /// Sends a failed message again with the same clientId, so the server
-  /// can't create it twice.
+  /// can't create it twice. Photos already uploaded are not uploaded again.
   Future<Result<Message>> retry(String clientId) async {
     final failed = _outbox[clientId];
     if (failed == null || !failed.status.isFailed) {
@@ -256,33 +325,117 @@ class ChatThreadNotifier
     return _deliver(pending);
   }
 
-  /// Drops a failed message.
+  /// Drops a failed message, and the files of its photos.
   void discard(String clientId) {
     if (_outbox[clientId]?.status.isFailed ?? false) {
       _outbox.remove(clientId);
+      final photos = _photos.remove(clientId) ?? const [];
+      for (final p in photos) {
+        _progress.remove(p.localId);
+      }
+      unawaited(
+        _compressor.delete([
+          for (final p in photos) ...[
+            p.sourcePath,
+            if (p.photo case final photo?) photo.path,
+          ],
+        ]),
+      );
       _emit();
     }
   }
 
   Future<Result<Message>> _deliver(Message pending) async {
     final clientId = pending.clientId;
-    final result = await _repo.send(
-      arg,
-      text: pending.text ?? '',
-      clientId: clientId,
-    );
+    final photos = _photos[clientId];
+    final result = photos == null
+        ? await _repo.send(arg, text: pending.text ?? '', clientId: clientId)
+        : await _deliverPhotos(clientId, photos);
+    if (result.isSuccess && photos != null) {
+      // The copies are the photos now; the originals are done with.
+      unawaited(_compressor.delete([for (final p in photos) p.sourcePath]));
+    }
     if (_disposed) return result;
     switch (result) {
       case Success(:final data):
         _outbox.remove(clientId);
+        _photos.remove(clientId);
+        for (final p in photos ?? const <_OutgoingPhoto>[]) {
+          _progress.remove(p.localId);
+        }
         _known.putIfAbsent(data.id, () => data);
       case Err():
-        if (_outbox.containsKey(clientId)) {
-          _outbox[clientId] = pending.copyWith(status: MessageStatus.failed);
+        if (_outbox[clientId] case final current?) {
+          _outbox[clientId] = current.copyWith(status: MessageStatus.failed);
         }
     }
     _emit();
     return result;
+  }
+
+  /// Compresses and uploads the photos not uploaded yet, then sends the
+  /// message with all of them.
+  Future<Result<Message>> _deliverPhotos(
+    String clientId,
+    List<_OutgoingPhoto> photos,
+  ) async {
+    final ids = <String>[];
+    for (final p in photos) {
+      if (p.uploaded case final uploaded?) {
+        ids.add(uploaded.id);
+        continue;
+      }
+      var compressed = p.photo;
+      if (compressed == null) {
+        final compression = p.compression ??= _compressor.compress(
+          p.sourcePath,
+        );
+        switch (await compression) {
+          case Success(:final data):
+            compressed = p.photo = data;
+            _showSizes(clientId, photos);
+          case Err(:final failure):
+            // A retry compresses again from the original.
+            p.compression = null;
+            return Err(failure);
+        }
+      }
+      _progress[p.localId] = 0;
+      _emit();
+      final upload = await _repo.uploadPhoto(
+        compressed,
+        onProgress: (value) {
+          _progress[p.localId] = value;
+          _emit();
+        },
+      );
+      switch (upload) {
+        case Success(:final data):
+          p.uploaded = data;
+          _progress[p.localId] = 1;
+          ids.add(data.id);
+        case Err(:final failure):
+          _progress.remove(p.localId);
+          return Err(failure);
+      }
+    }
+    final message = _outbox[clientId];
+    return _repo.send(
+      arg,
+      text: message?.text ?? '',
+      attachmentIds: ids,
+      clientId: clientId,
+    );
+  }
+
+  /// Lays the pending bubble out by the photos' real sizes once known.
+  void _showSizes(String clientId, List<_OutgoingPhoto> photos) {
+    if (_outbox[clientId] case final message?) {
+      _outbox[clientId] = message.copyWith(
+        attachments: [for (final p in photos) p.preview],
+      );
+      _emit();
+    }
   }
 
   /// Loads the page before the oldest known message.
@@ -320,4 +473,33 @@ class ChatThreadNotifier
     if (result.isFailure && _lastMarked == latest.id) _lastMarked = null;
     return result;
   }
+}
+
+/// A photo of a message on its way: compressed, then uploaded. A retry
+/// skips the steps already done.
+class _OutgoingPhoto {
+  _OutgoingPhoto({
+    required this.localId,
+    required this.sourcePath,
+    required this.compression,
+    this.photo,
+  });
+
+  /// Its attachment id in the pending message.
+  final String localId;
+  final String sourcePath;
+
+  /// Running or done; `null` after a failure, until the retry.
+  Future<Result<CompressedPhoto>>? compression;
+  CompressedPhoto? photo;
+  MessageAttachment? uploaded;
+
+  /// How the pending bubble shows it: the original, laid out by the size
+  /// of the copy once that is known.
+  MessageAttachment get preview => MessageAttachment(
+        id: localId,
+        url: sourcePath,
+        width: photo?.width,
+        height: photo?.height,
+      );
 }

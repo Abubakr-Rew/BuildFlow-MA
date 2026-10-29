@@ -2,13 +2,18 @@ import 'dart:math';
 
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/chat/data/fake_chat_store.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/domain/entities/message_attachment.dart';
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
+import 'package:flutter/foundation.dart';
 
 /// Fake chat repository of one signed-in user over the shared
-/// [FakeChatStore], with simulated latency.
+/// [FakeChatStore], with simulated latency. Photo uploads report progress
+/// over about a second; the compressed copy on the phone serves as the
+/// uploaded file.
 class FakeChatRepository implements ChatRepository {
   FakeChatRepository({
     required this.store,
@@ -22,9 +27,12 @@ class FakeChatRepository implements ChatRepository {
   /// The signed-in user; `null` without a session.
   final String? userId;
 
-  /// Share of sends that fail with a network error, to try the retry
-  /// flow on a device (`kFakeChatSendFailureRate`).
+  /// Share of sends and photo uploads that fail with a network error, to
+  /// try the retry flow on a device (`kFakeChatSendFailureRate`).
   final double sendFailureRate;
+
+  /// Steps of a simulated upload's progress.
+  static const _uploadSteps = 10;
   final Random _random;
 
   static const _noSession =
@@ -62,21 +70,58 @@ class FakeChatRepository implements ChatRepository {
     return store.loadOlder(chatId, uid, before: before);
   }
 
+  bool _fails() =>
+      sendFailureRate > 0 && _random.nextDouble() < sendFailureRate;
+
+  @override
+  Future<Result<MessageAttachment>> uploadPhoto(
+    CompressedPhoto photo, {
+    ValueChanged<double>? onProgress,
+  }) async {
+    final uid = userId;
+    if (uid == null) return const Err(_noSession);
+    // A failing upload breaks off halfway, as a lost connection would.
+    final failAt = _fails() ? 1 + _random.nextInt(_uploadSteps - 1) : null;
+    final stepMs = 60 + _random.nextInt(80);
+    for (var step = 1; step <= _uploadSteps; step++) {
+      await Future<void>.delayed(Duration(milliseconds: stepMs));
+      if (step == failAt) {
+        return const Err(
+          Failure(FailureCode.network, message: 'Simulated upload failure'),
+        );
+      }
+      onProgress?.call(step / _uploadSteps);
+    }
+    return store.registerUpload(
+      uid,
+      url: photo.path,
+      width: photo.width,
+      height: photo.height,
+    );
+  }
+
   @override
   Future<Result<Message>> send(
     String chatId, {
-    required String text,
     required String clientId,
+    String text = '',
+    List<String> attachmentIds = const [],
   }) async {
     await _simulateLatency();
     final uid = userId;
     if (uid == null) return const Err(_noSession);
-    if (sendFailureRate > 0 && _random.nextDouble() < sendFailureRate) {
+    if (_fails()) {
       return const Err(
         Failure(FailureCode.network, message: 'Simulated send failure'),
       );
     }
-    return store.send(chatId, uid, text: text, clientId: clientId);
+    return store.send(
+      chatId,
+      uid,
+      text: text,
+      clientId: clientId,
+      attachmentIds: attachmentIds,
+    );
   }
 
   @override

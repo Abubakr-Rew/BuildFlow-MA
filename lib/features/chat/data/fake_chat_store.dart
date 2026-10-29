@@ -7,6 +7,7 @@ import 'package:buildflow/features/chat/data/fake_chat_demo_data.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/domain/entities/message_attachment.dart';
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/team/data/fake_team_store.dart';
@@ -21,7 +22,8 @@ import 'package:flutter/foundation.dart';
 ///   directors plus the project's foremen and workers ([syncProject]);
 /// - direct chats only within one company;
 /// - a member removed from the company loses every chat of it, direct
-///   ones included ([FakeTeamStore] tells the store).
+///   ones included ([FakeTeamStore] tells the store);
+/// - a photo can be attached only by the user who uploaded it, and once.
 ///
 /// Created only by `fakeChatStoreProvider`; tests may create their own.
 class FakeChatStore {
@@ -54,6 +56,11 @@ class FakeChatStore {
 
   /// `chatId/senderId/clientId` → index of the message in its chat.
   final Map<String, int> _byClientId = {};
+
+  /// Uploaded photos not attached to a message yet, by attachment id.
+  final Map<String, ({String ownerId, MessageAttachment attachment})>
+      _uploads = {};
+  var _uploadSeq = 0;
   final _changes = StreamController<void>.broadcast();
   final Set<Timer> _timers = {};
   final Set<String> _echoing = {};
@@ -125,11 +132,31 @@ class FakeChatStore {
 
   // ── Writes ─────────────────────────────────────────────────
 
+  /// A photo uploaded by [userId], to attach to one of their messages. In
+  /// demo mode [url] is the compressed copy on the phone.
+  Result<MessageAttachment> registerUpload(
+    String userId, {
+    required String url,
+    required int width,
+    required int height,
+  }) {
+    if (_team.memberByUserId(userId) == null) return Err(_notInCompany(userId));
+    final attachment = MessageAttachment(
+      id: 'att-${++_uploadSeq}',
+      url: url,
+      width: width,
+      height: height,
+    );
+    _uploads[attachment.id] = (ownerId: userId, attachment: attachment);
+    return Success(attachment);
+  }
+
   Result<Message> send(
     String chatId,
     String userId, {
-    required String text,
     required String clientId,
+    String text = '',
+    List<String> attachmentIds = const [],
   }) {
     final chat = _chats[chatId];
     final denied = _denied(chat, chatId, userId);
@@ -140,13 +167,29 @@ class FakeChatStore {
     if (existing != null) return Success(_messageView(chat!, existing, userId));
 
     final trimmed = text.trim();
-    if (trimmed.isEmpty || trimmed.length > maxMessageLength) {
+    if ((trimmed.isEmpty && attachmentIds.isEmpty) ||
+        trimmed.length > maxMessageLength ||
+        attachmentIds.length > maxPhotosPerMessage) {
       return const Err(
         Failure(
           FailureCode.validation,
-          message: 'Text must be 1–$maxMessageLength characters',
+          message: 'Text must be 1–$maxMessageLength characters, '
+              'or up to $maxPhotosPerMessage photos',
         ),
       );
+    }
+    final attachments = <MessageAttachment>[];
+    for (final id in attachmentIds) {
+      final upload = _uploads[id];
+      if (upload == null || upload.ownerId != userId) {
+        return Err(
+          Failure(
+            FailureCode.forbidden,
+            message: 'Attachment $id was not uploaded by $userId',
+          ),
+        );
+      }
+      attachments.add(upload.attachment);
     }
     if (chat!.type.isDirect) {
       final peer = chat.participants.firstWhere((id) => id != userId);
@@ -160,7 +203,14 @@ class FakeChatStore {
       }
     }
 
-    final index = _append(chat, userId, text: trimmed, clientId: clientId);
+    attachmentIds.forEach(_uploads.remove);
+    final index = _append(
+      chat,
+      userId,
+      text: trimmed,
+      clientId: clientId,
+      attachments: attachments,
+    );
     _byClientId[key] = index;
     _emit();
     _scheduleEcho(chat, userId);
@@ -303,13 +353,14 @@ class FakeChatStore {
   }
 
   /// Appends a message from [senderId], who has thereby read the chat up
-  /// to it. Returns its index.
+  /// to it: text, or photos with [text] as the caption. Returns its index.
   int _append(
     _ChatRecord chat,
     String senderId, {
     required String text,
     String? clientId,
     DateTime? at,
+    List<MessageAttachment> attachments = const [],
   }) {
     final id = 'msg-${++_seq}';
     final createdAt = at ?? _now();
@@ -319,8 +370,9 @@ class FakeChatStore {
         clientId: clientId ?? id,
         chatId: chat.id,
         senderId: senderId,
-        kind: MessageKind.text,
-        text: text,
+        kind: attachments.isEmpty ? MessageKind.text : MessageKind.photo,
+        text: attachments.isNotEmpty && text.isEmpty ? null : text,
+        attachments: attachments,
         createdAt: createdAt,
       ),
     );
@@ -475,6 +527,28 @@ class FakeChatStore {
       _append(chat, sender, text: text, at: at);
     }
 
+    // Demo photos are `fake:` placeholders; portrait every third one.
+    var demoPhoto = 0;
+    void show(
+      _ChatRecord? chat,
+      String sender,
+      int count,
+      DateTime at, {
+      String caption = '',
+    }) {
+      if (chat == null) return;
+      final attachments = [
+        for (var i = 0; i < count; i++)
+          MessageAttachment(
+            id: 'att-demo-${++demoPhoto}',
+            url: 'fake:chat-$demoPhoto',
+            width: demoPhoto % 3 == 0 ? 1200 : 1600,
+            height: demoPhoto % 3 == 0 ? 1600 : 1200,
+          ),
+      ];
+      _append(chat, sender, text: caption, at: at, attachments: attachments);
+    }
+
     // Everyone has read everything, except the last [unread] messages from
     // others for [userId].
     void readAll(_ChatRecord? chat, {Map<String, int> unread = const {}}) {
@@ -501,7 +575,10 @@ class FakeChatStore {
     say(alaToo, demoForeman1Id,
         'Доброе утро. Бетон на 8-й этаж заказал на 9:00.', ago(130));
     say(alaToo, demoWorker1Id, 'Миксер приехал, начинаем заливку.', ago(118));
+    show(alaToo, demoWorker1Id, 1, ago(117));
     say(alaToo, demoWorker1Id, 'Второй вибратор взяли из бытовки.', ago(116));
+    show(alaToo, demoForeman1Id, 3, ago(62),
+        caption: 'Армирование плиты перед заливкой');
     say(alaToo, demoForeman1Id,
         'Залили 12 кубов из 20, перерыв на обед.', ago(60));
     say(alaToo, demoOwnerId,
@@ -515,6 +592,8 @@ class FakeChatStore {
     say(gorny, demoWorker2Id,
         'Нужна ещё одна бетономешалка, одна не справляется.', dayAt(1, 16, 52));
     say(gorny, demoOwnerId, 'Арендуем, завтра будет.', dayAt(1, 17, 5));
+    show(gorny, demoForeman2Id, 6, dayAt(1, 17, 40),
+        caption: 'Итоги дня: фундамент №4 и кладка №5');
     say(gorny, demoForeman2Id, 'Бетономешалку привезли, спасибо.', ago(90));
     say(gorny, demoForeman1Id,
         'Кровельщики выходят на №2 в понедельник.', ago(40));
@@ -532,6 +611,7 @@ class FakeChatStore {
     say(baitik, demoWorker3Id, 'А нам куда выходить?', dayAt(3, 11, 2));
     say(baitik, demoForeman2Id,
         'Азамат, с понедельника в «Горный», Нурлан покажет.', dayAt(3, 11, 10));
+    show(baitik, demoWorker3Id, 2, dayAt(3, 11, 40), caption: 'Леса вывезли');
     readAll(baitik);
 
     final warehouse = _chats['chat-project-4'];
@@ -545,6 +625,7 @@ class FakeChatStore {
         dayAt(1, 18, 10));
     say(ownerForeman, demoForeman1Id,
         'Да, встречу. Подготовлю журнал работ.', dayAt(1, 18, 25));
+    show(ownerForeman, demoForeman1Id, 1, ago(12));
     say(ownerForeman, demoForeman1Id,
         'Заказчик доволен, просит ускорить фасад.', ago(10));
     readAll(ownerForeman, unread: {demoOwnerId: 1});

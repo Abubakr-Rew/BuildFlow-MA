@@ -2,16 +2,22 @@ import 'dart:async';
 
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/domain/entities/message_attachment.dart';
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
 import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../../helpers/fake_photo_compressor.dart';
 
 const _me = User(
   id: 'user-foreman-1',
@@ -37,19 +43,50 @@ class _ScriptedChatRepository implements ChatRepository {
 
   /// Each send waits for the next completer the test completes.
   final sends = <(String clientId, Completer<Result<Message>>)>[];
+  final sentAttachments = <List<String>>[];
   final marked = <String>[];
+
+  /// Paths of the copies uploaded, in order.
+  final uploads = <String>[];
+
+  /// Copies whose next upload fails.
+  final failUploads = <String>{};
 
   @override
   Stream<List<Message>> watchMessages(String chatId) => messages.stream;
 
   @override
+  Future<Result<MessageAttachment>> uploadPhoto(
+    CompressedPhoto photo, {
+    ValueChanged<double>? onProgress,
+  }) async {
+    uploads.add(photo.path);
+    onProgress?.call(0.5);
+    await Future<void>.delayed(Duration.zero);
+    if (failUploads.remove(photo.path)) {
+      return const Err(Failure(FailureCode.network, message: 'offline'));
+    }
+    onProgress?.call(1);
+    return Success(
+      MessageAttachment(
+        id: 'att-${photo.path}',
+        url: photo.path,
+        width: photo.width,
+        height: photo.height,
+      ),
+    );
+  }
+
+  @override
   Future<Result<Message>> send(
     String chatId, {
-    required String text,
     required String clientId,
+    String text = '',
+    List<String> attachmentIds = const [],
   }) {
     final completer = Completer<Result<Message>>();
     sends.add((clientId, completer));
+    sentAttachments.add(attachmentIds);
     return completer.future;
   }
 
@@ -76,6 +113,7 @@ class _ScriptedChatRepository implements ChatRepository {
 
 void main() {
   late _ScriptedChatRepository repo;
+  late FakePhotoCompressor compressor;
   late ProviderContainer container;
 
   final provider = chatThreadProvider('chat-1');
@@ -89,10 +127,12 @@ void main() {
 
   setUp(() async {
     repo = _ScriptedChatRepository();
+    compressor = FakePhotoCompressor();
     container = ProviderContainer(
       overrides: [
         currentUserProvider.overrideWithValue(_me),
         chatRepositoryProvider.overrideWithValue(repo),
+        photoCompressorProvider.overrideWithValue(compressor),
       ],
     );
     addTearDown(container.dispose);
@@ -184,5 +224,137 @@ void main() {
     repo.messages.add([_message('m-2')]);
     await Future<void>.delayed(Duration.zero);
     expect(messages().map((m) => m.id), ['m-1', 'm-2']);
+  });
+
+  group('photos', () {
+    const drafts = 'chat:chat-1';
+    String copy(String path) => FakePhotoCompressor.copyOf(path);
+    Future<void> settle() =>
+        Future<void>.delayed(const Duration(milliseconds: 50));
+
+    /// Picks [paths] in the message field and sends them.
+    Future<Result<Message>> sendPhotos(
+      List<String> paths, {
+      String caption = '',
+    }) {
+      container.listen(photoDraftsProvider(drafts), (_, __) {});
+      final field = container.read(photoDraftsProvider(drafts).notifier)
+        ..add(paths);
+      return notifier().sendPhotos(field.takeAll(), caption: caption);
+    }
+
+    test('show at once, then compress, upload one by one and send', () async {
+      final done = sendPhotos(['/c/1.jpg', '/c/2.jpg'], caption: ' Плита ');
+      final pending = messages().last;
+      expect(pending.kind, MessageKind.photo);
+      expect(pending.text, 'Плита');
+      expect(pending.status, MessageStatus.sending);
+      // The originals stand in until the copies are uploaded.
+      expect(pending.attachments.map((a) => a.url), ['/c/1.jpg', '/c/2.jpg']);
+
+      await settle();
+      expect(repo.uploads, [copy('/c/1.jpg'), copy('/c/2.jpg')]);
+      expect(repo.sentAttachments.single, [
+        'att-${copy('/c/1.jpg')}',
+        'att-${copy('/c/2.jpg')}',
+      ]);
+      final thread = container.read(provider).requireValue;
+      expect(thread.uploadProgress.values, [1, 1]);
+      expect(thread.messages.last.attachments.first.width, 1600);
+
+      final (clientId, reply) = repo.sends.single;
+      expect(clientId, pending.clientId);
+      reply.complete(Success(serverCopy(messages().last, 'm-2')));
+      expect((await done).isSuccess, isTrue);
+      expect(messages().last.status, MessageStatus.sent);
+      expect(container.read(provider).requireValue.uploadProgress, isEmpty);
+      // The originals go; the copies are the sent photos now.
+      expect(compressor.deleted, ['/c/1.jpg', '/c/2.jpg']);
+    });
+
+    test('a failed upload fails the message; a retry uploads only the rest',
+        () async {
+      repo.failUploads.add(copy('/c/2.jpg'));
+      final first = sendPhotos(['/c/1.jpg', '/c/2.jpg', '/c/3.jpg']);
+      expect((await first).failure.code, FailureCode.network);
+      expect(messages().last.status, MessageStatus.failed);
+      expect(repo.uploads, [copy('/c/1.jpg'), copy('/c/2.jpg')]);
+      expect(repo.sends, isEmpty);
+
+      final retry = notifier().retry(messages().last.clientId);
+      expect(messages().last.status, MessageStatus.sending);
+      await settle();
+      expect(repo.uploads, [
+        copy('/c/1.jpg'),
+        copy('/c/2.jpg'),
+        copy('/c/2.jpg'),
+        copy('/c/3.jpg'),
+      ]);
+      expect(repo.sentAttachments.single, hasLength(3));
+      repo.sends.single.$2.complete(
+        Success(serverCopy(messages().last, 'm-2')),
+      );
+      expect((await retry).isSuccess, isTrue);
+    });
+
+    test('a failed send is retried with the same clientId, no new uploads',
+        () async {
+      final first = sendPhotos(['/c/1.jpg']);
+      await settle();
+      repo.sends.single.$2.complete(
+        const Err(Failure(FailureCode.network, message: 'offline')),
+      );
+      expect((await first).isFailure, isTrue);
+
+      final retry = notifier().retry(messages().last.clientId);
+      await settle();
+      expect(repo.uploads, [copy('/c/1.jpg')]);
+      expect(repo.sends, hasLength(2));
+      expect(repo.sends.last.$1, repo.sends.first.$1);
+      expect(repo.sentAttachments.last, ['att-${copy('/c/1.jpg')}']);
+      repo.sends.last.$2.complete(Success(serverCopy(messages().last, 'm-2')));
+      expect((await retry).isSuccess, isTrue);
+    });
+
+    test('a photo that fails to compress fails the message, not loses it',
+        () async {
+      compressor.failing.add('/c/2.jpg');
+      final first = sendPhotos(['/c/1.jpg', '/c/2.jpg']);
+      expect((await first).failure.code, FailureCode.photoProcessing);
+      expect(messages().last.status, MessageStatus.failed);
+      expect(messages().last.attachments.last.url, '/c/2.jpg');
+      expect(compressor.deleted, isEmpty);
+
+      compressor.failing.clear();
+      final retry = notifier().retry(messages().last.clientId);
+      await settle();
+      // Compressed again from the original; the first photo is not redone.
+      expect(compressor.compressed, ['/c/1.jpg', '/c/2.jpg', '/c/2.jpg']);
+      expect(repo.uploads, [copy('/c/1.jpg'), copy('/c/2.jpg')]);
+      repo.sends.single.$2.complete(
+        Success(serverCopy(messages().last, 'm-2')),
+      );
+      expect((await retry).isSuccess, isTrue);
+    });
+
+    test('discarding a failed photo message deletes its files', () async {
+      repo.failUploads.add(copy('/c/1.jpg'));
+      await sendPhotos(['/c/1.jpg']);
+      notifier().discard(messages().last.clientId);
+      expect(messages().map((m) => m.id), ['m-1']);
+      expect(compressor.deleted, ['/c/1.jpg', copy('/c/1.jpg')]);
+    });
+
+    test('nothing or more than ten photos are not sent', () async {
+      expect(
+        (await notifier().sendPhotos(const [])).failure.code,
+        FailureCode.validation,
+      );
+      final eleven = await sendPhotos([
+        for (var i = 0; i < 11; i++) '/c/$i.jpg',
+      ]);
+      expect(eleven.failure.code, FailureCode.validation);
+      expect(repo.uploads, isEmpty);
+    });
   });
 }

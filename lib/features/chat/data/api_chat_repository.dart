@@ -1,8 +1,11 @@
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
+import 'package:buildflow/features/chat/domain/entities/message_attachment.dart';
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
+import 'package:flutter/foundation.dart';
 
 /// API chat repository skeleton. Selected when `kUseMockData` is false;
 /// every call fails until the backend is available. REST and the STOMP
@@ -26,10 +29,18 @@ class ApiChatRepository implements ChatRepository {
       const Err(_notImplemented);
 
   @override
+  Future<Result<MessageAttachment>> uploadPhoto(
+    CompressedPhoto photo, {
+    ValueChanged<double>? onProgress,
+  }) async =>
+      const Err(_notImplemented);
+
+  @override
   Future<Result<Message>> send(
     String chatId, {
-    required String text,
     required String clientId,
+    String text = '',
+    List<String> attachmentIds = const [],
   }) async =>
       const Err(_notImplemented);
 

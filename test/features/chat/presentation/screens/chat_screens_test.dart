@@ -49,15 +49,21 @@ class _FlakyChatRepository extends FakeChatRepository {
   @override
   Future<Result<Message>> send(
     String chatId, {
-    required String text,
     required String clientId,
+    String text = '',
+    List<String> attachmentIds = const [],
   }) async {
     if (failures > 0) {
       failures--;
       await Future<void>.delayed(const Duration(milliseconds: 300));
       return const Err(Failure(FailureCode.network, message: 'offline'));
     }
-    return super.send(chatId, text: text, clientId: clientId);
+    return super.send(
+      chatId,
+      text: text,
+      clientId: clientId,
+      attachmentIds: attachmentIds,
+    );
   }
 }
 
