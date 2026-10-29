@@ -1533,6 +1533,24 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Фото не обработано'**
   String get photoProcessingFailed;
+
+  /// Capture time of a report photo in the viewer: «Снято 11:42» or «Снято 25 октября, 18:10»
+  ///
+  /// In ru, this message translates to:
+  /// **'Снято {time}'**
+  String photoTakenAt(String time);
+
+  /// Badge on a report photo taken on another day than the report was sent
+  ///
+  /// In ru, this message translates to:
+  /// **'Снято не сегодня'**
+  String get photoTakenNotToday;
+
+  /// Close button of the full-screen photo viewer
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрыть просмотр'**
+  String get photoViewerClose;
 }
 
 class _AppLocalizationsDelegate

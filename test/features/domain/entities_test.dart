@@ -110,9 +110,14 @@ void main() {
         authorId: 'u1',
         authorName: 'Author',
         text: 'Report text',
-        photos: const [
-          ReportPhoto(id: 'ph1', url: 'fake:test'),
-          ReportPhoto(id: 'ph2', url: 'https://x/2.jpg', thumbnailUrl: 'https://x/2s.jpg'),
+        photos: [
+          const ReportPhoto(id: 'ph1', url: 'fake:test'),
+          ReportPhoto(
+            id: 'ph2',
+            url: 'https://x/2.jpg',
+            thumbnailUrl: 'https://x/2s.jpg',
+            takenAt: DateTime.utc(2024, 6, 15, 4, 12),
+          ),
         ],
         createdAt: DateTime(2024, 6, 15, 10, 30),
       );
@@ -121,6 +126,9 @@ void main() {
 
       final decoded = jsonDecode(jsonEncode(json)) as Map<String, dynamic>;
       expect(Report.fromJson(decoded), report);
+      final photos = (decoded['photos'] as List).cast<Map<String, dynamic>>();
+      expect(photos.last['takenAt'], '2024-06-15T04:12:00.000Z');
+      expect(photos.first['takenAt'], isNull);
     });
   });
 }

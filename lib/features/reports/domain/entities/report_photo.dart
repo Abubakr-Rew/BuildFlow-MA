@@ -10,6 +10,11 @@ abstract class ReportPhoto with _$ReportPhoto {
     /// URL or local path. Fake photos use 'fake:N' scheme.
     required String url,
     String? thumbnailUrl,
+
+    /// When the photo was taken, from the original's EXIF; `null` if the
+    /// photo didn't say. A photo taken on another day than the report is
+    /// flagged in the viewer.
+    DateTime? takenAt,
   }) = _ReportPhoto;
 
   factory ReportPhoto.fromJson(Map<String, dynamic> json) =>

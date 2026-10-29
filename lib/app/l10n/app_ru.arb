@@ -750,5 +750,14 @@
   "@photoProcessing": {"description": "Semantics of the spinner on a photo being compressed"},
 
   "photoProcessingFailed": "Фото не обработано",
-  "@photoProcessingFailed": {"description": "Red mark on a photo that couldn't be compressed; title of its retry or remove sheet"}
+  "@photoProcessingFailed": {"description": "Red mark on a photo that couldn't be compressed; title of its retry or remove sheet"},
+
+  "photoTakenAt": "Снято {time}",
+  "@photoTakenAt": {"description": "Capture time of a report photo in the viewer: «Снято 11:42» or «Снято 25 октября, 18:10»", "placeholders": {"time": {"type": "String"}}},
+
+  "photoTakenNotToday": "Снято не сегодня",
+  "@photoTakenNotToday": {"description": "Badge on a report photo taken on another day than the report was sent"},
+
+  "photoViewerClose": "Закрыть просмотр",
+  "@photoViewerClose": {"description": "Close button of the full-screen photo viewer"}
 }

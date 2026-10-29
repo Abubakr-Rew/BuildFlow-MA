@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
@@ -10,13 +12,14 @@ import 'package:buildflow/core/widgets/bf_card.dart';
 import 'package:buildflow/core/widgets/empty_state.dart';
 import 'package:buildflow/core/widgets/error_state.dart';
 import 'package:buildflow/core/widgets/photo_thumbnail.dart';
+import 'package:buildflow/core/widgets/photo_viewer.dart';
 import 'package:buildflow/features/auth/presentation/role_label.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/entities/report_photo.dart';
+import 'package:buildflow/features/reports/domain/photo_capture.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -179,74 +182,46 @@ class _ReportBody extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context, Report report, int index) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => _PhotoViewer(report: report, initialIndex: index),
+    final l10n = AppLocalizations.of(context);
+    unawaited(
+      showPhotoViewer(
+        context,
+        initialIndex: index,
+        photos: [
+          for (final photo in report.photos)
+            ViewerPhoto(
+              url: photo.url,
+              heroTag: 'photo_${_heroId(report, photo)}',
+              author: report.authorName,
+              time: _shotTime(l10n, report, photo),
+              warning: takenOnAnotherDay(photo, report.createdAt)
+                  ? l10n.photoTakenNotToday
+                  : null,
+            ),
+        ],
       ),
     );
   }
+}
+
+/// «Снято 11:42», with the date when it isn't the report's day; the time
+/// the report was sent for a photo that doesn't say.
+String _shotTime(AppLocalizations l10n, Report report, ReportPhoto photo) {
+  final taken = photo.takenAt?.toLocal();
+  if (taken == null) {
+    return DateFormatter.reportDateTime(
+      report.createdAt,
+      today: l10n.today,
+      yesterday: l10n.yesterday,
+    );
+  }
+  final time = DateFormatter.time(taken);
+  return l10n.photoTakenAt(
+    takenOnAnotherDay(photo, report.createdAt)
+        ? '${DateFormatter.dayMonth(taken)}, $time'
+        : time,
+  );
 }
 
 String _heroId(Report report, ReportPhoto photo) =>
     '${report.id}-detail-${photo.id}';
-
-/// Swipeable full-screen photo viewer.
-class _PhotoViewer extends StatefulWidget {
-  const _PhotoViewer({required this.report, required this.initialIndex});
-
-  final Report report;
-  final int initialIndex;
-
-  @override
-  State<_PhotoViewer> createState() => _PhotoViewerState();
-}
-
-class _PhotoViewerState extends State<_PhotoViewer> {
-  late final PageController _controller = PageController(
-    initialPage: widget.initialIndex,
-  );
-  late int _index = widget.initialIndex;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final photos = widget.report.photos;
-
-    final t = context.bfTheme;
-
-    return Scaffold(
-      backgroundColor: t.graphite,
-      appBar: AppBar(
-        backgroundColor: t.graphite,
-        foregroundColor: t.onGraphite,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: Theme.of(context).textTheme.titleLarge
-            ?.copyWith(color: t.onGraphite),
-        title: Text(l10n.photoOf(_index + 1, photos.length)),
-      ),
-      body: PageView.builder(
-        controller: _controller,
-        itemCount: photos.length,
-        onPageChanged: (i) => setState(() => _index = i),
-        itemBuilder: (context, i) => Center(
-          child: InteractiveViewer(
-            child: LayoutBuilder(
-              builder: (context, constraints) => PhotoThumbnail(
-                photoId: _heroId(widget.report, photos[i]),
-                url: photos[i].url,
-                size: constraints.maxWidth,
-                borderRadius: 0,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

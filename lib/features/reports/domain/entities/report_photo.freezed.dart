@@ -17,7 +17,10 @@ T _$identity<T>(T value) => value;
 mixin _$ReportPhoto {
 
  String get id;/// URL or local path. Fake photos use 'fake:N' scheme.
- String get url; String? get thumbnailUrl;
+ String get url; String? get thumbnailUrl;/// When the photo was taken, from the original's EXIF; `null` if the
+/// photo didn't say. A photo taken on another day than the report is
+/// flagged in the viewer.
+ DateTime? get takenAt;
 /// Create a copy of ReportPhoto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,20 +34,20 @@ $ReportPhotoCopyWith<ReportPhoto> get copyWith => _$ReportPhotoCopyWithImpl<Repo
 @override
 bool operator ==(Object other) {
   final _this = this as ReportPhoto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportPhoto&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.thumbnailUrl, _this.thumbnailUrl) || other.thumbnailUrl == _this.thumbnailUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReportPhoto&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.url, _this.url) || other.url == _this.url)&&(identical(other.thumbnailUrl, _this.thumbnailUrl) || other.thumbnailUrl == _this.thumbnailUrl)&&(identical(other.takenAt, _this.takenAt) || other.takenAt == _this.takenAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ReportPhoto;
-  return Object.hash(runtimeType,_this.id,_this.url,_this.thumbnailUrl);
+  return Object.hash(runtimeType,_this.id,_this.url,_this.thumbnailUrl,_this.takenAt);
 }
 
 @override
 String toString() {
   final _this = this as ReportPhoto;
-  return 'ReportPhoto(id: ${_this.id}, url: ${_this.url}, thumbnailUrl: ${_this.thumbnailUrl})';
+  return 'ReportPhoto(id: ${_this.id}, url: ${_this.url}, thumbnailUrl: ${_this.thumbnailUrl}, takenAt: ${_this.takenAt})';
 }
 
 
@@ -55,7 +58,7 @@ abstract mixin class $ReportPhotoCopyWith<$Res>  {
   factory $ReportPhotoCopyWith(ReportPhoto value, $Res Function(ReportPhoto) _then) = _$ReportPhotoCopyWithImpl;
 @useResult
 $Res call({
- String id, String url, String? thumbnailUrl
+ String id, String url, String? thumbnailUrl, DateTime? takenAt
 });
 
 
@@ -72,12 +75,13 @@ class _$ReportPhotoCopyWithImpl<$Res>
 
 /// Create a copy of ReportPhoto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? url = null,Object? thumbnailUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? url = null,Object? thumbnailUrl = freezed,Object? takenAt = freezed,}) {
   return _then(ReportPhoto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,thumbnailUrl: freezed == thumbnailUrl ? _self.thumbnailUrl : thumbnailUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,takenAt: freezed == takenAt ? _self.takenAt : takenAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -162,10 +166,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String url,  String? thumbnailUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String url,  String? thumbnailUrl,  DateTime? takenAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReportPhoto() when $default != null:
-return $default(_that.id,_that.url,_that.thumbnailUrl);case _:
+return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
   return orElse();
 
 }
@@ -183,10 +187,10 @@ return $default(_that.id,_that.url,_that.thumbnailUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String url,  String? thumbnailUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String url,  String? thumbnailUrl,  DateTime? takenAt)  $default,) {final _that = this;
 switch (_that) {
 case _ReportPhoto():
-return $default(_that.id,_that.url,_that.thumbnailUrl);case _:
+return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +207,10 @@ return $default(_that.id,_that.url,_that.thumbnailUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String url,  String? thumbnailUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String url,  String? thumbnailUrl,  DateTime? takenAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ReportPhoto() when $default != null:
-return $default(_that.id,_that.url,_that.thumbnailUrl);case _:
+return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
   return null;
 
 }
@@ -218,13 +222,17 @@ return $default(_that.id,_that.url,_that.thumbnailUrl);case _:
 @JsonSerializable()
 
 class _ReportPhoto implements ReportPhoto {
-  const _ReportPhoto({required this.id, required this.url, this.thumbnailUrl});
+  const _ReportPhoto({required this.id, required this.url, this.thumbnailUrl, this.takenAt});
   factory _ReportPhoto.fromJson(Map<String, dynamic> json) => _$ReportPhotoFromJson(json);
 
 @override final  String id;
 /// URL or local path. Fake photos use 'fake:N' scheme.
 @override final  String url;
 @override final  String? thumbnailUrl;
+/// When the photo was taken, from the original's EXIF; `null` if the
+/// photo didn't say. A photo taken on another day than the report is
+/// flagged in the viewer.
+@override final  DateTime? takenAt;
 
 /// Create a copy of ReportPhoto
 /// with the given fields replaced by the non-null parameter values.
@@ -239,18 +247,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportPhoto&&(identical(other.id, id) || other.id == id)&&(identical(other.url, url) || other.url == url)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReportPhoto&&(identical(other.id, id) || other.id == id)&&(identical(other.url, url) || other.url == url)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.takenAt, takenAt) || other.takenAt == takenAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,url,thumbnailUrl);
+    return Object.hash(runtimeType,id,url,thumbnailUrl,takenAt);
 }
 
 @override
 String toString() {
-    return 'ReportPhoto(id: $id, url: $url, thumbnailUrl: $thumbnailUrl)';
+    return 'ReportPhoto(id: $id, url: $url, thumbnailUrl: $thumbnailUrl, takenAt: $takenAt)';
 }
 
 
@@ -261,7 +269,7 @@ abstract mixin class _$ReportPhotoCopyWith<$Res> implements $ReportPhotoCopyWith
   factory _$ReportPhotoCopyWith(_ReportPhoto value, $Res Function(_ReportPhoto) _then) = __$ReportPhotoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String url, String? thumbnailUrl
+ String id, String url, String? thumbnailUrl, DateTime? takenAt
 });
 
 
@@ -278,12 +286,13 @@ class __$ReportPhotoCopyWithImpl<$Res>
 
 /// Create a copy of ReportPhoto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? url = null,Object? thumbnailUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? url = null,Object? thumbnailUrl = freezed,Object? takenAt = freezed,}) {
   return _then(_ReportPhoto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,thumbnailUrl: freezed == thumbnailUrl ? _self.thumbnailUrl : thumbnailUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,takenAt: freezed == takenAt ? _self.takenAt : takenAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

@@ -1,4 +1,5 @@
 import 'package:buildflow/app/theme/app_theme.dart';
+import 'package:buildflow/core/widgets/photo_viewer.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -69,6 +70,22 @@ void main() {
     ),
     'people search (foreman)': (const PeopleSearchScreen(), _foreman),
     'profile': (const ProfileScreen(), _owner),
+    'photo viewer': (
+      const PhotoViewer(
+        initialIndex: 1,
+        photos: [
+          ViewerPhoto(url: 'fake:a', author: 'Бакыт Касымов', time: '11:42'),
+          ViewerPhoto(
+            url: 'fake:b',
+            caption: 'Залили плиту 8-го этажа',
+            author: 'Бакыт Касымов',
+            time: 'Снято 11:42',
+            warning: 'Снято не сегодня',
+          ),
+        ],
+      ),
+      null,
+    ),
   };
 
   for (final (themeName, theme) in [

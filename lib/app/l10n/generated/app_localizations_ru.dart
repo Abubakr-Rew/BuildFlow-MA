@@ -790,4 +790,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get photoProcessingFailed => 'Фото не обработано';
+
+  @override
+  String photoTakenAt(String time) {
+    return 'Снято $time';
+  }
+
+  @override
+  String get photoTakenNotToday => 'Снято не сегодня';
+
+  @override
+  String get photoViewerClose => 'Закрыть просмотр';
 }

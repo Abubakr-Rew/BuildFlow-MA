@@ -26,8 +26,21 @@ class FakeReportRepository implements ReportRepository {
       text: 'Залили фундамент блока Б. Бетон марки М300, '
           'всего 42 кубометра. Опалубку снимем через 3 дня.',
       photos: [
-        const ReportPhoto(id: 'photo-1', url: 'fake:foundation-1'),
-        const ReportPhoto(id: 'photo-2', url: 'fake:foundation-2'),
+        // Taken shortly before the report, as a camera shot would be.
+        ReportPhoto(
+          id: 'photo-1',
+          url: 'fake:foundation-1',
+          takenAt: DateTime.now().subtract(
+            const Duration(hours: 3, minutes: 40),
+          ),
+        ),
+        ReportPhoto(
+          id: 'photo-2',
+          url: 'fake:foundation-2',
+          takenAt: DateTime.now().subtract(
+            const Duration(hours: 3, minutes: 25),
+          ),
+        ),
         const ReportPhoto(id: 'photo-3', url: 'fake:foundation-3'),
       ],
       createdAt: DateTime.now().subtract(const Duration(hours: 3)),
@@ -41,8 +54,19 @@ class FakeReportRepository implements ReportRepository {
       text: 'Закончили кладку стен 1-го этажа дома №5. '
           'Использовали кирпич 250×120×65. Завтра начнём перемычки.',
       photos: [
-        const ReportPhoto(id: 'photo-4', url: 'fake:brickwork-1'),
-        const ReportPhoto(id: 'photo-5', url: 'fake:brickwork-2'),
+        ReportPhoto(
+          id: 'photo-4',
+          url: 'fake:brickwork-1',
+          takenAt: DateTime.now().subtract(
+            const Duration(hours: 5, minutes: 20),
+          ),
+        ),
+        // An old photo from the gallery: flagged «Снято не сегодня».
+        ReportPhoto(
+          id: 'photo-5',
+          url: 'fake:brickwork-2',
+          takenAt: DateTime.now().subtract(const Duration(days: 3, hours: 2)),
+        ),
       ],
       createdAt: DateTime.now().subtract(const Duration(hours: 5)),
     ),
@@ -153,6 +177,7 @@ class FakeReportRepository implements ReportRepository {
             id: 'photo-${now.millisecondsSinceEpoch}-'
                 '${_random.nextInt(100000)}',
             url: photo.path,
+            takenAt: photo.takenAt,
           ),
         if (photos.isEmpty)
           ReportPhoto(
