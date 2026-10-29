@@ -27,7 +27,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
           .timeout(_restoreTimeout);
       state = ThemeMode.values.asNameMap()[saved] ?? state;
     } catch (e) {
-      debugPrint('Theme mode restore failed: ${e.runtimeType}');
+      debugPrint('Theme mode restore failed: $e');
     }
   }
 
@@ -37,7 +37,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
     try {
       await ref.read(localStorageProvider).saveString(_storageKey, mode.name);
     } catch (e) {
-      debugPrint('Theme mode save failed: ${e.runtimeType}');
+      debugPrint('Theme mode save failed: $e');
     }
   }
 }
