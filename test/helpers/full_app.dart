@@ -101,8 +101,12 @@ class FullApp {
   }
 
   /// Unmounts the app before the container (and the router) is disposed.
+  /// Requests the last screens started may still be waiting out their
+  /// random fake latency, and a timer left pending fails the test, so it
+  /// runs out first: each request waits under a second.
   Future<void> dispose() async {
     await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 3));
     container.dispose();
   }
 }

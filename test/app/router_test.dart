@@ -187,8 +187,12 @@ void main() {
     }
 
     // Unmount the app before the container (and the router) is disposed.
+    // The requests the last screens started may still be waiting out their
+    // random fake latency, and a timer left pending fails the test, so let
+    // it run out first: each request waits under a second.
     Future<void> tearDownApp(WidgetTester tester) async {
       await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 3));
       container.dispose();
     }
 
