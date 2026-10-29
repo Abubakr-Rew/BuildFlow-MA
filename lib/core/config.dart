@@ -31,3 +31,18 @@ const int kPhotoTargetBytes = 450 * 1024;
 /// [kPhotoTargetBytes], the photo goes as is: lower qualities blur exactly
 /// the thin lines (cracks, joints) a report is about.
 const List<int> kPhotoQualitySteps = [82, 74, 66];
+
+/// Voice messages: AAC-LC in M4A, mono. At 32 kbit/s a five-minute note is
+/// about 1.2 MB; speech stays clear on a phone speaker.
+const int kVoiceBitRate = 32000;
+const int kVoiceSampleRate = 22050;
+
+/// Shorter recordings are dropped with «Удерживайте, чтобы записать».
+const Duration kVoiceMinDuration = Duration(seconds: 1);
+
+/// At this length the recording stops and waits as a draft; it is never
+/// sent on its own (a note held down in a pocket would be).
+const Duration kVoiceMaxDuration = Duration(minutes: 5);
+
+/// Values of the waveform sent with a voice message, each 0–100.
+const int kVoiceWaveformBars = 40;

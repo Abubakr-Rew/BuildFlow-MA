@@ -11,6 +11,12 @@ abstract final class DateFormatter {
   static String dayMonth(DateTime date) => _dayMonth.format(date);
   static String dayMonthYear(DateTime date) => _dayMonthYear.format(date);
   static String time(DateTime date) => _time.format(date);
+
+  /// Length of a voice note: «0:42», «4:59», «12:05».
+  static String duration(Duration d) {
+    final seconds = d.inSeconds;
+    return '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+  }
   static String full(DateTime date) => _full.format(date);
 
   /// Returns 'Сегодня', 'Вчера', or a formatted date.

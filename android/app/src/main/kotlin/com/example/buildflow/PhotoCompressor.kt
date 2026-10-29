@@ -194,9 +194,9 @@ class PhotoCompressor(private val context: Context) : MethodChannel.MethodCallHa
     }
 
     /**
-     * Our copies in cacheDir/photos, plus what image_picker leaves in cacheDir:
-     * camera shots (image_picker…), its own scaled copies (scaled_…) and gallery
-     * copies, each in a folder named by a UUID.
+     * Our copies in cacheDir/photos, voice notes (voice-…), plus what
+     * image_picker leaves in cacheDir: camera shots (image_picker…), its own
+     * scaled copies (scaled_…) and gallery copies, each in a folder named by a UUID.
      */
     private fun sweep(olderThanMs: Long) {
         val cutoff = System.currentTimeMillis() - olderThanMs
@@ -206,7 +206,8 @@ class PhotoCompressor(private val context: Context) : MethodChannel.MethodCallHa
             val leftover = if (f.isDirectory) {
                 UUID_NAME.matches(f.name)
             } else {
-                f.name.startsWith("image_picker") || f.name.startsWith("scaled_")
+                f.name.startsWith("image_picker") || f.name.startsWith("scaled_") ||
+                    f.name.startsWith("voice-")
             }
             if (leftover && f.lastModified() < cutoff) f.deleteRecursively()
         }
