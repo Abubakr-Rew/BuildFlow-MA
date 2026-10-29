@@ -1,4 +1,5 @@
 import 'package:buildflow/app/l10n/generated/app_localizations_ru.dart';
+import 'package:buildflow/core/audio/audio_providers.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
@@ -18,6 +19,7 @@ import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_p
 import 'package:buildflow/features/chat/presentation/screens/chat_list_screen.dart';
 import 'package:buildflow/features/chat/presentation/screens/chat_screen.dart';
 import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
+import 'package:buildflow/features/chat/presentation/widgets/voice_recorder_bar.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_store.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +27,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../helpers/fake_photo_compressor.dart';
+import '../../../../helpers/fake_voice.dart';
 import '../../../../helpers/test_app.dart';
 
 const _owner = User(
@@ -457,6 +460,133 @@ void main() {
       await tester.tap(find.text(l10n.morePhotos(3)));
       await tester.pumpAndSettle();
       expect(find.text(l10n.photoOf(4, 6)), findsOneWidget);
+    });
+  });
+
+  group('recording a voice note', () {
+    late FakeVoiceRecorder recorder;
+
+    Future<FakeChatStore> pumpChat(WidgetTester tester) async {
+      recorder = FakeVoiceRecorder();
+      final store = quietStore(demoHistory: false);
+      await pumpTestApp(
+        tester,
+        const ChatScreen(chatId: 'chat-project-1'),
+        overrides: [
+          currentUserProvider.overrideWithValue(_foreman),
+          fakeChatStoreProvider.overrideWithValue(store),
+          voiceRecorderProvider.overrideWithValue(recorder),
+          voicePlayerProvider.overrideWithValue(FakeVoicePlayer()),
+          photoCompressorProvider.overrideWithValue(FakePhotoCompressor()),
+        ],
+      );
+      await settle(tester);
+      return store;
+    }
+
+    Finder mic() => find.byType(VoiceMicButton);
+
+    /// Presses the microphone and keeps the finger down for [seconds].
+    Future<TestGesture> hold(WidgetTester tester, int seconds) async {
+      final gesture = await tester.startGesture(tester.getCenter(mic()));
+      await tester.pump();
+      for (var i = 0; i < seconds * 10; i++) {
+        recorder.emitLevel(0.5);
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      return gesture;
+    }
+
+    testWidgets('the microphone shows while the field is empty',
+        (tester) async {
+      await pumpChat(tester);
+      expect(mic(), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Привет');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(mic(), findsNothing);
+      expect(find.byTooltip(l10n.sendMessage), findsOneWidget);
+    });
+
+    testWidgets('hold, see the time and «Влево — отмена», lift: it is sent',
+        (tester) async {
+      final store = await pumpChat(tester);
+      final gesture = await hold(tester, 2);
+      expect(find.byType(VoiceHoldingBar), findsOneWidget);
+      expect(find.text('0:02'), findsOneWidget);
+      expect(find.text(l10n.voiceSlideToCancel), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+
+      await gesture.up();
+      await tester.pump();
+      expect(find.byType(VoiceHoldingBar), findsNothing);
+      expect(find.byType(TextField), findsOneWidget);
+
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      final sent = store.messagesFor('chat-project-1', _foreman.id).value.last;
+      expect(sent.kind, MessageKind.voice);
+      expect(sent.attachments.single.durationMs, 2000);
+      expect(sent.attachments.single.waveform, hasLength(40));
+    });
+
+    testWidgets('a tap says «Удерживайте, чтобы записать»', (tester) async {
+      await pumpChat(tester);
+      await tester.tap(mic());
+      await tester.pump();
+      expect(find.text(l10n.voiceHoldToRecord), findsOneWidget);
+    });
+
+    testWidgets('a refused microphone says so, with «Настройки»',
+        (tester) async {
+      await pumpChat(tester);
+      recorder.permitted = false;
+      await tester.tap(mic());
+      await tester.pump();
+      expect(find.text(l10n.microphoneAccessDenied), findsOneWidget);
+      expect(find.text(l10n.openSettings), findsOneWidget);
+    });
+
+    testWidgets('swipe up locks; stop gives a draft to listen and send',
+        (tester) async {
+      final store = await pumpChat(tester);
+      final gesture = await hold(tester, 1);
+      await gesture.moveBy(const Offset(0, -100));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byType(VoiceLockedBar), findsOneWidget);
+      expect(find.text('0:02'), findsOneWidget);
+
+      await tester.tap(find.byTooltip(l10n.voiceStop));
+      await tester.pump();
+      expect(find.byType(VoiceDraftBar), findsOneWidget);
+      expect(find.bySemanticsLabel(l10n.voicePlay), findsOneWidget);
+      expect(store.messagesFor('chat-project-1', _foreman.id).value, isEmpty);
+
+      await tester.tap(find.byTooltip(l10n.sendMessage));
+      await tester.pump();
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(find.byType(VoiceDraftBar), findsNothing);
+      expect(
+        store.messagesFor('chat-project-1', _foreman.id).value.single.kind,
+        MessageKind.voice,
+      );
+    });
+
+    testWidgets('swipe left cancels', (tester) async {
+      final store = await pumpChat(tester);
+      final gesture = await hold(tester, 2);
+      await gesture.moveBy(const Offset(-150, 0));
+      await tester.pump();
+      expect(find.byType(VoiceHoldingBar), findsNothing);
+      await gesture.up();
+      await tester.pump(const Duration(seconds: 2));
+      expect(store.messagesFor('chat-project-1', _foreman.id).value, isEmpty);
+      expect(recorder.calls.last, 'cancel');
     });
   });
 }

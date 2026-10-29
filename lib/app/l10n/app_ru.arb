@@ -783,5 +783,47 @@
   "@photoUploading": {"description": "Semantics of the progress ring on a photo being sent"},
 
   "voiceMessage": "Голосовое",
-  "@voiceMessage": {"description": "Chat list preview of a voice message: «Голосовое · 0:42»"}
+  "@voiceMessage": {"description": "Chat list preview of a voice message: «Голосовое · 0:42»"},
+
+  "recordVoice": "Записать голосовое",
+  "@recordVoice": {"description": "Microphone button of the chat message field: hold to record"},
+
+  "voiceHoldToRecord": "Удерживайте, чтобы записать",
+  "@voiceHoldToRecord": {"description": "Snack bar after a tap or a recording shorter than a second"},
+
+  "microphoneAccessDenied": "Нет доступа к микрофону. Его можно включить в настройках приложения",
+  "@microphoneAccessDenied": {"description": "The microphone permission was refused"},
+
+  "voiceRecordFailed": "Не удалось записать голосовое",
+  "@voiceRecordFailed": {"description": "The microphone failed to start or stop"},
+
+  "voiceRecording": "Идёт запись",
+  "@voiceRecording": {"description": "Semantics of the blinking dot while recording"},
+
+  "voiceSlideToCancel": "Влево — отмена",
+  "@voiceSlideToCancel": {"description": "Hint while holding the microphone"},
+
+  "voiceSlideToLock": "Вверх — запись без удержания",
+  "@voiceSlideToLock": {"description": "Lock hint above the microphone while holding it"},
+
+  "voiceStop": "Остановить",
+  "@voiceStop": {"description": "Stops a locked recording into a draft"},
+
+  "voiceListen": "Прослушать",
+  "@voiceListen": {"description": "Plays the recorded draft before sending"},
+
+  "voicePlay": "Воспроизвести",
+  "@voicePlay": {"description": "Play button of a voice note"},
+
+  "voicePause": "Пауза",
+  "@voicePause": {"description": "Pause button of a voice note"},
+
+  "voiceSpeed": "{speed}×",
+  "@voiceSpeed": {"description": "Playback speed button: 1×, 1.5×, 2×", "placeholders": {"speed": {"type": "String"}}},
+
+  "voiceUnheard": "Не прослушано",
+  "@voiceUnheard": {"description": "Semantics of the dot on someone else's voice note not played yet"},
+
+  "voiceUploading": "Голосовое загружается",
+  "@voiceUploading": {"description": "Semantics of the ring around a voice note being sent"}
 }

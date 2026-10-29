@@ -828,4 +828,49 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get voiceMessage => 'Голосовое';
+
+  @override
+  String get recordVoice => 'Записать голосовое';
+
+  @override
+  String get voiceHoldToRecord => 'Удерживайте, чтобы записать';
+
+  @override
+  String get microphoneAccessDenied =>
+      'Нет доступа к микрофону. Его можно включить в настройках приложения';
+
+  @override
+  String get voiceRecordFailed => 'Не удалось записать голосовое';
+
+  @override
+  String get voiceRecording => 'Идёт запись';
+
+  @override
+  String get voiceSlideToCancel => 'Влево — отмена';
+
+  @override
+  String get voiceSlideToLock => 'Вверх — запись без удержания';
+
+  @override
+  String get voiceStop => 'Остановить';
+
+  @override
+  String get voiceListen => 'Прослушать';
+
+  @override
+  String get voicePlay => 'Воспроизвести';
+
+  @override
+  String get voicePause => 'Пауза';
+
+  @override
+  String voiceSpeed(String speed) {
+    return '$speed×';
+  }
+
+  @override
+  String get voiceUnheard => 'Не прослушано';
+
+  @override
+  String get voiceUploading => 'Голосовое загружается';
 }

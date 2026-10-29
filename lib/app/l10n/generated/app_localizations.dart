@@ -1599,6 +1599,90 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Голосовое'**
   String get voiceMessage;
+
+  /// Microphone button of the chat message field: hold to record
+  ///
+  /// In ru, this message translates to:
+  /// **'Записать голосовое'**
+  String get recordVoice;
+
+  /// Snack bar after a tap or a recording shorter than a second
+  ///
+  /// In ru, this message translates to:
+  /// **'Удерживайте, чтобы записать'**
+  String get voiceHoldToRecord;
+
+  /// The microphone permission was refused
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет доступа к микрофону. Его можно включить в настройках приложения'**
+  String get microphoneAccessDenied;
+
+  /// The microphone failed to start or stop
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось записать голосовое'**
+  String get voiceRecordFailed;
+
+  /// Semantics of the blinking dot while recording
+  ///
+  /// In ru, this message translates to:
+  /// **'Идёт запись'**
+  String get voiceRecording;
+
+  /// Hint while holding the microphone
+  ///
+  /// In ru, this message translates to:
+  /// **'Влево — отмена'**
+  String get voiceSlideToCancel;
+
+  /// Lock hint above the microphone while holding it
+  ///
+  /// In ru, this message translates to:
+  /// **'Вверх — запись без удержания'**
+  String get voiceSlideToLock;
+
+  /// Stops a locked recording into a draft
+  ///
+  /// In ru, this message translates to:
+  /// **'Остановить'**
+  String get voiceStop;
+
+  /// Plays the recorded draft before sending
+  ///
+  /// In ru, this message translates to:
+  /// **'Прослушать'**
+  String get voiceListen;
+
+  /// Play button of a voice note
+  ///
+  /// In ru, this message translates to:
+  /// **'Воспроизвести'**
+  String get voicePlay;
+
+  /// Pause button of a voice note
+  ///
+  /// In ru, this message translates to:
+  /// **'Пауза'**
+  String get voicePause;
+
+  /// Playback speed button: 1×, 1.5×, 2×
+  ///
+  /// In ru, this message translates to:
+  /// **'{speed}×'**
+  String voiceSpeed(String speed);
+
+  /// Semantics of the dot on someone else's voice note not played yet
+  ///
+  /// In ru, this message translates to:
+  /// **'Не прослушано'**
+  String get voiceUnheard;
+
+  /// Semantics of the ring around a voice note being sent
+  ///
+  /// In ru, this message translates to:
+  /// **'Голосовое загружается'**
+  String get voiceUploading;
 }
 
 class _AppLocalizationsDelegate

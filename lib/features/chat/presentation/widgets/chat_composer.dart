@@ -12,9 +12,11 @@ import 'package:flutter/services.dart';
 ///
 /// Laid out as `[leading] [field [fieldSuffix]] [trailing]` with [top]
 /// above: the «+» for photos goes into [leading], the camera into
-/// [fieldSuffix], the picked photos into [top], the microphone (stage 3)
-/// into [trailingWhenEmpty], which shows in place of the send button while
-/// there is nothing to send.
+/// [fieldSuffix], the picked photos into [top], the microphone into
+/// [trailingWhenEmpty], which shows in place of the send button while
+/// there is nothing to send. A voice recording takes the row: [replacement]
+/// stands in for the «+» and the field, with the microphone beside it while
+/// held ([showTrailing]).
 class ChatComposer extends StatefulWidget {
   const ChatComposer({
     required this.onSend,
@@ -24,6 +26,8 @@ class ChatComposer extends StatefulWidget {
     this.top,
     this.hasAttachments = false,
     this.hintText,
+    this.replacement,
+    this.showTrailing = true,
     super.key,
   });
 
@@ -38,6 +42,11 @@ class ChatComposer extends StatefulWidget {
 
   /// In place of «Сообщение», e.g. «Подпись» while photos are attached.
   final String? hintText;
+
+  /// Instead of [leading] and the field, e.g. the recording bar. The typed
+  /// text stays for later.
+  final Widget? replacement;
+  final bool showTrailing;
 
   @override
   State<ChatComposer> createState() => _ChatComposerState();
@@ -111,38 +120,46 @@ class _ChatComposerState extends State<ChatComposer> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  ...widget.leading,
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      minLines: 1,
-                      maxLines: 5,
-                      keyboardType: TextInputType.multiline,
-                      textCapitalization: TextCapitalization.sentences,
-                      inputFormatters: [
-                        LengthLimitingTextInputFormatter(maxMessageLength),
-                      ],
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      decoration: InputDecoration(
-                        hintText: widget.hintText ?? l10n.messageHint,
-                        isDense: true,
-                        suffixIcon: widget.fieldSuffix,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacing16,
-                          vertical: 12,
+                  if (widget.replacement case final replacement?)
+                    Expanded(child: replacement)
+                  else ...[
+                    ...widget.leading,
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        minLines: 1,
+                        maxLines: 5,
+                        keyboardType: TextInputType.multiline,
+                        textCapitalization: TextCapitalization.sentences,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(maxMessageLength),
+                        ],
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          hintText: widget.hintText ?? l10n.messageHint,
+                          isDense: true,
+                          suffixIcon: widget.fieldSuffix,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacing16,
+                            vertical: 12,
+                          ),
+                          border: border,
+                          enabledBorder: border,
+                          focusedBorder: border,
                         ),
-                        border: border,
-                        enabledBorder: border,
-                        focusedBorder: border,
                       ),
                     ),
-                  ),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 150),
-                    transitionBuilder: (child, animation) =>
-                        ScaleTransition(scale: animation, child: child),
-                    child: trailing,
-                  ),
+                  ],
+                  // Keyed: a held microphone keeps its pointer while the
+                  // row around it changes.
+                  if (widget.showTrailing)
+                    AnimatedSwitcher(
+                      key: const ValueKey('trailing'),
+                      duration: const Duration(milliseconds: 150),
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
+                      child: trailing,
+                    ),
                 ],
               ),
             ),

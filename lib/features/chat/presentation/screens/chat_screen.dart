@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:app_settings/app_settings.dart';
 import 'package:buildflow/app/l10n/failure_messages.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/audio/voice_note.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/photos/lost_capture.dart';
 import 'package:buildflow/core/photos/photo_draft.dart';
@@ -25,10 +27,12 @@ import 'package:buildflow/features/chat/domain/entities/message.dart';
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
 import 'package:buildflow/features/chat/presentation/chat_texts.dart';
 import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
+import 'package:buildflow/features/chat/presentation/providers/voice_recording_provider.dart';
 import 'package:buildflow/features/chat/presentation/widgets/chat_avatar.dart';
 import 'package:buildflow/features/chat/presentation/widgets/chat_composer.dart';
 import 'package:buildflow/features/chat/presentation/widgets/message_bubble.dart';
 import 'package:buildflow/features/chat/presentation/widgets/message_photos.dart';
+import 'package:buildflow/features/chat/presentation/widgets/voice_recorder_bar.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
 import 'package:flutter/material.dart';
@@ -83,7 +87,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         lostCaptureProvider,
         _onLostCapture,
         fireImmediately: true,
+      )
+      ..listenManual(voiceRecordingProvider(widget.chatId), _onVoiceHint);
+  }
+
+  VoiceRecordingNotifier get _voice =>
+      ref.read(voiceRecordingProvider(widget.chatId).notifier);
+
+  /// Snack bars of the recording: too short, no microphone, failed.
+  void _onVoiceHint(VoiceRecording? previous, VoiceRecording next) {
+    final hint = next.hint;
+    if (hint == null || next.hintSeq == previous?.hintSeq) return;
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        switch (hint) {
+          VoiceHint.tooShort =>
+            SnackBar(content: Text(l10n.voiceHoldToRecord)),
+          VoiceHint.failed => SnackBar(content: Text(l10n.voiceRecordFailed)),
+          VoiceHint.permissionDenied => SnackBar(
+              content: Text(l10n.microphoneAccessDenied),
+              duration: const Duration(seconds: 8),
+              action: SnackBarAction(
+                label: l10n.openSettings,
+                onPressed: AppSettings.openAppSettings,
+              ),
+            ),
+        },
       );
+  }
+
+  /// A note that came out of the recording goes into the queue.
+  Future<void> _sendVoice(Future<VoiceNote?> recording) async {
+    final note = await recording;
+    if (note != null && mounted) unawaited(_notifier.sendVoice(note));
   }
 
   /// A shot lost with the app while taking a photo for this chat comes back
@@ -321,6 +359,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final me = ref.watch(currentUserProvider)?.id;
     final members = ref.watch(membersProvider).valueOrNull;
     final photos = ref.watch(photoDraftsProvider(_photoScope));
+    final voice = ref.watch(voiceRecordingProvider(widget.chatId));
     final peerId = me == null ? null : chat?.peerOf(me);
     final peer = peerId == null
         ? null
@@ -404,6 +443,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onRemove: (draft) => _photos.remove(draft.id),
                         onFailedTap: _onFailedPhoto,
                       ),
+                trailingWhenEmpty: VoiceMicButton(
+                  key: const ValueKey('mic'),
+                  holding: voice.phase == VoicePhase.holding,
+                  onPress: _voice.press,
+                  onDrag: _voice.drag,
+                  onRelease: () => _sendVoice(_voice.release()),
+                  onCancel: _voice.cancel,
+                ),
+                // The held microphone stays; locked and draft have their
+                // own buttons.
+                showTrailing: switch (voice.phase) {
+                  VoicePhase.locked || VoicePhase.draft => false,
+                  _ => true,
+                },
+                replacement: switch (voice.phase) {
+                  VoicePhase.holding => VoiceHoldingBar(recording: voice),
+                  VoicePhase.locked => VoiceLockedBar(
+                      recording: voice,
+                      onDelete: _voice.delete,
+                      onStop: _voice.stop,
+                      onSend: () => _sendVoice(_voice.send()),
+                    ),
+                  VoicePhase.draft => VoiceDraftBar(
+                      note: voice.draft!,
+                      onDelete: _voice.delete,
+                      onSend: () => _sendVoice(_voice.send()),
+                    ),
+                  VoicePhase.idle || VoicePhase.starting => null,
+                },
               ),
           ],
         ),
