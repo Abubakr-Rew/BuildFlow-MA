@@ -4,6 +4,7 @@ import 'package:buildflow/app/theme/app_text_theme.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/photos/lost_capture.dart';
 import 'package:buildflow/core/photos/photo_draft.dart';
 import 'package:buildflow/core/photos/photo_picking.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
@@ -15,6 +16,7 @@ import 'package:buildflow/core/widgets/bf_icon_button.dart';
 import 'package:buildflow/core/widgets/bf_text_field.dart';
 import 'package:buildflow/core/widgets/photo_draft_tile.dart';
 import 'package:buildflow/core/widgets/retry_delete_sheet.dart';
+import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
@@ -60,6 +62,36 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
 
   PhotoDraftsNotifier get _photos =>
       ref.read(photoDraftsProvider(_photoScope).notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<LostCapture?>(
+      lostCaptureProvider,
+      _onLostCapture,
+      fireImmediately: true,
+    );
+  }
+
+  /// A shot lost with the app while taking a report photo comes back here,
+  /// with the project chosen then.
+  void _onLostCapture(LostCapture? previous, LostCapture? capture) {
+    if (capture == null) return;
+    // Providers don't change while the tree builds.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final me = ref.read(currentUserProvider)?.id;
+      final taken = ref.read(lostCaptureProvider.notifier).take(
+            (t) => t.kind == CaptureKind.report && t.userId == me,
+          );
+      if (taken == null) return;
+      _photos.add(taken.paths);
+      final projectId = taken.target.id;
+      if (projectId != null && _selectedProjectId == null) {
+        setState(() => _selectedProjectId = projectId);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -125,11 +157,15 @@ class _NewReportScreenState extends ConsumerState<NewReportScreen> {
   }
 
   Future<void> _pickPhoto(ImageSource source) async {
+    final me = ref.read(currentUserProvider)?.id;
+    if (me == null) return;
     final picked = ref.read(photoDraftsProvider(_photoScope)).length;
     final paths = await pickPhotos(
       context,
+      ref,
       source: source,
       limit: _maxPhotos - picked,
+      target: CaptureTarget.report(userId: me, projectId: _selectedProjectId),
     );
     if (mounted) _photos.add(paths);
   }

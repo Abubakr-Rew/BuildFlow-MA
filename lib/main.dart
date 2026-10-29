@@ -37,9 +37,11 @@ Future<void> main() async {
     ),
   );
 
-  // Photo copies and picker leftovers of earlier runs: nothing waits for
-  // them, the send queues live in memory. Off the startup path.
-  WidgetsBinding.instance.addPostFrameCallback(
-    (_) => unawaited(container.read(photoCompressorProvider).sweep()),
-  );
+  // Off the startup path: a camera shot lost when Android killed the app
+  // under the camera goes back where it was taken; photo copies and picker
+  // leftovers of earlier runs are swept (the send queues live in memory).
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(container.read(lostCaptureProvider.notifier).recover());
+    unawaited(container.read(photoCompressorProvider).sweep());
+  });
 }

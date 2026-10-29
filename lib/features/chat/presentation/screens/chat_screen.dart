@@ -6,6 +6,7 @@ import 'package:buildflow/app/routes.dart';
 import 'package:buildflow/app/theme/app_theme.dart';
 import 'package:buildflow/app/theme/theme_extensions.dart';
 import 'package:buildflow/core/error/failures.dart';
+import 'package:buildflow/core/photos/lost_capture.dart';
 import 'package:buildflow/core/photos/photo_draft.dart';
 import 'package:buildflow/core/photos/photo_picking.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
@@ -72,11 +73,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
-    ref.listenManual(
-      chatThreadProvider(widget.chatId),
-      _onThread,
-      fireImmediately: true,
-    );
+    ref
+      ..listenManual(
+        chatThreadProvider(widget.chatId),
+        _onThread,
+        fireImmediately: true,
+      )
+      ..listenManual<LostCapture?>(
+        lostCaptureProvider,
+        _onLostCapture,
+        fireImmediately: true,
+      );
+  }
+
+  /// A shot lost with the app while taking a photo for this chat comes back
+  /// into the field and is compressed there.
+  void _onLostCapture(LostCapture? previous, LostCapture? capture) {
+    if (capture == null) return;
+    // Providers don't change while the tree builds.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final me = ref.read(currentUserProvider)?.id;
+      final taken = ref.read(lostCaptureProvider.notifier).take(
+            (t) =>
+                t.kind == CaptureKind.chat &&
+                t.id == widget.chatId &&
+                t.userId == me,
+          );
+      if (taken != null) _photos.add(taken.paths);
+    });
   }
 
   @override
@@ -216,7 +241,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       );
       return;
     }
-    final paths = await pickPhotos(context, source: source, limit: left);
+    final me = ref.read(currentUserProvider)?.id;
+    if (me == null) return;
+    final paths = await pickPhotos(
+      context,
+      ref,
+      source: source,
+      limit: left,
+      target: CaptureTarget.chat(userId: me, chatId: widget.chatId),
+    );
     if (mounted) _photos.add(paths);
   }
 

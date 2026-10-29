@@ -2,8 +2,12 @@ import 'dart:async';
 
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
+import 'package:buildflow/core/photos/lost_capture.dart';
 import 'package:buildflow/core/photos/photo_compressor.dart';
 import 'package:buildflow/core/photos/photo_draft.dart';
+import 'package:buildflow/core/photos/photo_picker.dart';
+import 'package:buildflow/core/storage/storage_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -11,6 +15,68 @@ import 'package:uuid/uuid.dart';
 final photoCompressorProvider = Provider<PhotoCompressor>(
   (ref) => const PlatformPhotoCompressor(),
 );
+
+/// The system camera and gallery; tests override it.
+final photoPickerProvider = Provider<PhotoPicker>(
+  (ref) => ImagePickerPhotoPicker(),
+);
+
+/// A camera shot that came back after Android killed the app under the
+/// camera, until its screen takes it. `recover()` runs once after start.
+final lostCaptureProvider =
+    NotifierProvider<LostCaptureNotifier, LostCapture?>(
+  LostCaptureNotifier.new,
+);
+
+class LostCaptureNotifier extends Notifier<LostCapture?> {
+  @override
+  LostCapture? build() => null;
+
+  /// Asks the picker for a shot lost with the app and where it belongs.
+  /// A shot with no saved place (e.g. from an older version) is deleted.
+  Future<void> recover() async {
+    final storage = ref.read(localStorageProvider);
+    Map<String, dynamic>? saved;
+    LostPhotos lost;
+    try {
+      saved = await storage.readJson(pendingCaptureKey);
+      await storage.remove(pendingCaptureKey);
+    } on Exception catch (e) {
+      debugPrint('Pending capture unreadable: $e');
+    }
+    try {
+      lost = await ref.read(photoPickerProvider).retrieveLost();
+    } on Exception catch (e) {
+      debugPrint('Lost photo retrieval failed: $e');
+      return;
+    }
+    if (lost.error != null) debugPrint('Lost photo error: ${lost.error}');
+    if (lost.paths.isEmpty) return;
+
+    final target = saved == null ? null : CaptureTarget.fromJson(saved);
+    if (target == null) {
+      unawaited(ref.read(photoCompressorProvider).delete(lost.paths));
+      return;
+    }
+    state = LostCapture(target: target, paths: lost.paths);
+  }
+
+  /// The waiting shot if [belongs] says it's for the caller, once.
+  LostCapture? take(bool Function(CaptureTarget target) belongs) {
+    final capture = state;
+    if (capture == null || !belongs(capture.target)) return null;
+    state = null;
+    return capture;
+  }
+
+  /// Drops the waiting shot and its files, e.g. when someone else signed in.
+  void discard() {
+    final capture = state;
+    if (capture == null) return;
+    state = null;
+    unawaited(ref.read(photoCompressorProvider).delete(capture.paths));
+  }
+}
 
 /// Photos picked in one place and being compressed, by scope: one per new
 /// report screen, `chat:<id>` for the message field of a chat. Leaving the

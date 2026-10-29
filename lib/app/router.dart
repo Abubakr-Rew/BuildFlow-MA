@@ -1,5 +1,7 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
 import 'package:buildflow/app/routes.dart';
+import 'package:buildflow/core/photos/lost_capture.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/core/widgets/bf_bottom_nav.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -229,7 +231,7 @@ class _RoleShell extends ConsumerWidget {
     };
 
     return Scaffold(
-      body: shell,
+      body: _LostCaptureOpener(role: role, child: shell),
       bottomNavigationBar: BfBottomNav(
         selectedIndex: shell.currentIndex,
         onSelected: (i) => shell.goBranch(
@@ -240,4 +242,57 @@ class _RoleShell extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Opens the screen a camera shot was for when the shot came back after
+/// Android killed the app under the camera: the chat, or the new report.
+/// The screen then takes the shot into its photos.
+class _LostCaptureOpener extends ConsumerStatefulWidget {
+  const _LostCaptureOpener({required this.role, required this.child});
+
+  final _ShellRole role;
+  final Widget child;
+
+  @override
+  ConsumerState<_LostCaptureOpener> createState() => _LostCaptureOpenerState();
+}
+
+class _LostCaptureOpenerState extends ConsumerState<_LostCaptureOpener> {
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<LostCapture?>(
+      lostCaptureProvider,
+      (_, capture) {
+        if (capture == null) return;
+        // Navigation and provider changes wait for the frame to finish.
+        WidgetsBinding.instance.addPostFrameCallback((_) => _open(capture));
+      },
+      fireImmediately: true,
+    );
+  }
+
+  void _open(LostCapture capture) {
+    if (!mounted || ref.read(lostCaptureProvider) != capture) return;
+    final target = capture.target;
+    if (target.userId != ref.read(currentUserProvider)?.id) {
+      ref.read(lostCaptureProvider.notifier).discard();
+      return;
+    }
+    switch (target.kind) {
+      case CaptureKind.chat:
+        context.push(Routes.chat(target.id!));
+      case CaptureKind.report when widget.role == _ShellRole.foreman:
+        context.go(Routes.foremanNewReport);
+      case CaptureKind.report:
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => NewReportScreen(initialProjectId: target.id),
+          ),
+        );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

@@ -1,7 +1,11 @@
 import 'package:app_settings/app_settings.dart';
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/core/photos/lost_capture.dart';
+import 'package:buildflow/core/photos/photo_providers.dart';
+import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// Long enough to read the access hint and reach the settings button.
@@ -28,37 +32,50 @@ const _actionSnackBarDuration = Duration(seconds: 8);
 /// chat alike. Returns the originals' paths: no resizing here, the
 /// `PhotoCompressor` does it properly. On failure a snack bar says why,
 /// with «Настройки» when the camera permission was refused.
+///
+/// While the camera is open [target] is kept in local storage: if Android
+/// kills the app meanwhile, `LostCaptureNotifier.recover()` brings the shot
+/// back to it on the next start.
 Future<List<String>> pickPhotos(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   required ImageSource source,
   required int limit,
+  required CaptureTarget target,
 }) async {
   if (limit <= 0) return const [];
   final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  final picker = ImagePicker();
+  final picker = ref.read(photoPickerProvider);
+  final storage = ref.read(localStorageProvider);
   try {
-    final files = switch (source) {
-      ImageSource.camera => [
-          if (await picker.pickImage(source: ImageSource.camera)
-              case final shot?)
-            shot,
-        ],
-      // pickMultiImage wants a limit of at least 2.
-      ImageSource.gallery when limit == 1 => [
-          if (await picker.pickImage(source: ImageSource.gallery)
-              case final one?)
-            one,
-        ],
-      ImageSource.gallery => await picker.pickMultiImage(limit: limit),
-    };
+    final List<String> paths;
+    if (source == ImageSource.camera) {
+      // Best effort: without it a lost shot is only lost, as before.
+      try {
+        await storage.saveJson(pendingCaptureKey, target.toJson());
+      } on Exception catch (e) {
+        debugPrint('Pending capture not saved: $e');
+      }
+      try {
+        paths = [?await picker.takePhoto()];
+      } finally {
+        try {
+          await storage.remove(pendingCaptureKey);
+        } on Exception catch (e) {
+          debugPrint('Pending capture not removed: $e');
+        }
+      }
+    } else {
+      paths = await picker.pickFromGallery(limit: limit);
+    }
     // Older Androids ignore the limit of the system picker.
-    if (files.length > limit) {
+    if (paths.length > limit) {
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.photoLimitReached(limit))),
       );
     }
-    return [for (final file in files.take(limit)) file.path];
+    return paths.take(limit).toList();
   } on Exception catch (e) {
     // The exception text is for debugging, not for the user.
     debugPrint('Photo pick failed: $e');
