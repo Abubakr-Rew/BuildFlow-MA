@@ -384,8 +384,10 @@ void main() {
       expect(find.text('Плита готова'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsWidgets);
 
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pump(const Duration(seconds: 1));
+      // Two uploads of up to 1.4 s each, then the send's latency.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
       final sent = store.messagesFor('chat-project-1', _foreman.id).value.last;
       expect(sent.kind, MessageKind.photo);
       expect(sent.text, 'Плита готова');
