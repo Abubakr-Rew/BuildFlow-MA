@@ -101,11 +101,19 @@ Text(l10n.failureMessage(error))                                             // 
   последнее. `Bitmap.compress` не пишет EXIF: GPS, модель и серийники не уходят; назад читается только
   `DateTimeOriginal` + `OffsetTimeOriginal` (`parseExifDateTime`). Копии — в `cacheDir/photos`; `delete` и `sweep`
   трогают только `cacheDir`. Один фоновый поток. Любой сбой (HEIC до Android 9, битый файл, OOM, не Android) —
-  `FailureCode.photoProcessing`, без исключений. В лог пишется «Photo compressed in N ms: 1600×1200, 380 KB, quality 82».
+  `FailureCode.photoProcessing`, без исключений. В debug и profile в лог пишется «Photo compressed in 387 ms
+  (work 169 ms): 3472×4624, 3207 KB → 1201×1600, 183 KB, quality 82» (work — без ожидания в очереди), в release — ничего.
   Для iOS реализации пока нет (нужна такая же на Swift).
-- `pickPhotos(context, source:, limit:)` и `describePhotoPickError()` — [photo_picking.dart](lib/core/photos/photo_picking.dart):
-  берёт оригиналы без ресайза (галерея — `pickMultiImage(limit:)`, при `limit == 1` — `pickImage`), лишние сверх
-  лимита отбрасывает со снэкбаром, при отказе в доступе — снэкбар с «Настройки».
+- `pickPhotos(context, ref, source:, limit:, target:)` и `describePhotoPickError()` —
+  [photo_picking.dart](lib/core/photos/photo_picking.dart): берёт оригиналы без ресайза через `PhotoPicker`
+  (`photoPickerProvider`, обёртка над image_picker; галерея — `pickMultiImage(limit:)`, при `limit == 1` — `pickImage`),
+  лишние сверх лимита отбрасывает со снэкбаром, при отказе в доступе — снэкбар с «Настройки».
+- Потерянный кадр: Android может убить приложение, пока открыта камера. Поэтому `pickPhotos` на время камеры
+  сохраняет `CaptureTarget` (чат или отчёт с объектом, и пользователь) в local storage (`pendingCaptureKey`).
+  После первого кадра main.dart вызывает `lostCaptureProvider.notifier.recover()` → `retrieveLostData()`. Кадр
+  с сохранённым местом ждёт в `lostCaptureProvider`, без места — удаляется. `_LostCaptureOpener` в оболочке роли
+  (router.dart) открывает чат или новый отчёт (у прораба — вкладку), а экран забирает кадр `take(...)` в свои
+  черновики и сжимает. Кадр другого пользователя удаляется.
 - `photoDraftsProvider(scope)` (autoDispose family, `PhotoDraftsNotifier`) — выбранные фото одного места: `report:<uuid>`
   у каждого экрана нового отчёта, `chat:<id>` у поля ввода чата. Сжатие стартует сразу после выбора; `PhotoDraft` —
   `processing` / `ready` / `failed`. `retry`, `remove` (удаляет оригинал и копию), `takeAll()` (отдаёт фото с ещё
@@ -271,8 +279,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   (`test/app/theme/contrast_test.dart`), `AvatarInitials` и бейдж статуса, правила поиска людей и «Недавние»,
   `FakeChatStore` (доставка, идемпотентность, непрочитанные, доступ при смене состава, эхо, вложения), `ChatThreadNotifier`,
   лента и поиск чатов. Компрессор в тестах — `FakePhotoCompressor` из test/helpers (копия `x.jpg` → `x.jpg.small.jpg`,
-  `failing` — какие оригиналы не сжимаются, `compressed` / `deleted` — что вызывали); выбор фото в виджет-тестах
-  имитируется через `photoDraftsProvider(scope).notifier.add(...)`, сам image_picker не вызывается. Виджет-тесты: `test/app/router_test.dart`
+  `failing` — какие оригиналы не сжимаются, `compressed` / `deleted` — что вызывали); камера и галерея —
+  `FakePhotoPicker` (`shot`, `gallery`, `lost`, `cameraError`, `whileCameraOpen`) через `photoPickerProvider`;
+  local storage — `SharedPreferences.setMockInitialValues({})` и настоящий `LocalStorageService`. Выбор фото на экране
+  можно имитировать и через `photoDraftsProvider(scope).notifier.add(...)`. Виджет-тесты: `test/app/router_test.dart`
   (`MaterialApp.router`) и экраны через `pumpTestApp()` из [test/helpers/test_app.dart](test/helpers/test_app.dart).
   Сценарии на всём приложении (вход, выход, переходы) — через `FullApp.pump()` из
   [test/helpers/full_app.dart](test/helpers/full_app.dart), пример — `test/features/chat/presentation/chat_flow_test.dart`.
@@ -363,6 +373,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   бывает только этот код, потому что галерее разрешение не нужно; `photo_access_denied` приходит только на iOS.
   Текст ошибки выбирает `describePhotoPickError()` в core/photos/photo_picking.dart. При отказе в доступе снэкбар
   предлагает действие «Настройки», которое вызывает `AppSettings.openAppSettings()`.
+- Плагины, которые ходят в Kotlin через JNI (`package:jni`, Pigeon JNI), ломаются только в release: R8 переименовывает
+  классы, которые ищутся по имени. Так `shared_preferences_android` 2.5.1 ронял чтение и запись темы
+  (`NoSuchMethodError … SharedPreferencesApiRegistrar.getAll`), исправлено в 2.5.2 (сейчас 2.5.4). Тесты и debug это
+  не ловят: после обновления таких плагинов проверять release-сборку на телефоне.
 - `pickMultiImage(limit:)` требует `limit >= 2`, а старые Android лимит системного пикера игнорируют — `pickPhotos`
   обрабатывает оба случая.
 - Вход по коду приглашения: ссылка «Есть код приглашения?» на экране входа ведёт на `/join` (`JoinScreen`):
