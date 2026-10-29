@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:buildflow/core/audio/demo_voice.dart';
+import 'package:buildflow/core/audio/voice_note.dart';
+import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/chat/data/fake_chat_demo_data.dart';
@@ -23,7 +26,9 @@ import 'package:flutter/foundation.dart';
 /// - direct chats only within one company;
 /// - a member removed from the company loses every chat of it, direct
 ///   ones included ([FakeTeamStore] tells the store);
-/// - a photo can be attached only by the user who uploaded it, and once.
+/// - a photo or a voice note can be attached only by the user who uploaded
+///   it, and once; a voice note goes alone, without text or photos;
+/// - «listened» is kept per user for every voice note.
 ///
 /// Created only by `fakeChatStoreProvider`; tests may create their own.
 class FakeChatStore {
@@ -132,13 +137,16 @@ class FakeChatStore {
 
   // ── Writes ─────────────────────────────────────────────────
 
-  /// A photo uploaded by [userId], to attach to one of their messages. In
-  /// demo mode [url] is the compressed copy on the phone.
+  /// A photo or a voice note uploaded by [userId], to attach to one of
+  /// their messages. In demo mode [url] is the file on the phone.
   Result<MessageAttachment> registerUpload(
     String userId, {
     required String url,
-    required int width,
-    required int height,
+    int? width,
+    int? height,
+    int? durationMs,
+    List<int>? waveform,
+    String? mime,
   }) {
     if (_team.memberByUserId(userId) == null) return Err(_notInCompany(userId));
     final attachment = MessageAttachment(
@@ -146,6 +154,9 @@ class FakeChatStore {
       url: url,
       width: width,
       height: height,
+      durationMs: durationMs,
+      waveform: waveform,
+      mime: mime,
     );
     _uploads[attachment.id] = (ownerId: userId, attachment: attachment);
     return Success(attachment);
@@ -190,6 +201,16 @@ class FakeChatStore {
         );
       }
       attachments.add(upload.attachment);
+    }
+    final voices = attachments.where((a) => a.durationMs != null).length;
+    if (voices > 0 &&
+        (voices > 1 || attachments.length > 1 || trimmed.isNotEmpty)) {
+      return const Err(
+        Failure(
+          FailureCode.validation,
+          message: 'A voice note goes alone, without text or photos',
+        ),
+      );
     }
     if (chat!.type.isDirect) {
       final peer = chat.participants.firstWhere((id) => id != userId);
@@ -261,6 +282,28 @@ class FakeChatStore {
       );
     }
     if (_readUpTo(chat, userId, index)) _emit();
+    return const Success(null);
+  }
+
+  /// Marks the voice note [messageId] as played by [userId].
+  Result<void> markListened(
+    String chatId,
+    String userId, {
+    required String messageId,
+  }) {
+    final chat = _chats[chatId];
+    final denied = _denied(chat, chatId, userId);
+    if (denied != null) return Err(denied);
+    final index = chat!.messages.indexWhere((m) => m.id == messageId);
+    if (index == -1 || chat.messages[index].kind != MessageKind.voice) {
+      return Err(
+        Failure(
+          FailureCode.notFound,
+          message: 'Voice note $messageId not found',
+        ),
+      );
+    }
+    if ((chat.listened[index] ??= {}).add(userId)) _emit();
     return const Success(null);
   }
 
@@ -370,7 +413,11 @@ class FakeChatStore {
         clientId: clientId ?? id,
         chatId: chat.id,
         senderId: senderId,
-        kind: attachments.isEmpty ? MessageKind.text : MessageKind.photo,
+        kind: switch (attachments) {
+          [] => MessageKind.text,
+          [MessageAttachment(durationMs: _?)] => MessageKind.voice,
+          _ => MessageKind.photo,
+        },
         text: attachments.isNotEmpty && text.isEmpty ? null : text,
         attachments: attachments,
         createdAt: createdAt,
@@ -435,9 +482,15 @@ class FakeChatStore {
   }
 
   /// The message at [index] as [userId] sees it: their own messages are
-  /// [MessageStatus.read] once someone else has read them.
+  /// [MessageStatus.read] once someone else has read them; others' voice
+  /// notes say whether [userId] has played them.
   Message _messageView(_ChatRecord chat, int index, String userId) {
     final m = chat.messages[index];
+    if (m.kind == MessageKind.voice && m.senderId != userId) {
+      return m.copyWith(
+        listened: chat.listened[index]?.contains(userId) ?? false,
+      );
+    }
     if (m.senderId != userId || m.kind == MessageKind.system) return m;
     final readByOthers =
         chat.lastRead.entries.any((e) => e.key != userId && e.value >= index);
@@ -527,6 +580,34 @@ class FakeChatStore {
       _append(chat, sender, text: text, at: at);
     }
 
+    // Demo voice notes are made in code (DemoVoice); nobody has played
+    // them, so they show the «not listened» dot.
+    var demoVoice = 0;
+    void voice(
+      _ChatRecord? chat,
+      String sender,
+      Duration length,
+      DateTime at,
+    ) {
+      if (chat == null) return;
+      final url = DemoVoice.url(++demoVoice, length);
+      _append(
+        chat,
+        sender,
+        text: '',
+        at: at,
+        attachments: [
+          MessageAttachment(
+            id: 'att-voice-$demoVoice',
+            url: url,
+            durationMs: length.inMilliseconds,
+            waveform: DemoVoice.waveform(url, kVoiceWaveformBars),
+            mime: VoiceNote.mime,
+          ),
+        ],
+      );
+    }
+
     // Demo photos are `fake:` placeholders; portrait every third one.
     var demoPhoto = 0;
     void show(
@@ -576,11 +657,13 @@ class FakeChatStore {
         'Доброе утро. Бетон на 8-й этаж заказал на 9:00.', ago(130));
     say(alaToo, demoWorker1Id, 'Миксер приехал, начинаем заливку.', ago(118));
     show(alaToo, demoWorker1Id, 1, ago(117));
+    voice(alaToo, demoWorker1Id, const Duration(seconds: 7), ago(114));
     say(alaToo, demoWorker1Id, 'Второй вибратор взяли из бытовки.', ago(116));
     show(alaToo, demoForeman1Id, 3, ago(62),
         caption: 'Армирование плиты перед заливкой');
     say(alaToo, demoForeman1Id,
         'Залили 12 кубов из 20, перерыв на обед.', ago(60));
+    voice(alaToo, demoForeman1Id, const Duration(seconds: 42), ago(50));
     say(alaToo, demoOwnerId,
         'Принято. Фото после заливки добавьте в отчёт.', ago(45));
     say(alaToo, demoForeman1Id, 'Хорошо, к 17:00 будет отчёт.', ago(20));
@@ -626,6 +709,7 @@ class FakeChatStore {
     say(ownerForeman, demoForeman1Id,
         'Да, встречу. Подготовлю журнал работ.', dayAt(1, 18, 25));
     show(ownerForeman, demoForeman1Id, 1, ago(12));
+    voice(ownerForeman, demoForeman1Id, const Duration(seconds: 23), ago(11));
     say(ownerForeman, demoForeman1Id,
         'Заказчик доволен, просит ускорить фасад.', ago(10));
     readAll(ownerForeman, unread: {demoOwnerId: 1});
@@ -669,4 +753,7 @@ class _ChatRecord {
 
   /// userId → index in [messages] of the last message they have read.
   final Map<String, int> lastRead = {};
+
+  /// Index of a voice note → who has played it.
+  final Map<int, Set<String>> listened = {};
 }

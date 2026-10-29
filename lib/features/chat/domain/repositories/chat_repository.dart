@@ -1,3 +1,4 @@
+import 'package:buildflow/core/audio/voice_note.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
@@ -46,9 +47,18 @@ abstract class ChatRepository {
     ValueChanged<double>? onProgress,
   });
 
-  /// Sends a message: [text], or photos uploaded by [uploadPhoto] with
-  /// [text] as their optional caption. Idempotent by [clientId]: a retry
-  /// returns the message created by the first attempt.
+  /// Uploads a recorded voice note, reporting [onProgress] from 0 to 1;
+  /// the attachment carries its length and waveform. Like a photo, it
+  /// belongs to the uploader and can be attached once.
+  Future<Result<MessageAttachment>> uploadVoice(
+    VoiceNote note, {
+    ValueChanged<double>? onProgress,
+  });
+
+  /// Sends a message: [text]; photos uploaded by [uploadPhoto] with [text]
+  /// as their optional caption; or one voice note from [uploadVoice].
+  /// Idempotent by [clientId]: a retry returns the message created by the
+  /// first attempt.
   Future<Result<Message>> send(
     String chatId, {
     required String clientId,
@@ -59,6 +69,9 @@ abstract class ChatRepository {
   /// The direct chat with [userId], created on first use. Only within the
   /// company; never with oneself.
   Future<Result<Chat>> getOrCreateDirect(String userId);
+
+  /// Marks the voice note [messageId] as played by the user.
+  Future<Result<void>> markListened(String chatId, {required String messageId});
 
   /// Marks the messages up to and including [upTo] as read.
   Future<Result<void>> markRead(String chatId, {required String upTo});

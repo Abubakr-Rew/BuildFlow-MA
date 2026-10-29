@@ -825,4 +825,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get photoUploading => 'Фото загружается';
+
+  @override
+  String get voiceMessage => 'Голосовое';
 }

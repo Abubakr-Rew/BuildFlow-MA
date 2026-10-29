@@ -13,6 +13,10 @@ _MessageAttachment _$MessageAttachmentFromJson(Map<String, dynamic> json) =>
       width: (json['width'] as num?)?.toInt(),
       height: (json['height'] as num?)?.toInt(),
       durationMs: (json['durationMs'] as num?)?.toInt(),
+      waveform: (json['waveform'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList(),
+      mime: json['mime'] as String?,
     );
 
 Map<String, dynamic> _$MessageAttachmentToJson(_MessageAttachment instance) =>
@@ -22,4 +26,6 @@ Map<String, dynamic> _$MessageAttachmentToJson(_MessageAttachment instance) =>
       'width': instance.width,
       'height': instance.height,
       'durationMs': instance.durationMs,
+      'waveform': instance.waveform,
+      'mime': instance.mime,
     };

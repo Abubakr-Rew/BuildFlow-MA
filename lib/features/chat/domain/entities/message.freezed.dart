@@ -20,7 +20,9 @@ mixin _$Message {
 /// clientId returns the message instead of creating a duplicate.
  String get clientId; String get chatId; String get senderId; MessageKind get kind; DateTime get createdAt;/// Delivery state as the current user sees it; meaningful for their
 /// own messages only.
- MessageStatus get status; String? get text; List<MessageAttachment> get attachments;/// The report of a [MessageKind.report] message.
+ MessageStatus get status; String? get text; List<MessageAttachment> get attachments;/// Whether the current user has played this voice note; others' notes
+/// show a dot until then.
+ bool get listened;/// The report of a [MessageKind.report] message.
  String? get reportId;/// What a [MessageKind.system] message reports, and about whom.
  ChatSystemEvent? get systemEvent; String? get subjectUserId;
 /// Create a copy of Message
@@ -36,20 +38,20 @@ $MessageCopyWith<Message> get copyWith => _$MessageCopyWithImpl<Message>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Message;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.clientId, _this.clientId) || other.clientId == _this.clientId)&&(identical(other.chatId, _this.chatId) || other.chatId == _this.chatId)&&(identical(other.senderId, _this.senderId) || other.senderId == _this.senderId)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.text, _this.text) || other.text == _this.text)&&const DeepCollectionEquality().equals(other.attachments, _this.attachments)&&(identical(other.reportId, _this.reportId) || other.reportId == _this.reportId)&&(identical(other.systemEvent, _this.systemEvent) || other.systemEvent == _this.systemEvent)&&(identical(other.subjectUserId, _this.subjectUserId) || other.subjectUserId == _this.subjectUserId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.clientId, _this.clientId) || other.clientId == _this.clientId)&&(identical(other.chatId, _this.chatId) || other.chatId == _this.chatId)&&(identical(other.senderId, _this.senderId) || other.senderId == _this.senderId)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.text, _this.text) || other.text == _this.text)&&const DeepCollectionEquality().equals(other.attachments, _this.attachments)&&(identical(other.listened, _this.listened) || other.listened == _this.listened)&&(identical(other.reportId, _this.reportId) || other.reportId == _this.reportId)&&(identical(other.systemEvent, _this.systemEvent) || other.systemEvent == _this.systemEvent)&&(identical(other.subjectUserId, _this.subjectUserId) || other.subjectUserId == _this.subjectUserId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Message;
-  return Object.hash(runtimeType,_this.id,_this.clientId,_this.chatId,_this.senderId,_this.kind,_this.createdAt,_this.status,_this.text,const DeepCollectionEquality().hash(_this.attachments),_this.reportId,_this.systemEvent,_this.subjectUserId);
+  return Object.hash(runtimeType,_this.id,_this.clientId,_this.chatId,_this.senderId,_this.kind,_this.createdAt,_this.status,_this.text,const DeepCollectionEquality().hash(_this.attachments),_this.listened,_this.reportId,_this.systemEvent,_this.subjectUserId);
 }
 
 @override
 String toString() {
   final _this = this as Message;
-  return 'Message(id: ${_this.id}, clientId: ${_this.clientId}, chatId: ${_this.chatId}, senderId: ${_this.senderId}, kind: ${_this.kind}, createdAt: ${_this.createdAt}, status: ${_this.status}, text: ${_this.text}, attachments: ${_this.attachments}, reportId: ${_this.reportId}, systemEvent: ${_this.systemEvent}, subjectUserId: ${_this.subjectUserId})';
+  return 'Message(id: ${_this.id}, clientId: ${_this.clientId}, chatId: ${_this.chatId}, senderId: ${_this.senderId}, kind: ${_this.kind}, createdAt: ${_this.createdAt}, status: ${_this.status}, text: ${_this.text}, attachments: ${_this.attachments}, listened: ${_this.listened}, reportId: ${_this.reportId}, systemEvent: ${_this.systemEvent}, subjectUserId: ${_this.subjectUserId})';
 }
 
 
@@ -60,7 +62,7 @@ abstract mixin class $MessageCopyWith<$Res>  {
   factory $MessageCopyWith(Message value, $Res Function(Message) _then) = _$MessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String clientId, String chatId, String senderId, MessageKind kind, DateTime createdAt, MessageStatus status, String? text, List<MessageAttachment> attachments, String? reportId, ChatSystemEvent? systemEvent, String? subjectUserId
+ String id, String clientId, String chatId, String senderId, MessageKind kind, DateTime createdAt, MessageStatus status, String? text, List<MessageAttachment> attachments, bool listened, String? reportId, ChatSystemEvent? systemEvent, String? subjectUserId
 });
 
 
@@ -77,7 +79,7 @@ class _$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? clientId = null,Object? chatId = null,Object? senderId = null,Object? kind = null,Object? createdAt = null,Object? status = null,Object? text = freezed,Object? attachments = null,Object? reportId = freezed,Object? systemEvent = freezed,Object? subjectUserId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? clientId = null,Object? chatId = null,Object? senderId = null,Object? kind = null,Object? createdAt = null,Object? status = null,Object? text = freezed,Object? attachments = null,Object? listened = null,Object? reportId = freezed,Object? systemEvent = freezed,Object? subjectUserId = freezed,}) {
   return _then(Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,clientId: null == clientId ? _self.clientId : clientId // ignore: cast_nullable_to_non_nullable
@@ -88,7 +90,8 @@ as MessageKind,createdAt: null == createdAt ? _self.createdAt : createdAt // ign
 as DateTime,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MessageStatus,text: freezed == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String?,attachments: null == attachments ? _self.attachments : attachments // ignore: cast_nullable_to_non_nullable
-as List<MessageAttachment>,reportId: freezed == reportId ? _self.reportId : reportId // ignore: cast_nullable_to_non_nullable
+as List<MessageAttachment>,listened: null == listened ? _self.listened : listened // ignore: cast_nullable_to_non_nullable
+as bool,reportId: freezed == reportId ? _self.reportId : reportId // ignore: cast_nullable_to_non_nullable
 as String?,systemEvent: freezed == systemEvent ? _self.systemEvent : systemEvent // ignore: cast_nullable_to_non_nullable
 as ChatSystemEvent?,subjectUserId: freezed == subjectUserId ? _self.subjectUserId : subjectUserId // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -176,10 +179,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String clientId,  String chatId,  String senderId,  MessageKind kind,  DateTime createdAt,  MessageStatus status,  String? text,  List<MessageAttachment> attachments,  String? reportId,  ChatSystemEvent? systemEvent,  String? subjectUserId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String clientId,  String chatId,  String senderId,  MessageKind kind,  DateTime createdAt,  MessageStatus status,  String? text,  List<MessageAttachment> attachments,  bool listened,  String? reportId,  ChatSystemEvent? systemEvent,  String? subjectUserId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_that.createdAt,_that.status,_that.text,_that.attachments,_that.reportId,_that.systemEvent,_that.subjectUserId);case _:
+return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_that.createdAt,_that.status,_that.text,_that.attachments,_that.listened,_that.reportId,_that.systemEvent,_that.subjectUserId);case _:
   return orElse();
 
 }
@@ -197,10 +200,10 @@ return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String clientId,  String chatId,  String senderId,  MessageKind kind,  DateTime createdAt,  MessageStatus status,  String? text,  List<MessageAttachment> attachments,  String? reportId,  ChatSystemEvent? systemEvent,  String? subjectUserId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String clientId,  String chatId,  String senderId,  MessageKind kind,  DateTime createdAt,  MessageStatus status,  String? text,  List<MessageAttachment> attachments,  bool listened,  String? reportId,  ChatSystemEvent? systemEvent,  String? subjectUserId)  $default,) {final _that = this;
 switch (_that) {
 case _Message():
-return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_that.createdAt,_that.status,_that.text,_that.attachments,_that.reportId,_that.systemEvent,_that.subjectUserId);case _:
+return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_that.createdAt,_that.status,_that.text,_that.attachments,_that.listened,_that.reportId,_that.systemEvent,_that.subjectUserId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -217,10 +220,10 @@ return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String clientId,  String chatId,  String senderId,  MessageKind kind,  DateTime createdAt,  MessageStatus status,  String? text,  List<MessageAttachment> attachments,  String? reportId,  ChatSystemEvent? systemEvent,  String? subjectUserId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String clientId,  String chatId,  String senderId,  MessageKind kind,  DateTime createdAt,  MessageStatus status,  String? text,  List<MessageAttachment> attachments,  bool listened,  String? reportId,  ChatSystemEvent? systemEvent,  String? subjectUserId)?  $default,) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_that.createdAt,_that.status,_that.text,_that.attachments,_that.reportId,_that.systemEvent,_that.subjectUserId);case _:
+return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_that.createdAt,_that.status,_that.text,_that.attachments,_that.listened,_that.reportId,_that.systemEvent,_that.subjectUserId);case _:
   return null;
 
 }
@@ -232,7 +235,7 @@ return $default(_that.id,_that.clientId,_that.chatId,_that.senderId,_that.kind,_
 @JsonSerializable()
 
 class _Message implements Message {
-  const _Message({required this.id, required this.clientId, required this.chatId, required this.senderId, required this.kind, required this.createdAt, this.status = MessageStatus.sent, this.text,  List<MessageAttachment> attachments = const [], this.reportId, this.systemEvent, this.subjectUserId}): _attachments = attachments;
+  const _Message({required this.id, required this.clientId, required this.chatId, required this.senderId, required this.kind, required this.createdAt, this.status = MessageStatus.sent, this.text,  List<MessageAttachment> attachments = const [], this.listened = false, this.reportId, this.systemEvent, this.subjectUserId}): _attachments = attachments;
   factory _Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
 
 @override final  String id;
@@ -254,6 +257,9 @@ class _Message implements Message {
   return EqualUnmodifiableListView(_attachments);
 }
 
+/// Whether the current user has played this voice note; others' notes
+/// show a dot until then.
+@override@JsonKey() final  bool listened;
 /// The report of a [MessageKind.report] message.
 @override final  String? reportId;
 /// What a [MessageKind.system] message reports, and about whom.
@@ -273,18 +279,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.clientId, clientId) || other.clientId == clientId)&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.status, status) || other.status == status)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.attachments, _attachments)&&(identical(other.reportId, reportId) || other.reportId == reportId)&&(identical(other.systemEvent, systemEvent) || other.systemEvent == systemEvent)&&(identical(other.subjectUserId, subjectUserId) || other.subjectUserId == subjectUserId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.clientId, clientId) || other.clientId == clientId)&&(identical(other.chatId, chatId) || other.chatId == chatId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.status, status) || other.status == status)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.attachments, _attachments)&&(identical(other.listened, listened) || other.listened == listened)&&(identical(other.reportId, reportId) || other.reportId == reportId)&&(identical(other.systemEvent, systemEvent) || other.systemEvent == systemEvent)&&(identical(other.subjectUserId, subjectUserId) || other.subjectUserId == subjectUserId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,clientId,chatId,senderId,kind,createdAt,status,text,const DeepCollectionEquality().hash(_attachments),reportId,systemEvent,subjectUserId);
+    return Object.hash(runtimeType,id,clientId,chatId,senderId,kind,createdAt,status,text,const DeepCollectionEquality().hash(_attachments),listened,reportId,systemEvent,subjectUserId);
 }
 
 @override
 String toString() {
-    return 'Message(id: $id, clientId: $clientId, chatId: $chatId, senderId: $senderId, kind: $kind, createdAt: $createdAt, status: $status, text: $text, attachments: $attachments, reportId: $reportId, systemEvent: $systemEvent, subjectUserId: $subjectUserId)';
+    return 'Message(id: $id, clientId: $clientId, chatId: $chatId, senderId: $senderId, kind: $kind, createdAt: $createdAt, status: $status, text: $text, attachments: $attachments, listened: $listened, reportId: $reportId, systemEvent: $systemEvent, subjectUserId: $subjectUserId)';
 }
 
 
@@ -295,7 +301,7 @@ abstract mixin class _$MessageCopyWith<$Res> implements $MessageCopyWith<$Res> {
   factory _$MessageCopyWith(_Message value, $Res Function(_Message) _then) = __$MessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String clientId, String chatId, String senderId, MessageKind kind, DateTime createdAt, MessageStatus status, String? text, List<MessageAttachment> attachments, String? reportId, ChatSystemEvent? systemEvent, String? subjectUserId
+ String id, String clientId, String chatId, String senderId, MessageKind kind, DateTime createdAt, MessageStatus status, String? text, List<MessageAttachment> attachments, bool listened, String? reportId, ChatSystemEvent? systemEvent, String? subjectUserId
 });
 
 
@@ -312,7 +318,7 @@ class __$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? clientId = null,Object? chatId = null,Object? senderId = null,Object? kind = null,Object? createdAt = null,Object? status = null,Object? text = freezed,Object? attachments = null,Object? reportId = freezed,Object? systemEvent = freezed,Object? subjectUserId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? clientId = null,Object? chatId = null,Object? senderId = null,Object? kind = null,Object? createdAt = null,Object? status = null,Object? text = freezed,Object? attachments = null,Object? listened = null,Object? reportId = freezed,Object? systemEvent = freezed,Object? subjectUserId = freezed,}) {
   return _then(_Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,clientId: null == clientId ? _self.clientId : clientId // ignore: cast_nullable_to_non_nullable
@@ -323,7 +329,8 @@ as MessageKind,createdAt: null == createdAt ? _self.createdAt : createdAt // ign
 as DateTime,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as MessageStatus,text: freezed == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String?,attachments: null == attachments ? _self._attachments : attachments // ignore: cast_nullable_to_non_nullable
-as List<MessageAttachment>,reportId: freezed == reportId ? _self.reportId : reportId // ignore: cast_nullable_to_non_nullable
+as List<MessageAttachment>,listened: null == listened ? _self.listened : listened // ignore: cast_nullable_to_non_nullable
+as bool,reportId: freezed == reportId ? _self.reportId : reportId // ignore: cast_nullable_to_non_nullable
 as String?,systemEvent: freezed == systemEvent ? _self.systemEvent : systemEvent // ignore: cast_nullable_to_non_nullable
 as ChatSystemEvent?,subjectUserId: freezed == subjectUserId ? _self.subjectUserId : subjectUserId // ignore: cast_nullable_to_non_nullable
 as String?,

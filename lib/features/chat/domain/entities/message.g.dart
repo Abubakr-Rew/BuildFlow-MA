@@ -22,6 +22,7 @@ _Message _$MessageFromJson(Map<String, dynamic> json) => _Message(
           ?.map((e) => MessageAttachment.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const [],
+  listened: json['listened'] as bool? ?? false,
   reportId: json['reportId'] as String?,
   systemEvent: $enumDecodeNullable(
     _$ChatSystemEventEnumMap,
@@ -40,6 +41,7 @@ Map<String, dynamic> _$MessageToJson(_Message instance) => <String, dynamic>{
   'status': _$MessageStatusEnumMap[instance.status]!,
   'text': instance.text,
   'attachments': instance.attachments.map((e) => e.toJson()).toList(),
+  'listened': instance.listened,
   'reportId': instance.reportId,
   'systemEvent': _$ChatSystemEventEnumMap[instance.systemEvent],
   'subjectUserId': instance.subjectUserId,

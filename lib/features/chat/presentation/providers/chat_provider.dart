@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:buildflow/core/audio/voice_note.dart';
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
@@ -162,6 +163,12 @@ class ChatThreadNotifier
 
   /// The photos of the photo messages in [_outbox], by clientId.
   final Map<String, List<_OutgoingPhoto>> _photos = {};
+
+  /// The notes of the voice messages in [_outbox], by clientId.
+  final Map<String, _OutgoingVoice> _voices = {};
+
+  /// Voice notes played here, shown as listened before the server says so.
+  final Set<String> _listened = {};
   final Map<String, double> _progress = {};
   bool? _hasMore;
   bool _loadingOlder = false;
@@ -176,6 +183,8 @@ class ChatThreadNotifier
     _known.clear();
     _outbox.clear();
     _photos.clear();
+    _voices.clear();
+    _listened.clear();
     _progress.clear();
     _hasMore = null;
     _loadingOlder = false;
@@ -220,7 +229,14 @@ class ChatThreadNotifier
     });
 
   ChatThread _compose() => ChatThread(
-        messages: [..._serverMessages, ..._outbox.values],
+        messages: [
+          for (final m in _serverMessages)
+            if (!m.listened && _listened.contains(m.id))
+              m.copyWith(listened: true)
+            else
+              m,
+          ..._outbox.values,
+        ],
         hasMore: _hasMore ?? false,
         isLoadingOlder: _loadingOlder,
         uploadProgress: Map.unmodifiable(_progress),
@@ -310,8 +326,61 @@ class ChatThreadNotifier
     return _deliver(pending);
   }
 
+  /// Sends a recorded voice note: shown at once as «sending», uploaded
+  /// with progress, then sent, through the same queue as photos.
+  Future<Result<Message>> sendVoice(VoiceNote note) async {
+    final userId = _userId;
+    if (userId == null) {
+      return const Err(
+        Failure(FailureCode.sessionExpired, message: 'Not signed in'),
+      );
+    }
+    final clientId = _uuid.v4();
+    final pending = Message(
+      id: clientId,
+      clientId: clientId,
+      chatId: arg,
+      senderId: userId,
+      kind: MessageKind.voice,
+      attachments: [
+        MessageAttachment(
+          id: clientId,
+          url: note.path,
+          durationMs: note.duration.inMilliseconds,
+          waveform: note.waveform,
+          mime: VoiceNote.mime,
+        ),
+      ],
+      createdAt: DateTime.now(),
+      status: MessageStatus.sending,
+    );
+    _outbox[clientId] = pending;
+    _voices[clientId] = _OutgoingVoice(note);
+    _emit();
+    return _deliver(pending);
+  }
+
+  /// The user played someone else's voice note: its dot goes at once, the
+  /// server learns it in the background.
+  Future<Result<void>> markListened(Message message) async {
+    if (message.kind != MessageKind.voice ||
+        message.listened ||
+        message.senderId == _userId ||
+        !_listened.add(message.id)) {
+      return const Success(null);
+    }
+    _emit();
+    final result = await _repo.markListened(arg, messageId: message.id);
+    if (result.isFailure && !_disposed) {
+      _listened.remove(message.id);
+      _emit();
+    }
+    return result;
+  }
+
   /// Sends a failed message again with the same clientId, so the server
-  /// can't create it twice. Photos already uploaded are not uploaded again.
+  /// can't create it twice. Photos and voice notes already uploaded are
+  /// not uploaded again.
   Future<Result<Message>> retry(String clientId) async {
     final failed = _outbox[clientId];
     if (failed == null || !failed.status.isFailed) {
@@ -329,6 +398,11 @@ class ChatThreadNotifier
   void discard(String clientId) {
     if (_outbox[clientId]?.status.isFailed ?? false) {
       _outbox.remove(clientId);
+      final voice = _voices.remove(clientId);
+      if (voice != null) {
+        _progress.remove(clientId);
+        unawaited(_compressor.delete([voice.note.path]));
+      }
       final photos = _photos.remove(clientId) ?? const [];
       for (final p in photos) {
         _progress.remove(p.localId);
@@ -348,9 +422,12 @@ class ChatThreadNotifier
   Future<Result<Message>> _deliver(Message pending) async {
     final clientId = pending.clientId;
     final photos = _photos[clientId];
-    final result = photos == null
-        ? await _repo.send(arg, text: pending.text ?? '', clientId: clientId)
-        : await _deliverPhotos(clientId, photos);
+    final voice = _voices[clientId];
+    final result = switch ((photos, voice)) {
+      (final photos?, _) => await _deliverPhotos(clientId, photos),
+      (_, final voice?) => await _deliverVoice(clientId, voice),
+      _ => await _repo.send(arg, text: pending.text ?? '', clientId: clientId),
+    };
     if (result.isSuccess && photos != null) {
       // The copies are the photos now; the originals are done with.
       unawaited(_compressor.delete([for (final p in photos) p.sourcePath]));
@@ -360,6 +437,8 @@ class ChatThreadNotifier
       case Success(:final data):
         _outbox.remove(clientId);
         _photos.remove(clientId);
+        _voices.remove(clientId);
+        _progress.remove(clientId);
         for (final p in photos ?? const <_OutgoingPhoto>[]) {
           _progress.remove(p.localId);
         }
@@ -424,6 +503,39 @@ class ChatThreadNotifier
       arg,
       text: message?.text ?? '',
       attachmentIds: ids,
+      clientId: clientId,
+    );
+  }
+
+  /// Uploads the note unless it already is, then sends it. Its progress
+  /// is under the clientId, the pending attachment's id.
+  Future<Result<Message>> _deliverVoice(
+    String clientId,
+    _OutgoingVoice voice,
+  ) async {
+    var uploaded = voice.uploaded;
+    if (uploaded == null) {
+      _progress[clientId] = 0;
+      _emit();
+      final upload = await _repo.uploadVoice(
+        voice.note,
+        onProgress: (value) {
+          _progress[clientId] = value;
+          _emit();
+        },
+      );
+      switch (upload) {
+        case Success(:final data):
+          uploaded = voice.uploaded = data;
+          _progress[clientId] = 1;
+        case Err(:final failure):
+          _progress.remove(clientId);
+          return Err(failure);
+      }
+    }
+    return _repo.send(
+      arg,
+      attachmentIds: [uploaded.id],
       clientId: clientId,
     );
   }
@@ -502,4 +614,12 @@ class _OutgoingPhoto {
         width: photo?.width,
         height: photo?.height,
       );
+}
+
+/// A voice note of a message on its way; a retry doesn't upload it again.
+class _OutgoingVoice {
+  _OutgoingVoice(this.note);
+
+  final VoiceNote note;
+  MessageAttachment? uploaded;
 }

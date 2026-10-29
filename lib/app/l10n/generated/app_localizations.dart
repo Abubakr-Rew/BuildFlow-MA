@@ -1593,6 +1593,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Фото загружается'**
   String get photoUploading;
+
+  /// Chat list preview of a voice message: «Голосовое · 0:42»
+  ///
+  /// In ru, this message translates to:
+  /// **'Голосовое'**
+  String get voiceMessage;
 }
 
 class _AppLocalizationsDelegate

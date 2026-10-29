@@ -780,5 +780,8 @@
   "@photoFailedBeforeSend": {"description": "Snack bar when sending while an attached photo failed to compress"},
 
   "photoUploading": "Фото загружается",
-  "@photoUploading": {"description": "Semantics of the progress ring on a photo being sent"}
+  "@photoUploading": {"description": "Semantics of the progress ring on a photo being sent"},
+
+  "voiceMessage": "Голосовое",
+  "@voiceMessage": {"description": "Chat list preview of a voice message: «Голосовое · 0:42»"}
 }

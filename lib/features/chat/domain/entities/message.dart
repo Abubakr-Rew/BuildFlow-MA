@@ -24,6 +24,10 @@ abstract class Message with _$Message {
     String? text,
     @Default([]) List<MessageAttachment> attachments,
 
+    /// Whether the current user has played this voice note; others' notes
+    /// show a dot until then.
+    @Default(false) bool listened,
+
     /// The report of a [MessageKind.report] message.
     String? reportId,
 

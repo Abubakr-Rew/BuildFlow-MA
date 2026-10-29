@@ -220,7 +220,7 @@ class _ChatRow extends StatelessWidget {
 
   final Chat chat;
   final List<({int start, int end})> ranges;
-  final ({String prefix, String text, bool isPhoto}) preview;
+  final ({String prefix, String text, MessageKind? media}) preview;
   final VoidCallback onTap;
 
   @override
@@ -300,16 +300,22 @@ class _ChatRow extends StatelessWidget {
   }
 }
 
-/// «Бакыт: текст», or «Бакыт: 📷 3 фото · подпись» with a photo icon.
+/// «Бакыт: текст», or with an icon: «Бакыт: 📷 3 фото · подпись»,
+/// «Бакыт: 🎤 Голосовое · 0:42».
 class _Preview extends StatelessWidget {
   const _Preview({required this.preview, required this.style});
 
-  final ({String prefix, String text, bool isPhoto}) preview;
+  final ({String prefix, String text, MessageKind? media}) preview;
   final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
-    if (!preview.isPhoto) {
+    final icon = switch (preview.media) {
+      MessageKind.photo => Icons.photo_camera_outlined,
+      MessageKind.voice => Icons.mic_none_rounded,
+      _ => null,
+    };
+    if (icon == null) {
       return Text(
         '${preview.prefix}${preview.text}',
         maxLines: 1,
@@ -326,7 +332,7 @@ class _Preview extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(right: AppTheme.spacing4),
               child: Icon(
-                Icons.photo_camera_outlined,
+                icon,
                 size: 16,
                 color: style?.color,
               ),

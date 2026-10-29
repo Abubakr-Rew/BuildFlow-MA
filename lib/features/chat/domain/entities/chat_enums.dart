@@ -19,7 +19,7 @@ enum MessageKind {
   /// an optional caption in `Message.text`.
   photo,
 
-  /// Stage 3: a voice note in `Message.attachments`.
+  /// One voice note in `Message.attachments` (`durationMs`, `waveform`).
   voice,
 
   /// Stage 4: a report card, `Message.reportId`.
@@ -33,6 +33,7 @@ enum MessageKind {
   bool get isSupported =>
       this == MessageKind.text ||
       this == MessageKind.photo ||
+      this == MessageKind.voice ||
       this == MessageKind.system;
 }
 

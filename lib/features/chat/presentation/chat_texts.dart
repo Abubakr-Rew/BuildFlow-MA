@@ -1,4 +1,5 @@
 import 'package:buildflow/app/l10n/generated/app_localizations.dart';
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
@@ -16,8 +17,8 @@ extension ChatTexts on AppLocalizations {
       chat.title.isEmpty && chat.type.isDirect ? formerMember : chat.title;
 
   /// The content of [message] in one line: its text, «3 фото · подпись»
-  /// for photos, the wording of a system event, or «Неподдерживаемое
-  /// сообщение».
+  /// for photos, «Голосовое · 0:42», the wording of a system event, or
+  /// «Неподдерживаемое сообщение».
   String messageSummary(Message message, Map<String, String> names) {
     if (message.kind == MessageKind.system) {
       final name = memberName(names, message.subjectUserId ?? '');
@@ -28,6 +29,11 @@ extension ChatTexts on AppLocalizations {
       };
     }
     if (!message.kind.isSupported) return unsupportedMessage;
+    if (message.kind == MessageKind.voice) {
+      final ms = message.attachments.firstOrNull?.durationMs ?? 0;
+      return '$voiceMessage · '
+          '${DateFormatter.duration(Duration(milliseconds: ms))}';
+    }
     if (message.kind == MessageKind.photo) {
       final count = message.attachments.length;
       final label = count <= 1 ? photoMessage : photosCount(count);
@@ -39,18 +45,23 @@ extension ChatTexts on AppLocalizations {
 
   /// The last message under the chat title: «Вы: текст» for the user's
   /// own, «Бакыт: текст» in a project chat, just the text in a direct one.
-  /// `isPhoto` puts a photo icon between the prefix and the text.
-  ({String prefix, String text, bool isPhoto}) chatPreview(
+  /// `media` (photo or voice) puts its icon between the prefix and the text.
+  ({String prefix, String text, MessageKind? media}) chatPreview(
     Chat chat,
     String? me,
     Map<String, String> names,
   ) {
     final message = chat.lastMessage;
-    if (message == null) return (prefix: '', text: chatNoMessages, isPhoto: false);
+    if (message == null) {
+      return (prefix: '', text: chatNoMessages, media: null);
+    }
     final summary = messageSummary(message, names);
-    final isPhoto = message.kind == MessageKind.photo;
+    final media = switch (message.kind) {
+      MessageKind.photo || MessageKind.voice => message.kind,
+      _ => null,
+    };
     if (message.kind == MessageKind.system) {
-      return (prefix: '', text: summary, isPhoto: false);
+      return (prefix: '', text: summary, media: null);
     }
     final prefix = switch (message.senderId) {
       final id when id == me => '$you: ',
@@ -58,6 +69,6 @@ extension ChatTexts on AppLocalizations {
         '${memberName(names, id).split(' ').first}: ',
       _ => '',
     };
-    return (prefix: prefix, text: summary, isPhoto: isPhoto);
+    return (prefix: prefix, text: summary, media: media);
   }
 }

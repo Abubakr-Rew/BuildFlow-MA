@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:buildflow/core/audio/voice_note.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
@@ -73,14 +74,9 @@ class FakeChatRepository implements ChatRepository {
   bool _fails() =>
       sendFailureRate > 0 && _random.nextDouble() < sendFailureRate;
 
-  @override
-  Future<Result<MessageAttachment>> uploadPhoto(
-    CompressedPhoto photo, {
-    ValueChanged<double>? onProgress,
-  }) async {
-    final uid = userId;
-    if (uid == null) return const Err(_noSession);
-    // A failing upload breaks off halfway, as a lost connection would.
+  /// Simulated transfer: progress in [_uploadSteps] steps over about a
+  /// second; a failing one breaks off halfway, as a lost connection would.
+  Future<Result<void>> _upload(ValueChanged<double>? onProgress) async {
     final failAt = _fails() ? 1 + _random.nextInt(_uploadSteps - 1) : null;
     final stepMs = 60 + _random.nextInt(80);
     for (var step = 1; step <= _uploadSteps; step++) {
@@ -92,12 +88,51 @@ class FakeChatRepository implements ChatRepository {
       }
       onProgress?.call(step / _uploadSteps);
     }
+    return const Success(null);
+  }
+
+  @override
+  Future<Result<MessageAttachment>> uploadPhoto(
+    CompressedPhoto photo, {
+    ValueChanged<double>? onProgress,
+  }) async {
+    final uid = userId;
+    if (uid == null) return const Err(_noSession);
+    if (await _upload(onProgress) case Err(:final failure)) return Err(failure);
     return store.registerUpload(
       uid,
       url: photo.path,
       width: photo.width,
       height: photo.height,
     );
+  }
+
+  @override
+  Future<Result<MessageAttachment>> uploadVoice(
+    VoiceNote note, {
+    ValueChanged<double>? onProgress,
+  }) async {
+    final uid = userId;
+    if (uid == null) return const Err(_noSession);
+    if (await _upload(onProgress) case Err(:final failure)) return Err(failure);
+    return store.registerUpload(
+      uid,
+      url: note.path,
+      durationMs: note.duration.inMilliseconds,
+      waveform: note.waveform,
+      mime: VoiceNote.mime,
+    );
+  }
+
+  @override
+  Future<Result<void>> markListened(
+    String chatId, {
+    required String messageId,
+  }) async {
+    await _simulateLatency();
+    final uid = userId;
+    if (uid == null) return const Err(_noSession);
+    return store.markListened(chatId, uid, messageId: messageId);
   }
 
   @override

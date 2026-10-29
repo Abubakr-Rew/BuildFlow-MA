@@ -1,3 +1,4 @@
+import 'package:buildflow/core/audio/voice_note.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
@@ -32,6 +33,20 @@ class ApiChatRepository implements ChatRepository {
   Future<Result<MessageAttachment>> uploadPhoto(
     CompressedPhoto photo, {
     ValueChanged<double>? onProgress,
+  }) async =>
+      const Err(_notImplemented);
+
+  @override
+  Future<Result<MessageAttachment>> uploadVoice(
+    VoiceNote note, {
+    ValueChanged<double>? onProgress,
+  }) async =>
+      const Err(_notImplemented);
+
+  @override
+  Future<Result<void>> markListened(
+    String chatId, {
+    required String messageId,
   }) async =>
       const Err(_notImplemented);
 

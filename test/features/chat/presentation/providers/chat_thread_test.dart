@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:buildflow/core/audio/voice_note.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
@@ -75,6 +76,40 @@ class _ScriptedChatRepository implements ChatRepository {
         height: photo.height,
       ),
     );
+  }
+
+  /// Notes uploaded, by path; [failUploads] holds for them too.
+  @override
+  Future<Result<MessageAttachment>> uploadVoice(
+    VoiceNote note, {
+    ValueChanged<double>? onProgress,
+  }) async {
+    uploads.add(note.path);
+    onProgress?.call(0.5);
+    await Future<void>.delayed(Duration.zero);
+    if (failUploads.remove(note.path)) {
+      return const Err(Failure(FailureCode.network, message: 'offline'));
+    }
+    onProgress?.call(1);
+    return Success(
+      MessageAttachment(
+        id: 'att-${note.path}',
+        url: note.path,
+        durationMs: note.duration.inMilliseconds,
+        waveform: note.waveform,
+      ),
+    );
+  }
+
+  final listened = <String>[];
+
+  @override
+  Future<Result<void>> markListened(
+    String chatId, {
+    required String messageId,
+  }) async {
+    listened.add(messageId);
+    return const Success(null);
   }
 
   @override
@@ -355,6 +390,89 @@ void main() {
       ]);
       expect(eleven.failure.code, FailureCode.validation);
       expect(repo.uploads, isEmpty);
+    });
+  });
+
+  group('voice notes', () {
+    const note = VoiceNote(
+      path: '/cache/voice-1.m4a',
+      duration: Duration(seconds: 12),
+      waveform: [10, 80, 100, 40],
+    );
+    Future<void> settle() =>
+        Future<void>.delayed(const Duration(milliseconds: 20));
+
+    test('show at once, upload with progress, then send', () async {
+      final done = notifier().sendVoice(note);
+      final pending = messages().last;
+      expect(pending.kind, MessageKind.voice);
+      expect(pending.status, MessageStatus.sending);
+      expect(pending.attachments.single.durationMs, 12000);
+      expect(pending.attachments.single.waveform, [10, 80, 100, 40]);
+
+      await settle();
+      expect(repo.uploads, ['/cache/voice-1.m4a']);
+      expect(repo.sentAttachments.single, ['att-/cache/voice-1.m4a']);
+      expect(
+        container.read(provider).requireValue.uploadProgress[pending.clientId],
+        1,
+      );
+      repo.sends.single.$2.complete(Success(serverCopy(messages().last, 'm-2')));
+      expect((await done).isSuccess, isTrue);
+      expect(messages().last.status, MessageStatus.sent);
+      // The recording is the sent file now.
+      expect(compressor.deleted, isEmpty);
+    });
+
+    test('a failed upload fails it; a failed send retries without uploading',
+        () async {
+      repo.failUploads.add(note.path);
+      final first = notifier().sendVoice(note);
+      expect((await first).failure.code, FailureCode.network);
+      expect(messages().last.status, MessageStatus.failed);
+
+      final second = notifier().retry(messages().last.clientId);
+      await settle();
+      expect(repo.uploads, [note.path, note.path]);
+      repo.sends.single.$2.complete(
+        const Err(Failure(FailureCode.network, message: 'offline')),
+      );
+      expect((await second).isFailure, isTrue);
+
+      final third = notifier().retry(messages().last.clientId);
+      await settle();
+      expect(repo.uploads, hasLength(2), reason: 'no new upload');
+      expect(repo.sends, hasLength(2));
+      expect(repo.sends.last.$1, repo.sends.first.$1);
+      repo.sends.last.$2.complete(Success(serverCopy(messages().last, 'm-2')));
+      expect((await third).isSuccess, isTrue);
+    });
+
+    test('discarding a failed voice note deletes the recording', () async {
+      repo.failUploads.add(note.path);
+      await notifier().sendVoice(note);
+      notifier().discard(messages().last.clientId);
+      expect(messages().map((m) => m.id), ['m-1']);
+      expect(compressor.deleted, [note.path]);
+    });
+
+    test("playing someone else's note marks it listened, once", () async {
+      Message voiceFrom(String sender, String id) => _message(id, sender: sender)
+          .copyWith(kind: MessageKind.voice, text: null);
+      repo.messages.add([
+        _message('m-1'),
+        voiceFrom('user-owner-1', 'm-2'),
+        voiceFrom(_me.id, 'm-3'),
+      ]);
+      await Future<void>.delayed(Duration.zero);
+
+      final theirs = messages().firstWhere((m) => m.id == 'm-2');
+      expect(theirs.listened, isFalse);
+      await notifier().markListened(theirs);
+      expect(messages().firstWhere((m) => m.id == 'm-2').listened, isTrue);
+      await notifier().markListened(theirs);
+      await notifier().markListened(messages().firstWhere((m) => m.id == 'm-3'));
+      expect(repo.listened, ['m-2']);
     });
   });
 }

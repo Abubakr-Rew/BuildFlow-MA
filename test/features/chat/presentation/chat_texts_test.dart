@@ -46,11 +46,11 @@ void main() {
   test('the chat preview marks photos for the icon', () {
     expect(
       l10n.chatPreview(chatWith(photos(2, caption: 'Леса')), 'u-2', names),
-      (prefix: 'Бакыт: ', text: '2 фото · Леса', isPhoto: true),
+      (prefix: 'Бакыт: ', text: '2 фото · Леса', media: MessageKind.photo),
     );
     expect(
       l10n.chatPreview(chatWith(photos(1)), 'u-1', names),
-      (prefix: 'Вы: ', text: 'Фото', isPhoto: true),
+      (prefix: 'Вы: ', text: 'Фото', media: MessageKind.photo),
     );
     expect(
       l10n.chatPreview(
@@ -58,7 +58,21 @@ void main() {
         'u-2',
         names,
       ),
-      (prefix: '', text: 'Фото', isPhoto: true),
+      (prefix: '', text: 'Фото', media: MessageKind.photo),
+    );
+  });
+
+  test('a voice message reads «Голосовое · 0:42» with the microphone', () {
+    final voice = photos(0).copyWith(
+      kind: MessageKind.voice,
+      attachments: const [
+        MessageAttachment(id: 'v', url: '/v.m4a', durationMs: 42400),
+      ],
+    );
+    expect(l10n.messageSummary(voice, names), 'Голосовое · 0:42');
+    expect(
+      l10n.chatPreview(chatWith(voice), 'u-2', names),
+      (prefix: 'Бакыт: ', text: 'Голосовое · 0:42', media: MessageKind.voice),
     );
   });
 }

@@ -415,4 +415,89 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     expect(store.messagesFor(_alaToo, _owner).value, hasLength(1));
   });
+
+  group('voice notes', () {
+    String uploadVoice(String userId) => store
+        .registerUpload(
+          userId,
+          url: '/cache/voice-1.m4a',
+          durationMs: 4200,
+          waveform: const [10, 100, 50],
+          mime: 'audio/mp4',
+        )
+        .value
+        .id;
+
+    test('a voice note goes as a voice message with its length and waveform',
+        () {
+      final message = store
+          .send(
+            _alaToo,
+            _foreman1,
+            clientId: 'c-1',
+            attachmentIds: [uploadVoice(_foreman1)],
+          )
+          .value;
+      expect(message.kind, MessageKind.voice);
+      expect(message.attachments.single.durationMs, 4200);
+      expect(message.attachments.single.waveform, [10, 100, 50]);
+      expect(message.text, isNull);
+    });
+
+    test('a voice note goes alone: no text, no second file', () {
+      for (final (text, ids) in [
+        ('Послушай', [uploadVoice(_foreman1)]),
+        ('', [uploadVoice(_foreman1), uploadVoice(_foreman1)]),
+      ]) {
+        expect(
+          store
+              .send(_alaToo, _foreman1, clientId: 'c-$text${ids.length}',
+                  text: text, attachmentIds: ids)
+              .failure
+              .code,
+          FailureCode.validation,
+        );
+      }
+    });
+
+    test('«listened» is per user and only for voice notes', () {
+      final note = store
+          .send(
+            _alaToo,
+            _foreman1,
+            clientId: 'c-1',
+            attachmentIds: [uploadVoice(_foreman1)],
+          )
+          .value;
+      Message seenBy(String userId) => store
+          .messagesFor(_alaToo, userId)
+          .value
+          .firstWhere((m) => m.id == note.id);
+
+      expect(seenBy(_owner).listened, isFalse);
+      store.markListened(_alaToo, _owner, messageId: note.id);
+      expect(seenBy(_owner).listened, isTrue);
+      expect(seenBy(_worker1).listened, isFalse);
+
+      final text = send(_alaToo, _owner, 'Принято');
+      expect(
+        store.markListened(_alaToo, _owner, messageId: text.id).failure.code,
+        FailureCode.notFound,
+      );
+    });
+
+    test('the demo history has voice notes nobody has played yet', () {
+      store.dispose();
+      store = createStore(demoHistory: true);
+      final voices = store
+          .messagesFor(_alaToo, _owner)
+          .value
+          .where((m) => m.kind == MessageKind.voice)
+          .toList();
+      expect(voices, hasLength(2));
+      expect(voices.every((m) => !m.listened), isTrue);
+      expect(voices.map((m) => m.attachments.single.durationMs), [7000, 42000]);
+      expect(voices.first.attachments.single.waveform, hasLength(40));
+    });
+  });
 }
