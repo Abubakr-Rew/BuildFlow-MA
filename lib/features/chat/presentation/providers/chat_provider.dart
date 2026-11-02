@@ -8,9 +8,13 @@ import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/core/photos/photo_compressor.dart';
 import 'package:buildflow/core/photos/photo_draft.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
+import 'package:buildflow/core/supabase/supabase_providers.dart';
+import 'package:buildflow/core/supabase/supabase_uploads.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
-import 'package:buildflow/features/chat/data/api_chat_repository.dart';
+import 'package:buildflow/features/chat/data/chat_events.dart';
 import 'package:buildflow/features/chat/data/fake_chat_repository.dart';
+import 'package:buildflow/features/chat/data/supabase_chat_repository.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
@@ -19,23 +23,58 @@ import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart
 import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_provider.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 // ── DI ───────────────────────────────────────────────────────
 
-/// Bound to the signed-in user: the fake needs the id, the API will take
-/// the user from the token.
+/// Bound to the signed-in user: a new user gets a new repository, and the
+/// old one leaves its realtime channel.
 final chatRepositoryProvider = Provider<ChatRepository>(
-  (ref) => kBackend == Backend.fake
-      ? FakeChatRepository(
-          store: ref.watch(fakeChatStoreProvider),
-          userId: ref.watch(currentUserProvider.select((u) => u?.id)),
-          sendFailureRate: kFakeChatSendFailureRate,
-        )
-      : ApiChatRepository(),
+  (ref) => switch (kBackend) {
+    Backend.fake => FakeChatRepository(
+        store: ref.watch(fakeChatStoreProvider),
+        userId: ref.watch(currentUserProvider.select((u) => u?.id)),
+        sendFailureRate: kFakeChatSendFailureRate,
+      ),
+    Backend.supabase => supabaseChatRepository(ref),
+  },
 );
+
+/// Opens the realtime channel of a user; tests override it.
+final chatEventsFactoryProvider = Provider<ChatEvents Function(String userId)>(
+  (ref) {
+    final client = ref.watch(supabaseGatewayProvider).client;
+    return (userId) => SupabaseChatEvents(client, userId: userId);
+  },
+);
+
+/// The chats of the signed-in user on Supabase, with their channel. When
+/// the app comes back to the front, it checks the channel and catches up.
+/// Public for tests, which run on the fake backend.
+SupabaseChatRepository supabaseChatRepository(Ref ref) {
+  final userId = ref.watch(currentUserProvider.select((u) => u?.id));
+  final gateway = ref.watch(supabaseGatewayProvider);
+  final repo = SupabaseChatRepository(
+    gateway: gateway,
+    uploads: SupabaseUploads(
+      gateway,
+      // A sent photo or note is what the server has: no download back.
+      onUploaded: ref.watch(remoteFilesProvider).adopt,
+    ),
+    userId: userId,
+    events: userId == null ? null : ref.watch(chatEventsFactoryProvider)(userId),
+  );
+  final lifecycle = AppLifecycleListener(
+    onResume: () => unawaited(repo.onAppResumed()),
+  );
+  ref.onDispose(() {
+    lifecycle.dispose();
+    unawaited(repo.dispose());
+  });
+  return repo;
+}
 
 // ── Chat list ────────────────────────────────────────────────
 
