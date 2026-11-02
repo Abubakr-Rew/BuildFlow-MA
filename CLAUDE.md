@@ -510,6 +510,12 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   с разделителями (`'${l10n.foremenCount}: $n'`), но новые слова в такие строки не добавлять.
 - В `build.gradle.kts` стоит `minSdk = flutter.minSdkVersion` (в Flutter 3.47.5 это 24), хотя в коммите было `23`.
   flutter_secure_storage нужен ≥ 23, так что работает, но если сменить версию Flutter, проверь.
+- Машина сборки — 8 ГБ, рядом Docker с Supabase: в android/gradle.properties куча Gradle 3 ГБ и
+  `kotlin.compiler.execution.strategy=in-process` (без отдельного Kotlin-демона). С `-Xmx8G` и Kotlin-демоном release
+  падал с `Out of Memory Error` (логи `android/hs_err_pid*.log` — удалять, в git не нужны). Долгие сборки запускать в фоне.
+- Запуск без сети: `SupabaseAuthRepository` открывает последний профиль, списки показывают «Ошибка сети». Живой
+  список чатов и участники поднимаются сами, когда канал Realtime входит (первый вход после ошибок канала тоже
+  догружает); объекты и отчёты — по «Повторить» или потягиванию вниз.
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
 - AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
