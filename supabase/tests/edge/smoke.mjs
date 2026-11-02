@@ -70,6 +70,27 @@ async function invite(ownerToken, role) {
   return res.data.code;
 }
 
+// ── Demo data (supabase/seed.sql) ────────────────────────────
+
+async function signIn(email) {
+  const res = await call('/auth/v1/token?grant_type=password', { body: { email, password: '123456' } });
+  return res.data?.access_token;
+}
+
+const demoOwner = await signIn('owner@buildflow.kg');
+check('the demo owner signs in with 123456', !!demoOwner);
+if (demoOwner) {
+  const chats = (await rpc('get_chats', demoOwner)).data ?? [];
+  check('the demo owner sees 4 projects, 5 reports and 3 unread messages in 5 chats',
+    (await rpc('get_projects', demoOwner)).data?.length === 4 &&
+      (await rpc('get_reports', demoOwner)).data?.length === 5 &&
+      chats.length === 5 && chats.reduce((sum, c) => sum + c.unreadCount, 0) === 3,
+    chats.map((c) => [c.title, c.unreadCount]));
+}
+const demoWorker = await signIn('worker3@buildflow.kg');
+check('a demo worker sees only the own project',
+  (await rpc('get_projects', demoWorker)).data?.map((p) => p.name).join() === 'Офис «Байтик»');
+
 // ── Join ─────────────────────────────────────────────────────
 
 const ownerToken = await signUpOwner(`owner-${run}@smoke.kg`);
