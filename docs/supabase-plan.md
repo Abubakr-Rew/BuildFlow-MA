@@ -8,6 +8,13 @@
 - Supabase CLI запускается через `npx supabase@2.122.0`, глобально не ставится. Пока работаем только локально,
   облачный проект привяжем отдельным шагом перед пилотом.
 - Подтверждение email выключено (`[auth.email] enable_confirmations = false`). **Пересмотреть перед пилотом.**
+
+**Перед пилотом:**
+- подтверждение email;
+- какой заголовок несёт настоящий IP клиента в Edge Functions облачного проекта (`join` берёт
+  `cf-connecting-ip`, иначе последний адрес `X-Forwarded-For`). Если это окажется адрес внутреннего прокси,
+  лимит по IP станет общим на всех;
+- привязка облачного проекта и `supabase db push`.
 - Срок access-токена — 15 минут (`[auth] jwt_expiry = 900`).
 - В `auth.users` и `auth.sessions` SQL не пишет. Блокировку входа и выход со всех устройств делает Edge Function
   `remove-member` через admin API.
@@ -79,7 +86,7 @@
 | `POST/DELETE /projects/:id/foremen` | `assign_foreman(p_project_id, p_foreman_id)`, `remove_foreman(...)` |
 | `GET /team/members?query=&role=` | `get_members(p_query?, p_role?)`. Правила `matchName` перенесены в `private.fold_name()` и `private.latin_to_cyrillic()` |
 | `POST /team/invite` | `create_invite(p_role)` |
-| `DELETE /team/members/:id` | Edge Function `remove-member` → RPC `remove_member(p_member_id)` + admin API |
+| `DELETE /team/members/:id` | Edge Function `remove-member` → служебная RPC `remove_member(p_actor_id, p_member_id)` + admin API |
 | `GET /reports`, `/:id` | `get_reports(p_project_id?)`, `get_report(p_id)` |
 | `POST /reports` | `submit_report(p_project_id, p_text, p_photos)`, где `p_photos` — `[{attachmentId, takenAt}]`, до 5 |
 | `POST /uploads` | `create_upload(p_content_type, p_bytes, p_width?, p_height?, p_duration_ms?, p_waveform?)` → `{attachmentId, bucket, path}` |
@@ -93,24 +100,33 @@ HTTP-статусы 200/201 у RPC не различаются: PostgREST отв
 
 ## Авторизация
 - **Регистрация** — обычный `signUp` (`data: {name, company_name}`). Если триггер отклонил вставку, GoTrue
-  отвечает 500 «Database error saving new user». Имя и название компании клиент проверяет заранее.
+  отвечает ошибкой: 400 с нашим `hint` или 500 «Database error saving new user». Имя и название компании клиент
+  проверяет заранее.
+- **Триггер регистрации отложен до `COMMIT`** (`constraint trigger … initially deferred`). `admin.createUser`
+  вставляет пользователя без `app_metadata` и дописывает её вторым запросом той же транзакции, поэтому обычный
+  `AFTER INSERT` не видел `invite_code`. Отложенный триггер перечитывает строку при `COMMIT`, а его исключение
+  по-прежнему откатывает всю регистрацию. В pgTAP `tests.create_user` повторяет этот порядок.
 - **Edge Function `join`** (`verify_jwt = false`):
-  1. Ограничивает попытки: 10 в минуту с IP (`x-forwarded-for`) и с устройства (`X-Device-Id`). Сверх — 429
-     и `Retry-After: 60`.
+  1. Ограничивает попытки: 10 в минуту с IP и с устройства (`X-Device-Id`). Сверх — 429 и `Retry-After: 60`.
+     IP берётся из `cf-connecting-ip`, иначе из **последнего** адреса `X-Forwarded-For`: первый подставляет
+     сам клиент. Смоук-тест проверяет, что выдуманный `X-Forwarded-For` лимит не сбрасывает.
   2. Вызывает `admin.createUser` с `email_confirm`, `user_metadata: {name}`, `app_metadata: {invite_code}`.
      GoTrue проверяет email раньше триггера, поэтому занятый email даёт 409, а код не тратится.
   3. Триггер гасит код одним `UPDATE … WHERE used_at IS NULL AND expires_at > now() RETURNING`. Если код
      не подошёл, триггер бросает исключение, и пользователь не создаётся. Функция тогда отвечает 404.
      Из двух одновременных запросов с одним кодом успешен один.
   4. Входит под новым пользователем и отвечает `201 {session, user, company}`.
-- **Edge Function `remove-member`** (JWT директора):
-  1. Вызывает `remove_member` от имени директора: проверка роли, `removed_at`, чистка `project_members` и чатов,
-     системные сообщения — одной транзакцией.
+- **Edge Function `remove-member`** (JWT директора, тело `{memberId}`):
+  1. Проверяет токен (`auth.getUser`) и вызывает служебную RPC `remove_member(p_actor_id, p_member_id)`:
+     проверка, что вызывающий — директор, `removed_at`, чистка `project_members` и чатов, системные сообщения —
+     одной транзакцией. RPC доступна только `service_role`: если бы клиент мог вызвать её сам, удаление прошло бы
+     без блокировки.
   2. Через admin API блокирует пользователя (`ban_duration`). У GoTrue нет admin-метода «выйти со всех устройств»
      по id пользователя: `admin.signOut` принимает JWT самого пользователя. Но заблокированному GoTrue не обновляет
-     сессию по refresh-токену, а это и есть выход со всех устройств. Через ≤ 15 минут истекает и access-токен.
-  3. Повтор после сбоя на шаге 2 получает 404 от RPC. Функция тогда видит, что участник уже удалён, ещё раз
-     ставит блокировку и отвечает 404.
+     сессию (`Invalid Refresh Token: User Banned`) и не даёт войти (`user_banned`), а это и есть выход со всех
+     устройств. Через ≤ 15 минут истекает и access-токен. Проверено смоук-тестом.
+  3. Повтор после сбоя на шаге 2: RPC отвечает `already_removed`, функция ещё раз ставит блокировку и отвечает
+     404, как требует контракт.
 - **Удалённый участник до истечения access-токена** получает от RPC 403 с `hint: "account_removed"`. Прямые
   чтения таблиц под RLS возвращают ему пустой результат.
 
@@ -175,6 +191,7 @@ Realtime Broadcast из базы: триггеры вызывают `realtime.se
 npx supabase@2.122.0 start      # первый раз скачивает образы, несколько минут
 npx supabase@2.122.0 db reset   # пересоздать базу: миграции + seed.sql
 npx supabase@2.122.0 test db    # тесты pgTAP из supabase/tests/database
+node supabase/tests/edge/smoke.mjs   # Edge Functions по HTTP на запущенном стеке
 npx supabase@2.122.0 stop       # остановить
 ```
 `start` печатает адреса и ключи: API `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`.

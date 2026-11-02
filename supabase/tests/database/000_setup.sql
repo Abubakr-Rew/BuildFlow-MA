@@ -5,7 +5,9 @@ create extension if not exists pgtap with schema extensions;
 create schema if not exists tests;
 grant usage on schema tests to anon, authenticated;
 
--- An auth user, as GoTrue would insert it: the registration trigger fires.
+-- An auth user, as GoTrue's admin.createUser writes it: the insert, then
+-- the app metadata in a second statement. The registration trigger is
+-- deferred to commit, and tests never commit, so it's fired right here.
 create or replace function tests.create_user(
   p_email text,
   p_user_meta jsonb,
@@ -18,15 +20,18 @@ as $$
 declare
   v_id uuid := gen_random_uuid();
 begin
+  set constraints all deferred;
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   ) values (
     '00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
     p_email, '', now(),
-    '{"provider": "email", "providers": ["email"]}'::jsonb || p_app_meta,
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
     p_user_meta, now(), now()
   );
+  update auth.users set raw_app_meta_data = raw_app_meta_data || p_app_meta where id = v_id;
+  set constraints all immediate;
   return v_id;
 end;
 $$;
@@ -111,6 +116,18 @@ begin
 end;
 $$;
 
+-- The service role key, as Edge Functions call the database.
+create or replace function tests.as_service()
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  perform set_config('role', 'service_role', true);
+  perform set_config('request.jwt.claims', '{"role": "service_role"}', true);
+end;
+$$;
+
 -- 'ok' if [p_sql] runs, otherwise 'SQLSTATE hint' for our own errors
 -- ('PT403 account_removed') and just the SQLSTATE for the rest ('42501').
 create or replace function tests.error_of(p_sql text)
@@ -172,7 +189,8 @@ as $$
   from jsonb_array_elements_text(p_array) e
 $$;
 
-grant execute on all functions in schema tests to anon, authenticated;
+grant usage on schema tests to service_role;
+grant execute on all functions in schema tests to anon, authenticated, service_role;
 
 select plan(1);
 select pass('test helpers installed');

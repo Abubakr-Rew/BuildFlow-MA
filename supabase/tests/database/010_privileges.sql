@@ -1,16 +1,19 @@
 -- Who may call what and touch which table. Every function of the public
 -- schema must be listed below: a new one fails these tests until it is.
 begin;
-select plan(12);
+select plan(13);
 
 create temp table client_functions (name text primary key) on commit drop;
 insert into client_functions values
   ('get_me'),
   ('get_projects'), ('get_project'), ('create_project'), ('update_project'),
-  ('assign_foreman'), ('remove_foreman');
+  ('assign_foreman'), ('remove_foreman'),
+  ('create_invite'), ('get_members');
 
 -- Called by Edge Functions with the service role key only.
 create temp table service_functions (name text primary key) on commit drop;
+insert into service_functions values
+  ('invite_is_redeemable'), ('join_rate_limit'), ('remove_member');
 
 grant select on client_functions, service_functions to anon, authenticated;
 
@@ -118,6 +121,20 @@ select is_empty(
 );
 
 -- The service functions are not callable by app users.
+create temp table service_calls (name text, as_user text) on commit drop;
+grant all on service_calls to authenticated;
+insert into service_calls (name) select name from service_functions;
+select tests.new_owner('owner@test.kg') as owner \gset
+select tests.login_as(:'owner');
+update service_calls set as_user = tests.error_of(tests.call_with_nulls(name,
+  (select nargs from tests.public_functions() f where f.name = service_calls.name)));
+reset role;
+
+select is_empty(
+  $$ select name, as_user from service_calls where as_user <> '42501' $$,
+  'an app user gets "permission denied" from every service function'
+);
+
 select is_empty(
   $$ select name from tests.public_functions()
      where name in (select name from service_functions)
