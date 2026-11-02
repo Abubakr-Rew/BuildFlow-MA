@@ -178,6 +178,40 @@ as $$
     coalesce((select string_agg('null', ', ') from generate_series(1, p_nargs)), ''))
 $$;
 
+-- The file of attachment [p_id] has been uploaded, as Storage would record it.
+create or replace function tests.store(p_id uuid)
+returns uuid
+language sql
+security definer
+set search_path = ''
+as $$
+  insert into storage.objects (bucket_id, name, metadata)
+  select a.bucket, a.path, jsonb_build_object('size', a.bytes, 'mimetype', a.mime)
+  from public.attachments a where a.id = p_id;
+  select p_id;
+$$;
+
+-- A photo of [p_user], uploaded unless [p_store] is false: the attachment id.
+create or replace function tests.photo(p_user uuid, p_store boolean default true)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_claims text := current_setting('request.jwt.claims', true);
+  v_id uuid;
+begin
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', p_user, 'role', 'authenticated')::text, true);
+  v_id := (public.create_upload('image/jpeg', 200000, 1600, 1200) ->> 'attachmentId')::uuid;
+  perform set_config('request.jwt.claims', coalesce(v_claims, ''), true);
+  if p_store then
+    perform tests.store(v_id);
+  end if;
+  return v_id;
+end;
+$$;
+
 -- A JSON array of strings, sorted: compares lists whose order doesn't matter.
 create or replace function tests.sorted(p_array jsonb)
 returns jsonb

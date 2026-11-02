@@ -122,11 +122,84 @@ const spoofed = await joinOnce(joinBody(`spoof-${run}@smoke.kg`, 'ZZZZZZ'), {
 });
 check('a made-up X-Forwarded-For and device id do not reset the limit', spoofed.status === 429, spoofed);
 
-// ── Remove member ────────────────────────────────────────────
+// ── Storage and reports ──────────────────────────────────────
 
 const worker = joined.data.user;
 const workerSession = joined.data.session;
 const foremanToken = afterTaken.data.session.access_token;
+const foremanId = afterTaken.data.user.id;
+
+async function storage(path, { method = 'POST', token, body, contentType } = {}) {
+  const res = await fetch(`${url}/storage/v1/${path}`, {
+    method,
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+      ...(contentType ? { 'Content-Type': contentType } : {}),
+    },
+    body,
+  });
+  const text = await res.text();
+  let data = text;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // binary or empty
+  }
+  return { status: res.status, data, text };
+}
+
+const project = (await rpc('create_project', ownerToken, { p_name: `Объект ${run}` })).data;
+await rpc('update_project', ownerToken, { p_id: project.id, p_foreman_ids: [foremanId] });
+
+const jpeg = Buffer.from(`ffd8ffe000104a46494600010100000100010000ffd9${'00'.repeat(64)}`, 'hex');
+const upload = (await rpc('create_upload', foremanToken, {
+  p_content_type: 'image/jpeg', p_bytes: jpeg.length, p_width: 1600, p_height: 1200,
+})).data;
+check('create_upload returns where to upload', upload?.bucket === 'photos' && !!upload?.path, upload);
+
+const objectPath = `${upload.bucket}/${upload.path}`;
+const byOther = await storage(`object/${objectPath}`, { token: ownerToken, body: jpeg, contentType: 'image/jpeg' });
+check('nobody else can upload to that path', byOther.status >= 400, byOther);
+
+const uploaded = await storage(`object/${objectPath}`, { token: foremanToken, body: jpeg, contentType: 'image/jpeg' });
+check('the foreman uploads the photo straight to Storage', uploaded.status === 200, uploaded);
+
+const overwrite = await storage(`object/${objectPath}`, {
+  method: 'PUT', token: foremanToken, body: jpeg, contentType: 'image/jpeg',
+});
+check('an uploaded file cannot be replaced', overwrite.status >= 400, overwrite);
+
+const gif = (await rpc('create_upload', foremanToken, {
+  p_content_type: 'image/jpeg', p_bytes: 10, p_width: 1, p_height: 1,
+})).data;
+const wrongType = await storage(`object/${gif.bucket}/${gif.path}`, {
+  token: foremanToken, body: Buffer.from('GIF89a'), contentType: 'image/gif',
+});
+check('the bucket refuses a type it does not allow', wrongType.status >= 400, wrongType);
+
+const report = await rpc('submit_report', foremanToken, {
+  p_project_id: project.id,
+  p_text: 'Смоук',
+  p_photos: [{ attachmentId: upload.attachmentId, takenAt: '2026-11-02T08:12:40Z' }],
+});
+check('the foreman submits a report with the uploaded photo',
+  report.status === 200 && report.data?.photos?.[0]?.path === upload.path, report);
+
+const signed = await storage(`object/sign/${objectPath}`, {
+  token: ownerToken, body: JSON.stringify({ expiresIn: 3600 }), contentType: 'application/json',
+});
+const download = signed.data?.signedURL ? await fetch(`${url}/storage/v1${signed.data.signedURL}`) : null;
+const downloaded = download ? Buffer.from(await download.arrayBuffer()) : null;
+check('the owner gets a signed link to the photo and downloads it',
+  download?.status === 200 && downloaded?.equals(jpeg), signed);
+
+const notVisible = await storage(`object/sign/${objectPath}`, {
+  token: workerSession.access_token, body: JSON.stringify({ expiresIn: 3600 }), contentType: 'application/json',
+});
+check('a worker not on the project gets no link', notVisible.status >= 400, notVisible);
+
+// ── Remove member ────────────────────────────────────────────
 
 const byForeman = await removeMember(foremanToken, worker.id);
 check('a foreman cannot remove members: 403', byForeman.status === 403, byForeman);

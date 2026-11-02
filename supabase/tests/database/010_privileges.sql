@@ -8,7 +8,8 @@ insert into client_functions values
   ('get_me'),
   ('get_projects'), ('get_project'), ('create_project'), ('update_project'),
   ('assign_foreman'), ('remove_foreman'),
-  ('create_invite'), ('get_members');
+  ('create_invite'), ('get_members'),
+  ('create_upload'), ('get_reports'), ('get_report'), ('submit_report');
 
 -- Called by Edge Functions with the service role key only.
 create temp table service_functions (name text primary key) on commit drop;
