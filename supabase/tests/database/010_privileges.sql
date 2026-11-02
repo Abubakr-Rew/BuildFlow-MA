@@ -5,7 +5,9 @@ select plan(12);
 
 create temp table client_functions (name text primary key) on commit drop;
 insert into client_functions values
-  ('get_me');
+  ('get_me'),
+  ('get_projects'), ('get_project'), ('create_project'), ('update_project'),
+  ('assign_foreman'), ('remove_foreman');
 
 -- Called by Edge Functions with the service role key only.
 create temp table service_functions (name text primary key) on commit drop;

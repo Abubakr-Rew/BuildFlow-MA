@@ -161,6 +161,17 @@ as $$
     coalesce((select string_agg('null', ', ') from generate_series(1, p_nargs)), ''))
 $$;
 
+-- A JSON array of strings, sorted: compares lists whose order doesn't matter.
+create or replace function tests.sorted(p_array jsonb)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(jsonb_agg(e order by e), '[]'::jsonb)
+  from jsonb_array_elements_text(p_array) e
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated;
 
 select plan(1);
