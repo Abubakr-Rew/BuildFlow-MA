@@ -212,6 +212,26 @@ begin
 end;
 $$;
 
+-- An uploaded voice note of [p_user], 42.4 s: the attachment id.
+create or replace function tests.voice(p_user uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_claims text := current_setting('request.jwt.claims', true);
+  v_id uuid;
+begin
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', p_user, 'role', 'authenticated')::text, true);
+  v_id := (public.create_upload('audio/mp4', 168400, p_duration_ms => 42400,
+    p_waveform => (select array_agg(i * 2) from generate_series(1, 40) i)) ->> 'attachmentId')::uuid;
+  perform set_config('request.jwt.claims', coalesce(v_claims, ''), true);
+  perform tests.store(v_id);
+  return v_id;
+end;
+$$;
+
 -- A JSON array of strings, sorted: compares lists whose order doesn't matter.
 create or replace function tests.sorted(p_array jsonb)
 returns jsonb
