@@ -21,6 +21,15 @@ class FakeReply {
           'details': null,
         });
 
+  /// An Auth (GoTrue) error with its machine [code], e.g.
+  /// `invalid_credentials` or `user_banned`.
+  FakeReply.auth(int status, String code)
+      : this(
+          status,
+          {'code': code, 'msg': code},
+          {'x-supabase-api-version': '2024-01-01'},
+        );
+
   final int status;
   final Object? body;
   final Map<String, String> headers;
@@ -49,7 +58,11 @@ class FakeSupabase {
       url,
       'anon-key',
       httpClient: MockClient(_handleHttp),
-      authOptions: const AuthClientOptions(autoRefreshToken: false),
+      authOptions: const AuthClientOptions(
+        autoRefreshToken: false,
+        // As in main.dart: password sign-in, no PKCE.
+        authFlowType: AuthFlowType.implicit,
+      ),
     );
     final dio = Dio()..httpClientAdapter = _DioAdapter(this);
     gateway = SupabaseGateway(client, url: url, anonKey: 'anon-key', dio: dio);

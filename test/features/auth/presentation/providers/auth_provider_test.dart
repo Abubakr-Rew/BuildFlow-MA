@@ -22,6 +22,10 @@ class _StubAuthRepository implements AuthRepository {
   Result<User> result = const Success(_user);
   Exception? error;
   Completer<void>? gate;
+  final ended = StreamController<Failure>.broadcast();
+
+  @override
+  Stream<Failure> get sessionEnded => ended.stream;
 
   Future<Result<User>> _respond() async {
     await gate?.future;
@@ -160,6 +164,31 @@ void main() {
       await notifier().logout();
       expect(state().status, AuthStatus.unauthenticated);
       expect(state().user, isNull);
+    });
+
+    test('a session that ends on its own signs out with the reason', () async {
+      await notifier().login(email: 'a@b.kg', password: '123456');
+
+      repo.ended.add(const Failure(FailureCode.sessionExpired));
+      await pumpEventQueue();
+
+      expect(state().status, AuthStatus.unauthenticated);
+      expect(state().user, isNull);
+      expect(state().failure?.code, FailureCode.sessionExpired);
+    });
+
+    test('a session end while signed out changes nothing', () async {
+      notifier().forceUnauthenticated();
+      repo.ended.add(const Failure(FailureCode.sessionExpired));
+      await pumpEventQueue();
+      expect(state().failure, isNull);
+    });
+
+    test('restoring a removed account says access is closed', () async {
+      repo.result = const Err(Failure(FailureCode.accountDisabled));
+      await notifier().restoreSession();
+      expect(state().status, AuthStatus.unauthenticated);
+      expect(state().failure?.code, FailureCode.accountDisabled);
     });
 
     test('currentUserProvider follows the signed-in user', () async {

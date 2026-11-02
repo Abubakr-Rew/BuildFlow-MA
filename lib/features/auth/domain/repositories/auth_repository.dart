@@ -1,8 +1,9 @@
+import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 
 /// Auth repository contract. Implemented by FakeAuthRepository and
-/// ApiAuthRepository.
+/// SupabaseAuthRepository.
 abstract class AuthRepository {
   /// Authenticate with email and password.
   Future<Result<User>> login({
@@ -33,6 +34,11 @@ abstract class AuthRepository {
 
   /// Clear the current session.
   Future<Result<void>> logout();
+
+  /// Fires when the session ends without [logout]: it can no longer be
+  /// refreshed, or the server says the account is gone. Carries why
+  /// (`sessionExpired`, `accountDisabled`).
+  Stream<Failure> get sessionEnded;
 
   /// Get the current authenticated user, or null.
   User? get currentUser;

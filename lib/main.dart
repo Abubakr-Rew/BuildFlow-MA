@@ -56,8 +56,10 @@ Future<void> main() async {
       publishableKey: config.supabaseAnonKey,
       authOptions: FlutterAuthClientOptions(
         localStorage: SecureSessionStorage(container.read(secureStorageProvider)),
-        // Password sign-in only: no magic links or OAuth to catch.
+        // Password sign-in only: no magic links or OAuth codes to catch,
+        // so no PKCE either.
         detectSessionInUri: false,
+        authFlowType: AuthFlowType.implicit,
       ),
     );
   }

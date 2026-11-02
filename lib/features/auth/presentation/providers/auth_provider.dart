@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/storage/storage_providers.dart';
-import 'package:buildflow/features/auth/data/api_auth_repository.dart';
+import 'package:buildflow/core/supabase/supabase_providers.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
+import 'package:buildflow/features/auth/data/supabase_auth_repository.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
@@ -14,12 +17,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ── DI providers ─────────────────────────────────────────────
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => kBackend == Backend.fake
-      ? FakeAuthRepository(
-          secureStorage: ref.watch(secureStorageProvider),
-          teamStore: ref.watch(fakeTeamStoreProvider),
-        )
-      : ApiAuthRepository(),
+  (ref) => switch (kBackend) {
+    Backend.fake => FakeAuthRepository(
+        secureStorage: ref.watch(secureStorageProvider),
+        teamStore: ref.watch(fakeTeamStoreProvider),
+      ),
+    Backend.supabase => SupabaseAuthRepository(
+        gateway: ref.watch(supabaseGatewayProvider),
+        localStorage: ref.watch(localStorageProvider),
+      ),
+  },
 );
 
 // ── Auth state ───────────────────────────────────────────────
@@ -67,7 +74,14 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     // A different repository starts a fresh session state.
-    ref.watch(authRepositoryProvider);
+    final repo = ref.watch(authRepositoryProvider);
+    // The session ended without a logout (expired, account removed): back
+    // to the login screen, which says why. The router follows the state.
+    final ended = repo.sessionEnded.listen((failure) {
+      if (state.user == null) return;
+      state = AuthState(status: AuthStatus.unauthenticated, failure: failure);
+    });
+    ref.onDispose(() => unawaited(ended.cancel()));
     return const AuthState();
   }
 
@@ -82,8 +96,11 @@ class AuthNotifier extends Notifier<AuthState> {
           status: AuthStatus.authenticated,
           user: user,
         ),
-        failure: (_) => const AuthState(
+        // A removed account is told so; any other failure just shows the
+        // login screen.
+        failure: (f) => AuthState(
           status: AuthStatus.unauthenticated,
+          failure: f.code == FailureCode.accountDisabled ? f : null,
         ),
       );
     } catch (_) {

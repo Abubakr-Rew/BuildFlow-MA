@@ -58,6 +58,9 @@ Failure failureFromSupabase(
         status: status,
       );
 
+    case AuthWeakPasswordException():
+      return fail(FailureCode.validation);
+
     case AuthSessionMissingException():
       return fail(FailureCode.sessionExpired);
 
