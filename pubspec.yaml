@@ -22,7 +22,7 @@ dependencies:
   freezed_annotation: ^3.1.0
   json_annotation: ^4.12.0
 
-  # Networking
+  # Networking (uploads and downloads of Storage files with progress)
   dio: ^5.7.0
 
   # Storage
@@ -43,7 +43,11 @@ dependencies:
   # Voice messages: recording (AAC in M4A) and playback
   record: ^7.1.2
   audioplayers: ^6.8.1
+
+  # Backend: Auth, RPC, Storage, Realtime and Edge Functions of Supabase.
+  # http for its ClientException (network errors) and MockClient in tests.
   supabase_flutter: ^2.18.3
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -54,7 +58,6 @@ dev_dependencies:
   build_runner: ^2.4.14
   freezed: ^4.0.0
   json_serializable: ^6.9.0
-  http: ^1.6.0
 
 flutter:
   generate: true

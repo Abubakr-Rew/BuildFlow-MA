@@ -4,11 +4,14 @@ import 'package:buildflow/app/app.dart';
 import 'package:buildflow/app/config_error_app.dart';
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
+import 'package:buildflow/core/storage/storage_providers.dart';
+import 'package:buildflow/core/supabase/secure_session_storage.dart';
 import 'package:buildflow/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +46,21 @@ Future<void> main() async {
   // doesn't see the light theme flash on every launch.
   final container = ProviderContainer();
   await container.read(themeModeProvider.notifier).restore();
+
+  // The stored session is read here (secure storage, with timeouts) and
+  // refreshed in the background; AuthNotifier restores the user on the
+  // splash screen.
+  if (config.backend == Backend.supabase) {
+    await Supabase.initialize(
+      url: config.supabaseUrl,
+      publishableKey: config.supabaseAnonKey,
+      authOptions: FlutterAuthClientOptions(
+        localStorage: SecureSessionStorage(container.read(secureStorageProvider)),
+        // Password sign-in only: no magic links or OAuth to catch.
+        detectSessionInUri: false,
+      ),
+    );
+  }
 
   runApp(
     UncontrolledProviderScope(

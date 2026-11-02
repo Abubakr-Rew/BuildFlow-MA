@@ -24,6 +24,7 @@ class SecureStorageService {
   static const _tokenKey = 'auth_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _userIdKey = 'user_id';
+  static const _supabaseSessionKey = 'supabase_session';
 
   Future<void> saveToken(String token) => _write(_tokenKey, token);
 
@@ -39,6 +40,16 @@ class SecureStorageService {
   Future<void> saveUserId(String userId) => _write(_userIdKey, userId);
 
   Future<String?> readUserId() => _read(_userIdKey);
+
+  /// The Supabase session (access and refresh token, user) as JSON; kept
+  /// and refreshed by supabase_flutter through `SecureSessionStorage`.
+  Future<void> saveSupabaseSession(String json) =>
+      _write(_supabaseSessionKey, json);
+
+  Future<String?> readSupabaseSession() => _read(_supabaseSessionKey);
+
+  Future<void> deleteSupabaseSession() =>
+      _guard(() => _storage.delete(key: _supabaseSessionKey));
 
   Future<void> clearAll() => _guard(_storage.deleteAll);
 
