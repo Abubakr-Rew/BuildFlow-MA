@@ -1,0 +1,4 @@
+# Tags of test suites.
+tags:
+  # integration/supabase: needs the local Supabase running (README).
+  supabase:
