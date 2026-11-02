@@ -698,6 +698,8 @@ Authorization: Bearer <token>
 | 400 | `validation` |
 | 401 на `POST /auth/login` | `invalidCredentials` |
 | 401 на остальных запросах | `sessionExpired` |
+| Вход удалённого участника: Supabase Auth `user_banned`, 403 `account_removed` на входе и при восстановлении сессии | `accountDisabled` |
+| 403 `account_removed` / `no_profile` на остальных запросах | `sessionExpired` (клиент выходит из сессии) |
 | 403 (в том числе чат, где пользователь больше не участник, и чужое или уже прикреплённое вложение) | `forbidden` |
 | 404 на `POST /auth/join` (код неизвестен, использован или истёк) | `invalidInviteCode` |
 | 404 на остальных запросах | `notFound` |

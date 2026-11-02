@@ -26,6 +26,11 @@ enum FailureCode {
   /// No valid session; the user has to log in again (401).
   sessionExpired,
 
+  /// The account was removed from the company: signing in is refused
+  /// (Supabase Auth `user_banned`, 400) or the profile is marked removed
+  /// (403 `account_removed` while signing in or restoring the session).
+  accountDisabled,
+
   /// The user's role doesn't allow the action (403).
   forbidden,
 

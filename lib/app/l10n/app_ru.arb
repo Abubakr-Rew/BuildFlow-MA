@@ -382,6 +382,9 @@
   "errorSessionExpired": "Сессия истекла. Войдите снова",
   "@errorSessionExpired": {"description": "FailureCode.sessionExpired: the user must log in again"},
 
+  "errorAccountDisabled": "Доступ закрыт. Обратитесь к директору компании",
+  "@errorAccountDisabled": {"description": "FailureCode.accountDisabled: the user was removed from the company and can no longer sign in"},
+
   "errorForbidden": "Недостаточно прав для этого действия",
   "@errorForbidden": {"description": "FailureCode.forbidden: the role does not allow the action"},
 
@@ -399,6 +402,12 @@
 
   "errorUnknown": "Что-то пошло не так",
   "@errorUnknown": {"description": "FailureCode.unknown and unexpected exceptions"},
+
+  "configErrorTitle": "Сборка настроена неверно",
+  "@configErrorTitle": {"description": "Title of the screen shown instead of the app when the build has no server address"},
+
+  "configErrorHint": "Соберите приложение заново с адресом сервера. Подробности для разработчика:",
+  "@configErrorHint": {"description": "Text above the technical details on the build configuration error screen"},
 
   "offlineBanner": "Нет подключения к интернету",
   "@offlineBanner": {"description": "Offline banner text"},

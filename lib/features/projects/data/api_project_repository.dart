@@ -3,7 +3,7 @@ import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/repositories/project_repository.dart';
 
-/// API project repository skeleton. Selected when `kUseMockData` is false;
+/// API project repository skeleton. Selected with `Backend.supabase` until replaced;
 /// every call fails until the backend is available.
 class ApiProjectRepository implements ProjectRepository {
   @override

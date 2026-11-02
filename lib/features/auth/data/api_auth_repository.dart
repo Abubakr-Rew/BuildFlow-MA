@@ -3,7 +3,7 @@ import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
 
-/// API auth repository skeleton. Selected when `kUseMockData` is false;
+/// API auth repository skeleton. Selected with `Backend.supabase` until replaced;
 /// every call fails until the backend is available.
 class ApiAuthRepository implements AuthRepository {
   @override

@@ -814,6 +814,12 @@ abstract class AppLocalizations {
   /// **'Сессия истекла. Войдите снова'**
   String get errorSessionExpired;
 
+  /// FailureCode.accountDisabled: the user was removed from the company and can no longer sign in
+  ///
+  /// In ru, this message translates to:
+  /// **'Доступ закрыт. Обратитесь к директору компании'**
+  String get errorAccountDisabled;
+
   /// FailureCode.forbidden: the role does not allow the action
   ///
   /// In ru, this message translates to:
@@ -849,6 +855,18 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Что-то пошло не так'**
   String get errorUnknown;
+
+  /// Title of the screen shown instead of the app when the build has no server address
+  ///
+  /// In ru, this message translates to:
+  /// **'Сборка настроена неверно'**
+  String get configErrorTitle;
+
+  /// Text above the technical details on the build configuration error screen
+  ///
+  /// In ru, this message translates to:
+  /// **'Соберите приложение заново с адресом сервера. Подробности для разработчика:'**
+  String get configErrorHint;
 
   /// Offline banner text
   ///

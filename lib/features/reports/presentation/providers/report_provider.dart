@@ -12,7 +12,7 @@ import 'package:buildflow/features/reports/domain/repositories/report_repository
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final reportRepositoryProvider = Provider<ReportRepository>(
-  (ref) => kUseMockData ? FakeReportRepository() : ApiReportRepository(),
+  (ref) => kBackend == Backend.fake ? FakeReportRepository() : ApiReportRepository(),
 );
 
 /// Reports visible to the current user: everything for a director,

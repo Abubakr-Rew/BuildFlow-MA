@@ -28,7 +28,7 @@ import 'package:uuid/uuid.dart';
 /// Bound to the signed-in user: the fake needs the id, the API will take
 /// the user from the token.
 final chatRepositoryProvider = Provider<ChatRepository>(
-  (ref) => kUseMockData
+  (ref) => kBackend == Backend.fake
       ? FakeChatRepository(
           store: ref.watch(fakeChatStoreProvider),
           userId: ref.watch(currentUserProvider.select((u) => u?.id)),

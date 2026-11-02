@@ -5,7 +5,7 @@ import 'package:buildflow/features/team/domain/entities/invite_code.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/domain/repositories/team_repository.dart';
 
-/// API team repository skeleton. Selected when `kUseMockData` is false;
+/// API team repository skeleton. Selected with `Backend.supabase` until replaced;
 /// every call fails until the backend is available.
 class ApiTeamRepository implements TeamRepository {
   @override

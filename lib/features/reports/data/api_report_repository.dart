@@ -5,7 +5,7 @@ import 'package:buildflow/features/reports/domain/entities/draft_report.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/repositories/report_repository.dart';
 
-/// API report repository skeleton. Selected when `kUseMockData` is false;
+/// API report repository skeleton. Selected with `Backend.supabase` until replaced;
 /// every call fails until the backend is available.
 class ApiReportRepository implements ReportRepository {
   @override

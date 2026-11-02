@@ -12,7 +12,7 @@ import 'package:buildflow/features/projects/domain/repositories/project_reposito
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => kUseMockData
+  (ref) => kBackend == Backend.fake
       ? FakeProjectRepository(
           // The server keeps each project chat's team in line with the
           // project; the fake store needs to be told.

@@ -8,7 +8,7 @@ import 'package:buildflow/features/chat/domain/entities/message_attachment.dart'
 import 'package:buildflow/features/chat/domain/repositories/chat_repository.dart';
 import 'package:flutter/foundation.dart';
 
-/// API chat repository skeleton. Selected when `kUseMockData` is false;
+/// API chat repository skeleton. Selected with `Backend.supabase` until replaced;
 /// every call fails until the backend is available. REST and the STOMP
 /// events are described in docs/api-contract.md («Чат»).
 class ApiChatRepository implements ChatRepository {

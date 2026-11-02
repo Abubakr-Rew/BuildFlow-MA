@@ -13,7 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final teamRepositoryProvider = Provider<TeamRepository>(
-  (ref) => kUseMockData
+  (ref) => kBackend == Backend.fake
       ? FakeTeamRepository(store: ref.watch(fakeTeamStoreProvider))
       : ApiTeamRepository(),
 );

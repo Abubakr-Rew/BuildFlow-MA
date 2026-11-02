@@ -14,7 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ── DI providers ─────────────────────────────────────────────
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => kUseMockData
+  (ref) => kBackend == Backend.fake
       ? FakeAuthRepository(
           secureStorage: ref.watch(secureStorageProvider),
           teamStore: ref.watch(fakeTeamStoreProvider),

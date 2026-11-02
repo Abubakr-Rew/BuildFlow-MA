@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:buildflow/app/app.dart';
+import 'package:buildflow/app/config_error_app.dart';
+import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
 import 'package:buildflow/features/profile/presentation/providers/profile_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +12,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // A build without a usable backend stops here, on a screen that says
+  // why, rather than starting on demo data or failing on the first request.
+  final BackendConfig config;
+  try {
+    config = kBackendConfig;
+  } on BackendConfigError catch (e) {
+    debugPrint('$e');
+    runApp(ConfigErrorApp(details: e.message));
+    return;
+  }
+  debugPrint('Backend: ${config.backend.name}');
 
   // The bundled Inter font is under the OFL, which travels with the font.
   LicenseRegistry.addLicense(() async* {
