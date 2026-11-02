@@ -3,15 +3,17 @@
 ## О проекте
 Flutter-приложение для ежедневных фото-отчётов со стройки для небольших строительных компаний Бишкека.
 Прораб снимает объект и отправляет отчёт, владелец видит прогресс за день. Интерфейс только на русском.
-Приложение пока работает на in-memory Fake-репозиториях. Бэкенд на Supabase готов локально (`supabase/`),
-но клиент к нему ещё не подключён (см. «Бэкенд»). Основная цель — Android (тестируем на Xiaomi).
+Два режима сборки (`--dart-define=BACKEND`): `fake` — in-memory Fake-репозитории с демо-данными (по умолчанию в debug
+и тестах), `supabase` — бэкенд на Supabase (`supabase/`, пока только локальный стек на компьютере, см. «Бэкенд»).
+Основная цель — Android (тестируем на Xiaomi).
 
 ## Команды
 ```bash
 flutter pub get                                           # зависимости
 dart run build_runner build --delete-conflicting-outputs  # freezed / json_serializable
 flutter gen-l10n                                          # после правки app_ru.arb
-flutter run                                               # на подключённом устройстве
+flutter run                                               # на подключённом устройстве, демо-данные
+flutter run --dart-define-from-file=env/local.env         # с локальным Supabase (README: adb reverse, env)
 flutter analyze                                           # цель: "No issues found!" (~2 мин)
 flutter test                                              # все тесты
 flutter test test/core/error/result_test.dart             # один файл
@@ -23,26 +25,31 @@ npx supabase@2.122.0 start                                # локальный �
 npx supabase@2.122.0 db reset                             # миграции + seed.sql
 npx supabase@2.122.0 test db                              # pgTAP
 node supabase/tests/edge/smoke.mjs                        # Edge Functions, Storage, Realtime по HTTP
+node tool/local_env.mjs                                   # env/local.env (URL и ключ, не в git) из supabase status
+flutter test integration/supabase --dart-define-from-file=env/local.env  # клиент против стека (не в flutter test)
 ```
 
 ## Архитектура
 **Стек:** Flutter 3.47 / Dart ^3.13, flutter_riverpod 2.6, go_router 14, freezed 4 + json_serializable,
 flutter_secure_storage, shared_preferences, image_picker, app_settings, intl, very_good_analysis,
-record (запись голосовых), audioplayers (воспроизведение).
+record (запись голосовых), audioplayers (воспроизведение), supabase_flutter 2.18 (бэкенд), http (`ClientException`
+сетевых ошибок, `MockClient` в тестах), dio (загрузка и скачивание файлов Storage с прогрессом).
 Шрифт Inter лежит в `assets/fonts/inter/`, google_fonts не используется.
 `app_settings` нужен только для того, чтобы открыть системные настройки приложения после отказа в разрешении.
 `uuid` генерирует `clientId` сообщений чата.
-Подключены, но в `lib/` не используются: dio, cached_network_image. Сжатие фото — свой Kotlin-канал
+Подключён, но в `lib/` не используется: cached_network_image (файлы Storage кэширует `RemoteFiles`). Сжатие фото — свой Kotlin-канал
 (см. «Фото»), `flutter_image_compress` удалён.
 
 ```
-lib/main.dart  ProviderContainer, восстановление темы до первого кадра, runApp
+lib/main.dart  конфигурация сборки (иначе ConfigErrorApp), ProviderContainer, тема до первого кадра,
+               Supabase.initialize (только BACKEND=supabase), runApp
 lib/app/       app.dart (MaterialApp.router), router.dart, routes.dart, theme/, l10n/
 lib/core/      config.dart, error/ (Result, Failure), photos/ (сжатие, выбор, черновики фото), audio/ (голосовые),
-               storage/ (secure, local, storage_providers), utils/, widgets/
+               storage/ (secure, local, storage_providers), supabase/ (шлюз, ошибки, сессия, загрузки),
+               remote_files/ (файлы Storage на телефоне), utils/, widgets/
 android/app/src/main/kotlin/…/PhotoCompressor.kt   нативное сжатие фото (канал buildflow/photos)
 android/app/src/main/kotlin/…/MainActivity.kt      каналы: buildflow/photos и buildflow/paths (cacheDir для записи)
-lib/features/<фича>/data/          Fake*Repository, Api*Repository
+lib/features/<фича>/data/          Fake*Repository, Supabase*Repository
                     domain/        entities/ (freezed), repositories/ (абстрактные интерфейсы)
                     presentation/  providers/, screens/, widgets/
 ```
@@ -52,7 +59,8 @@ lib/features/<фича>/data/          Fake*Repository, Api*Repository
 `Failure` ([failures.dart](lib/core/error/failures.dart)) — один класс. Что увидит пользователь, решает `code`
 (enum `FailureCode`). `message` нужен только для логов и отладки и в UI не показывается. Есть ещё `statusCode`
 и `stackTrace`. Коды: `network`, `timeout`, `server`, `invalidCredentials`, `emailTaken`, `invalidInviteCode`,
-`sessionExpired`, `forbidden`, `notFound`, `validation`, `tooManyRequests`, `photoProcessing` (только клиент: фото
+`sessionExpired`, `accountDisabled` (вход удалённого участника), `forbidden`, `notFound`, `validation`,
+`tooManyRequests`, `photoProcessing` (только клиент: фото
 не сжалось на устройстве), `unknown`. Соответствие HTTP-ответам — в docs/api-contract.md.
 ```dart
 Future<Result<Project>> createProject(...);                                  // интерфейс репозитория
@@ -80,17 +88,36 @@ Text(l10n.failureMessage(error))                                             // 
 
 **Репозитории и DI:**
 - Реализацию выбирает только `xxxRepositoryProvider` в `presentation/providers/<фича>_provider.dart`
-  (`authRepositoryProvider` лежит в auth_provider.dart): `kUseMockData ? FakeXxxRepository() : ApiXxxRepository()`.
-  Флаг — в [config.dart](lib/core/config.dart). `ProviderContainer` создаётся в main.dart без overrides
-  и передаётся в `UncontrolledProviderScope`.
+  (`authRepositoryProvider` лежит в auth_provider.dart):
+  `switch (kBackend) { Backend.fake => FakeXxxRepository(…), Backend.supabase => SupabaseXxxRepository(…) }`.
+  `kBackend` / `kBackendConfig` — в [config.dart](lib/core/config.dart), из `--dart-define` `BACKEND`,
+  `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Без `BACKEND` debug, profile и тесты — fake, release — `BackendConfigError`
+  и экран `ConfigErrorApp` вместо приложения (демо-release — явный `BACKEND=fake`). `ProviderContainer` создаётся
+  в main.dart без overrides и передаётся в `UncontrolledProviderScope`.
 - Сервисы хранилищ создаются только в [storage_providers.dart](lib/core/storage/storage_providers.dart):
   `secureStorageProvider` и `localStorageProvider`. `FakeAuthRepository` получает `SecureStorageService` через
   `secureStorageProvider`. Напрямую `SecureStorageService()` / `LocalStorageService()` не создавать (кроме тестов).
-- Новый репозиторий подключать так же: интерфейс в domain, `Fake*` и `Api*` в data, выбор в его провайдере.
+- Новый репозиторий подключать так же: интерфейс в domain, `Fake*` и `Supabase*` в data, выбор в его провайдере.
   В тестах подменять через `ProviderScope(overrides: [xxxRepositoryProvider.overrideWithValue(...)])`.
-- `Api*Repository` есть у всех пяти фич с данными, но это заглушки: все методы возвращают
-  `Err(Failure(FailureCode.server, message: 'API not implemented'))`, потоки чата — `Stream.error` с той же ошибкой.
-  Контракт: [docs/api-contract.md](docs/api-contract.md).
+- `Supabase*Repository` (все пять фич) ходят в бэкенд только через `SupabaseGateway`
+  ([supabase_gateway.dart](lib/core/supabase/supabase_gateway.dart), `supabaseGatewayProvider`): `rpc(name, parse,
+  params:)`, `invoke` (Edge Functions), `upload` (Dio, прогресс; повтор уже сохранённого файла — успех),
+  `signUrls`, `download`. Ответы RPC разбирают готовые `fromJson` (`one()` / `listOf()` из core/supabase/json.dart).
+  - Ошибки переводит `failureFromSupabase(error, call:)` ([supabase_failures.dart](lib/core/supabase/supabase_failures.dart)):
+    PostgREST `PT<статус>` + `hint`, коды Auth, статус и `hint` Edge Functions, Storage, Dio, сеть. `SupabaseCall.signIn`
+    (вход, регистрация, восстановление и их `get_me`): 403 `account_removed` → `accountDisabled`; `join`: 404 →
+    `invalidInviteCode`; данные: 403 `account_removed` / `no_profile` → `sessionExpired`.
+  - Запрос данных, обнаруживший конец сессии (`sessionExpired`), выходит на этом устройстве и сообщает в
+    `gateway.sessionEnded`; туда же — выход, который сделал сам Auth (refresh-токен отозван, бан). `AuthRepository.sessionEnded`
+    слушает `AuthNotifier`: `unauthenticated` с причиной, роутер ведёт на вход. Без сессии запрос данных не уходит.
+  - Сессию хранит и обновляет supabase_flutter: `SecureSessionStorage` поверх `SecureStorageService` (с таймаутами),
+    `AuthFlowType.implicit` (только пароль, без PKCE), `detectSessionInUri: false`. Просроченный токен клиент обновляет
+    сам перед запросом. `SupabaseAuthRepository` кэширует последний профиль (`cachedProfileKey`) для старта без сети
+    и шлёт в `join` `X-Device-Id` (uuid установки, `deviceIdKey`).
+  - Вложения: `SupabaseUploads` (`create_upload` → Storage; тот же локальный файл второй раз не грузится, оборванная
+    загрузка идёт в уже выданное вложение), своя загрузка сразу кладётся в кэш `RemoteFiles.adopt`.
+  - `ProjectRepository.updateProject(id, ProjectChanges)` отправляет только изменённые поля (`null` — не менять).
+  Контракт: [docs/api-contract.md](docs/api-contract.md), отличия Supabase — [docs/supabase-plan.md](docs/supabase-plan.md).
 - Fake-репозитории изолированы друг от друга, но используют общие ID (`user-owner-1`, `user-foreman-1`, `project-1`…).
   Есть искусственная задержка. Данные живут только в памяти и при перезапуске сбрасываются.
   Исключение — участники и коды приглашения. Они лежат в общем
@@ -132,6 +159,12 @@ Text(l10n.failureMessage(error))                                             // 
   сжатие и показывают превью); сжатая копия после отправки — это и есть фото (в Fake её путь служит URL).
   При запуске после первого кадра `sweep()` удаляет копии и остатки image_picker старше суток.
 - `PhotoImage` декодирует локальные файлы под размер на экране (`cacheWidth`), а не все 12 Мп оригинала.
+- Файлы сервера: `url` вложения — `storage:<bucket>/<path>` (`StorageRef`, сущности читают его из `bucket` и `path`
+  через `@JsonKey(readValue: readStorageUrl)`). [RemoteFiles](lib/core/remote_files/remote_files.dart)
+  (`remoteFilesProvider`) подписывает ссылки на час (кэш по attachmentId, заново за 5 мин до конца или если
+  скачивание отказано; ссылки одного экрана — одним запросом на бакет) и скачивает в `cacheDir/remote/<attachmentId>.<ext>`.
+  `PhotoImage` и голосовые (`VoicePlaybackNotifier`) берут файл оттуда. `clear()` — при выходе, конце сессии
+  и каждом входе; `sweep()` после старта (30 дней, 300 МБ).
 
 **Голосовые** (`lib/core/audio/` + чат):
 - `VoiceRecorder` (`voiceRecorderProvider`, поверх record): AAC-LC в M4A, моно, `kVoiceBitRate` 32 кбит/с,
@@ -167,6 +200,15 @@ Text(l10n.failureMessage(error))                                             // 
   `loadOlder`, `uploadPhoto(CompressedPhoto, onProgress:)` / `uploadVoice(VoiceNote, onProgress:)` → вложение,
   `send(text:, attachmentIds:)` (идемпотентно по `clientId`), `getOrCreateDirect`, `markRead`, `markListened`. Потоки не бросают: отказ —
   событие ошибки с `Failure` (`forbidden`, когда пользователя исключили), оно попадает в `AsyncValue.error`.
+- [SupabaseChatRepository](lib/features/chat/data/supabase_chat_repository.dart): `get_chats` и последняя страница
+  `get_messages`, дальше события приватного канала Realtime `user:<id>` (`ChatEvents` / `SupabaseChatEvents` в
+  chat_events.dart): `message.created` (без дублей), `message.status` (свои до `upTo` — `read`), `chat.updated`,
+  `chat.removed` (поток открытого чата — ошибка `forbidden`). Пропущенное догружается (`catchUp`: `get_chats` и
+  `get_messages(after:)` открытых чатов, при `truncated` — последняя страница заново), когда канал снова вошёл и когда
+  приложение вернулось из фона (`onAppResumed` через `AppLifecycleListener`: упавший канал сначала переподключается).
+  Вид сообщения для `send_message` репозиторий знает по своим загрузкам. Репозиторий привязан к пользователю:
+  выход и смена пользователя закрывают его канал. Канал открывает `chatEventsFactoryProvider` (в тестах —
+  `FakeChatEvents`); провайдерный тест подставляет `chatRepositoryProvider.overrideWith(supabaseChatRepository)`.
 - [FakeChatStore](lib/features/chat/data/fake_chat_store.dart) — общий in-memory «сервер» всех пользователей
   процесса (broadcast `StreamController`), поэтому после выхода и входа другим человеком сообщения на месте.
   Отдаёт его `fakeChatStoreProvider` из отдельного файла (его читает project_provider, а chat_provider импортирует
@@ -182,7 +224,7 @@ Text(l10n.failureMessage(error))                                             // 
     загрузивший и только один раз, иначе `forbidden`; голосовое — одно и без текста, иначе `validation`. «Прослушано»
     хранится по пользователям. В демо-истории есть сообщения с 1, 2, 3 и 6 фото (`fake:`) и три голосовых
     (0:07 и 0:42 в «Ала-Тоо», 0:23 в личном директор ↔ Бакыт).
-  - Флаги в config.dart (только при `kUseMockData`): `kFakeChatEcho` — собеседник в личном чате «читает» через 1–2 с
+  - Флаги в config.dart (только при `Backend.fake`): `kFakeChatEcho` — собеседник в личном чате «читает» через 1–2 с
     и отвечает через 2–4 с; `kFakeChatSendFailureRate` (0–1) — доля отправок и загрузок фото с ошибкой `network`
     (загрузка обрывается на середине), для ручной проверки «Повторить / Удалить».
 - Провайдеры в chat_provider.dart: `chatsProvider` (`StreamNotifierProvider`, сырые чаты), `chatListProvider`
@@ -264,9 +306,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `ProjectsNotifier.setProgress`). Смена статуса и готовности блокирует друг друга и редактор состава.
 
 ## Бэкенд (Supabase)
-Подробно — [docs/supabase-plan.md](docs/supabase-plan.md): решения, схема, соответствие эндпоинтов функциям, что
-сделать перед пилотом и при подключении клиента. Только локально; клиент пока не подключён (`supabase_flutter`
-добавим тогда же).
+Подробно — [docs/supabase-plan.md](docs/supabase-plan.md): решения, схема, соответствие эндпоинтов функциям, клиент,
+что сделать перед пилотом. Только локально: приложение ходит в стек на компьютере (`BACKEND=supabase`, README).
 - `supabase/migrations/` — по файлу на этап. Уже закоммиченную миграцию не править, а писать новую
   (`create or replace`, `drop trigger` …): после `db push` в облако старые миграции не перезапускаются.
 - Чтение — RPC `get_*` с правами вызывающего под RLS. Запись — только RPC с `security definer`, которые сами
@@ -281,11 +322,15 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `name`, `company_name` и `invite_code` (последний — из `app_metadata`, её ставит только Edge Function `join`).
 - В `auth.users` и `auth.sessions` SQL не пишет: бан и выход — admin API в Edge Function `remove-member`.
 - Подводные камни: триггер регистрации отложен до `COMMIT` (`admin.createUser` дописывает `app_metadata` вторым
-  запросом); у отчётов и сообщений одной транзакции одинаковый `now()`, в тестах порядок задавать явно;
+  запросом); `on_message_notify` (`message.created`) тоже отложен до `COMMIT`, иначе событие уходит без вложений:
+  `send_message` прикрепляет их после вставки сообщения. pgTAP не делает `COMMIT`: `tests.create_user` оставляет
+  ограничения `immediate`, а проверке «событие после коммита» нужны `set constraints all deferred` до и `immediate`
+  после (070_realtime). У отчётов и сообщений одной транзакции одинаковый `now()`, в тестах порядок задавать явно;
   `stable`-функция в том же `select`, что и мутация, видит снимок до неё.
+- Лимит `join` — 10 в минуту с IP: смоук-тест его выбирает, интеграционный тест после него ждёт минуту (иначе 429).
 
 ## Соглашения
-- Файлы в snake_case. Классы: `XxxScreen`, `XxxRepository` (интерфейс), `FakeXxxRepository` / `ApiXxxRepository`,
+- Файлы в snake_case. Классы: `XxxScreen`, `XxxRepository` (интерфейс), `FakeXxxRepository` / `SupabaseXxxRepository`,
   `XxxNotifier`, `xxxProvider`. Приватные виджеты `_Xxx` лежат в том же файле. Разделители секций: `// ── Title ───`.
 - Импорты только абсолютные: `package:buildflow/...`.
 - Сущности: `@freezed abstract class X with _$X` + `factory X.fromJson`, `part 'x.freezed.dart'; part 'x.g.dart';`.
@@ -458,7 +503,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   - Ошибки: неизвестный, использованный или истёкший код → `invalidInviteCode`; занятый email → `emailTaken`,
     причём email проверяется до того, как код гасится.
   - Сервер ограничивает попытки (429 → `tooManyRequests`) и гасит код атомарно. Fake этого не моделирует.
-  - Удалённый участник в Fake всё ещё может войти. Как должен вести себя сервер — в api-contract.md.
+  - Удалённый участник в Fake всё ещё может войти. Сервер его банит: вход — `accountDisabled` («Доступ закрыт»).
 - Если в shell одной роли несколько вкладок с `FloatingActionButton`, у них должен быть `heroTag: null`.
   `StatefulShellRoute` держит все вкладки живыми, и два одинаковых hero-тега роняют любой переход между страницами.
 - Название приложения — `l10n.appName`, в том числе в `MaterialApp.onGenerateTitle`. Можно склеивать строки l10n
@@ -468,22 +513,32 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
 - AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
+  `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`, `localhost` и `10.0.2.2` (локальный
+  Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
+- Тесты репозиториев Supabase — настоящий `SupabaseClient` поверх `MockClient` (`FakeSupabase` в test/helpers:
+  `rpc` / `rpcFails` / `function` / `on`, `FakeReply.auth` для ошибок GoTrue, `signIn(userId)` кладёт сессию; Dio
+  Storage идёт в те же обработчики). PostgREST читает `response.request`, поэтому `http.Response` отдаётся с `request:`.
+  Тестовый `SupabaseClient` и шлюз закрывать (`dispose`), иначе тест не завершится.
+- `AppLifecycleListener` проверяет переходы: в тесте фон и возврат — цепочкой inactive → hidden → paused → hidden →
+  inactive → resumed через `binding.handleAppLifecycleStateChanged`.
+- `integration/` анализатор не считает тестовой папкой (`visibleForTesting` там — с `ignore`), и `flutter test` без
+  пути её не запускает.
 - Inter 4.1 (статические TTF из релиза rsms/inter) лежит в `assets/fonts/inter/`, начертания 400, 500, 600, 700 и 800,
   рядом лицензия `OFL.txt`. main.dart регистрирует её в `LicenseRegistry`. Для нового начертания (например, 300) нужно
   добавить файл и строку в `fonts:` в pubspec.yaml. Иначе Flutter возьмёт ближайшее начертание или сымитирует жирность.
   Семейство задаётся в `AppTextTheme` на каждом стиле, а не только в `ThemeData`: AppBar и кнопки берут стили прямо оттуда.
 
 ## Текущее состояние
-Готово на Fake-данных: вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
+Готово (на Fake-данных и на локальном Supabase): вход, регистрация и вход по коду приглашения, сплэш, объекты (список со сводкой дня и фильтром,
 детали, статус, готовность, команда объекта), команда и коды приглашения по ролям, поиск людей по имени и фамилии, отчёты (создание с камерой или галереей, список по дням, детали, время съёмки фото), профиль и тема
 (сохраняется между запусками), три роли, чат этапов 1–3 (чаты объектов и личные, текст, фото, голосовые, статусы, непрочитанные),
 сжатие фото на устройстве (Android), общий полноэкранный просмотр фото.
 Визуальный стиль — см. «Дизайн-токены и компоненты».
 Бэкенд на Supabase (локально): схема, RLS, RPC всех пяти фич, Storage, Realtime, Edge Functions `join` и
-`remove-member`, демо-данные, тесты pgTAP и смоук — см. «Бэкенд (Supabase)».
-Заглушки и пробелы: Api-репозитории (все пять — заглушки, к Supabase не подключены), клиент Realtime, клиент Dio, загрузка в хранилище
-по `POST /uploads`, показ сетевых фото (cached_network_image), сжатие фото на iOS, черновики отчётов (`DraftReport`
-есть в репозитории, но UI нет), applicationId и подпись Android-релиза.
+`remove-member`, демо-данные, тесты pgTAP и смоук — см. «Бэкенд (Supabase)». Клиент подключён: `Supabase*Repository`,
+сессия, загрузки и подписанные ссылки, Realtime с догрузом, интеграционный тест.
+Заглушки и пробелы: облачный проект Supabase (только локальный стек), пуши, сжатие фото на iOS, черновики отчётов
+(`DraftReport` есть в репозитории, но UI нет), applicationId и подпись Android-релиза.
 Подробности и этапы — в [PROGRESS.md](PROGRESS.md); он отстаёт от кода, сверяйся с кодом.
 
 ## Правила работы

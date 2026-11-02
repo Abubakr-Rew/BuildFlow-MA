@@ -5,16 +5,20 @@
 ## Как запустить
 ```bash
 flutter pub get
-flutter run          # на подключённом Xiaomi
+flutter run          # на подключённом Xiaomi, демо-данные
 flutter analyze      # цель: "No issues found!"
-flutter test         # 483 теста
+flutter test         # 589 тестов
 ```
 
-Демо-входы (FakeAuthRepository), пароль у всех `123456`:
+С сервером на компьютере (Supabase, телефон по USB) — README, «Запуск с сервером на компьютере»:
+`npx supabase@2.122.0 start` → `db reset` → `node tool/local_env.mjs` → `adb reverse tcp:54321 tcp:54321` →
+`flutter run --dart-define-from-file=env/local.env`.
+
+Демо-входы (Fake и `seed.sql` одинаковые), пароль у всех `123456`:
 `owner@buildflow.kg` (директор), `foreman1@` / `foreman2@` (прорабы), `worker1@` / `worker2@` / `worker3@buildflow.kg` (строители).
 
 ## Текущее состояние
-Готово на Fake-данных:
+Готово на Fake-данных и на локальном Supabase (`BACKEND=supabase`):
 - вход, регистрация, вход по коду приглашения (роль из кода), сплэш с защитой от зависания KeyStore на MIUI;
 - три роли со своей навигацией;
 - объекты: список со сводкой дня и фильтром по статусу, детали, статус, готовность в процентах, состав;
@@ -32,12 +36,35 @@ flutter test         # 483 теста
 Ошибки типизированы: `Failure` + `FailureCode`. В UI ошибка выводится только через `l10n.failureMessage`. Мутации возвращают `Result<T>`.
 
 Заглушки:
-- Api-репозитории (все пять) и WebSocket-клиент чата;
-- клиент Dio;
-- загрузка фото в хранилище (`POST /uploads`) и показ сетевых фото;
+- облачный проект Supabase: пока только локальный стек на компьютере;
+- пуши;
 - сжатие фото на iOS: нужна такая же реализация `PhotoCompressor` на Swift (сейчас только Kotlin);
 - черновики отчётов (UI нет);
 - applicationId и подпись Android-релиза.
+
+## Сделано 2026-11-02 — приложение на Supabase
+Ветка `feat/supabase-client`. Устройство — CLAUDE.md, решения и отличия от контракта — docs/supabase-plan.md («Клиент»).
+- `b576ff4` feat(config): choose the backend with --dart-define — `BACKEND=fake|supabase`, `SUPABASE_URL`,
+  `SUPABASE_ANON_KEY` вместо `kUseMockData`; release без `BACKEND` показывает экран «Сборка настроена неверно»;
+  `env/local.env` (не в git) из `tool/local_env.mjs`; открытый HTTP только на 127.0.0.1 / localhost / 10.0.2.2;
+  новый `FailureCode.accountDisabled` («Доступ закрыт. Обратитесь к директору компании»). Пакеты: `supabase_flutter`
+  2.18.3, `http` (в dependencies: `ClientException` сетевых ошибок нужен в `lib/`, `MockClient` — в тестах).
+- `7411596` feat(core): Supabase gateway, error mapping and session storage — `SupabaseGateway`, `failureFromSupabase`,
+  выход при `sessionExpired` с `sessionEnded`, сессия в secure storage.
+- `5e7cfcd` feat(auth): sign in against Supabase — вход, регистрация, `join` с `X-Device-Id`, восстановление с кэшем
+  профиля без сети, `AuthNotifier` слушает конец сессии. Поток паролей без PKCE.
+- `ede243c` feat(data): projects, team and reports over Supabase — частичный `updateProject(id, ProjectChanges)`,
+  удаление через `remove-member` (клиентская чистка объектов убрана, Fake чистит сам через `FakeTeamStore`),
+  загрузка фото отчёта без повторов, `storage:<bucket>/<path>` в `url`.
+- `bd632fb` feat(files): show and play Storage files through signed links — `RemoteFiles`: ссылки по attachmentId
+  на час, пачкой на экран, переподпись, кэш файлов, своя загрузка без скачивания назад, очистка при выходе и входе.
+- `690c3d3` feat(chat): chats over Supabase RPC and Realtime — канал `user:<id>`, события, догруз после
+  переподключения и возврата из фона, фото и голосовые, выход закрывает канал.
+- `618beff` fix(backend): send message.created with the attachments — нашёл интеграционный тест: событие нового
+  сообщения уходило без фото и голосовых (триггер срабатывал до прикрепления). Теперь отложен до `COMMIT`, новая миграция.
+- `5c5cbed` test(supabase): end-to-end flow against the local stack — `flutter test integration/supabase
+  --dart-define-from-file=env/local.env`.
+- Тесты: 589 в `flutter test` (было 532), 3 сценария в `integration/supabase`, pgTAP 225, смоук 32.
 
 ## Сделано 2026-11-02 — бэкенд на Supabase (локально)
 План, решения и что сделать перед пилотом — [docs/supabase-plan.md](docs/supabase-plan.md). Ветка `feat/supabase-backend`.
@@ -199,6 +226,18 @@ flutter test         # 483 теста
 - `6a0b494` refactor: return Result from mutations
 
 ## Проверить на устройстве
+- С сервером на компьютере (release, `BACKEND=supabase`, README):
+  - вход директором, перезапуск приложения (смахнуть из недавних) — открывается без входа; то же через 20 минут
+    (access-токен истёк, обновляется сам);
+  - режим полёта, перезапуск — открывается с последним профилем, без экрана входа;
+  - директор создаёт код → выход → «Есть код приглашения?» → строитель входит по коду; повторный вход с тем же
+    кодом — «Неверный код»;
+  - директор добавляет строителя в объект; переписка в чате объекта: текст, фото (кольцо прогресса, после отправки
+    фото не скачивается заново), голосовое; у второго участника приходит сразу, фото и голосовое открываются;
+  - свернуть приложение на минуту, написать с другого аккаунта, вернуться — сообщение на месте, бейдж обновился;
+  - директор удаляет строителя: у строителя при следующем действии — экран входа с «Сессия истекла», вход —
+    «Доступ закрыт. Обратитесь к директору компании»;
+  - сборка без `--dart-define-from-file` — экран «Сборка настроена неверно».
 - Чат (обе темы):
   - нижняя навигация прораба на узком экране: пять вкладок, «Отчёт» в центре не обрезан, бейдж на «Чатах» виден;
   - клавиатура: поле ввода поднимается над ней, лента не прыгает, поле растёт до 5 строк и дальше прокручивается;
@@ -279,24 +318,12 @@ flutter test         # 483 теста
   (событие `message.listened` уже в контракте).
 - **Сжатие фото на iOS:** такая же реализация канала `buildflow/photos` на Swift (ImageIO: `CGImageSourceCreateThumbnailAtIndex`
   с `kCGImageSourceCreateThumbnailWithTransform`, JPEG без метаданных). Без неё на iOS любое фото — `photoProcessing`.
-- **Загрузка фото через API:** RPC `create_upload` + `POST /storage/v1/object/<bucket>/<path>` с прогрессом по байтам
-  (Dio `onSendProgress`), показ по подписанным ссылкам (`createSignedUrls`) через `cached_network_image` с ключом
-  кэша по `attachmentId`.
-- **Чат через API:** `ApiChatRepository` поверх RPC и приватного канала Realtime `user:<id>` (события —
-  в supabase-plan.md, «Реальное время»), догрузка `after=` после переподключения. STOMP-клиент больше не нужен.
 1. **README:** запуск, демо-входы, архитектура кратко, ссылка на CLAUDE.md.
 2. **Офлайн-очередь отчётов:** `DraftReport` и `localStorageProvider` уже есть, нужны UI, повторная отправка и `OfflineBanner`. Фото черновиков хранить в `filesDir`, а не в `cacheDir`: кэш чистит и система, и `sweep()` при запуске.
 3. **Android-релиз:** `applicationId` вместо `com.example.buildflow`, подпись release-ключом (сейчас debug).
-4. **Подключение клиента к Supabase** (бэкенд готов локально, см. «Для этапа подключения клиента» в
-   [docs/supabase-plan.md](docs/supabase-plan.md)).
-   - `supabase_flutter`; при `sessionExpired` — logout, 403 с `hint` `account_removed` / `no_profile` — тоже
-     `sessionExpired`. Перевод ответов в `FailureCode` — по таблице в `docs/api-contract.md`.
-   - `kUseMockData` через `--dart-define`.
-   - Реализации `Api*Repository` поверх RPC, Storage и Realtime.
-   - Частичное обновление объекта уже на сервере (`update_project`: `null` — «не менять»): статус и состав
-     отправлять отдельно, только изменённые поля. Сейчас `updateProject` шлёт объект целиком, и параллельные изменения
-     могут затереть друг друга. На экране объекта это закрыто блокировкой, в общем случае — нет.
-   - Перед пилотом: облачный проект, подтверждение email, заголовок с IP клиента в Edge Functions.
+4. **Supabase перед пилотом:** облачный проект (`db push`, `functions deploy`), подтверждение email, заголовок с IP
+   клиента в Edge Functions (supabase-plan.md, «Перед пилотом»). Голосовое во время скачивания показывает «пауза»
+   без отдельного индикатора загрузки — добавить, если на медленной сети будет заметно.
 5. **Обновление на Riverpod 3.** Legacy-провайдеров уже нет, всё на `Notifier`/`AsyncNotifier`. Проверить `ref.mounted` в мутациях после `await`.
 
 При обновлении Flutter: `app_settings` применяет Kotlin Gradle Plugin, а будущие версии Flutter такие плагины собирать не будут. Перед обновлением проверить его новую версию.
