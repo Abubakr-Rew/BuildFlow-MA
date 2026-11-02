@@ -1701,6 +1701,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Голосовое загружается'**
   String get voiceUploading;
+
+  /// Semantics of the ring around a voice note whose file downloads before it plays
+  ///
+  /// In ru, this message translates to:
+  /// **'Голосовое скачивается'**
+  String get voiceDownloading;
 }
 
 class _AppLocalizationsDelegate

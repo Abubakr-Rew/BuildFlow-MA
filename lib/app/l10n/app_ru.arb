@@ -834,5 +834,8 @@
   "@voiceUnheard": {"description": "Semantics of the dot on someone else's voice note not played yet"},
 
   "voiceUploading": "Голосовое загружается",
-  "@voiceUploading": {"description": "Semantics of the ring around a voice note being sent"}
+  "@voiceUploading": {"description": "Semantics of the ring around a voice note being sent"},
+
+  "voiceDownloading": "Голосовое скачивается",
+  "@voiceDownloading": {"description": "Semantics of the ring around a voice note whose file downloads before it plays"}
 }

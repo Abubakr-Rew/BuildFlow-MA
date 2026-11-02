@@ -884,4 +884,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get voiceUploading => 'Голосовое загружается';
+
+  @override
+  String get voiceDownloading => 'Голосовое скачивается';
 }

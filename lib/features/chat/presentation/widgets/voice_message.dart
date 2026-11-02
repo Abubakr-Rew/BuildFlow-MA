@@ -74,6 +74,7 @@ class VoiceNotePlayer extends ConsumerWidget {
       children: [
         _PlayButton(
           playing: playing,
+          loading: playback.isLoading(playbackId),
           uploadProgress: uploadProgress,
           onPressed: play,
         ),
@@ -140,6 +141,7 @@ class VoiceNotePlayer extends ConsumerWidget {
 class _PlayButton extends StatelessWidget {
   const _PlayButton({
     required this.playing,
+    required this.loading,
     required this.uploadProgress,
     required this.onPressed,
   });
@@ -147,6 +149,10 @@ class _PlayButton extends StatelessWidget {
   static const _size = 40.0;
 
   final bool playing;
+
+  /// The note's file is downloading before it plays: a spinning ring; a
+  /// tap now cancels like a pause.
+  final bool loading;
   final double? uploadProgress;
   final VoidCallback onPressed;
 
@@ -168,6 +174,15 @@ class _PlayButton extends StatelessWidget {
                 strokeWidth: 2.5,
                 color: t.accent,
                 semanticsLabel: l10n.voiceUploading,
+              ),
+            )
+          else if (loading)
+            SizedBox.square(
+              dimension: _size + 6,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: t.accent,
+                semanticsLabel: l10n.voiceDownloading,
               ),
             ),
           SizedBox.square(
