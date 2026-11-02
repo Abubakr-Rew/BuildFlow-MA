@@ -16,8 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ReportPhoto {
 
- String get id;/// URL or local path. Fake photos use 'fake:N' scheme.
- String get url; String? get thumbnailUrl;/// When the photo was taken, from the original's EXIF; `null` if the
+ String get id;/// URL or local path. Fake photos use 'fake:N' scheme; the server's
+/// photos are `storage:<bucket>/<path>` (`StorageRef`).
+@JsonKey(readValue: readStorageUrl) String get url; String? get thumbnailUrl;/// When the photo was taken, from the original's EXIF; `null` if the
 /// photo didn't say. A photo taken on another day than the report is
 /// flagged in the viewer.
  DateTime? get takenAt;
@@ -58,7 +59,7 @@ abstract mixin class $ReportPhotoCopyWith<$Res>  {
   factory $ReportPhotoCopyWith(ReportPhoto value, $Res Function(ReportPhoto) _then) = _$ReportPhotoCopyWithImpl;
 @useResult
 $Res call({
- String id, String url, String? thumbnailUrl, DateTime? takenAt
+ String id,@JsonKey(readValue: readStorageUrl) String url, String? thumbnailUrl, DateTime? takenAt
 });
 
 
@@ -166,7 +167,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String url,  String? thumbnailUrl,  DateTime? takenAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(readValue: readStorageUrl)  String url,  String? thumbnailUrl,  DateTime? takenAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReportPhoto() when $default != null:
 return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
@@ -187,7 +188,7 @@ return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String url,  String? thumbnailUrl,  DateTime? takenAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(readValue: readStorageUrl)  String url,  String? thumbnailUrl,  DateTime? takenAt)  $default,) {final _that = this;
 switch (_that) {
 case _ReportPhoto():
 return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
@@ -207,7 +208,7 @@ return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String url,  String? thumbnailUrl,  DateTime? takenAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(readValue: readStorageUrl)  String url,  String? thumbnailUrl,  DateTime? takenAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ReportPhoto() when $default != null:
 return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
@@ -222,12 +223,13 @@ return $default(_that.id,_that.url,_that.thumbnailUrl,_that.takenAt);case _:
 @JsonSerializable()
 
 class _ReportPhoto implements ReportPhoto {
-  const _ReportPhoto({required this.id, required this.url, this.thumbnailUrl, this.takenAt});
+  const _ReportPhoto({required this.id, @JsonKey(readValue: readStorageUrl) required this.url, this.thumbnailUrl, this.takenAt});
   factory _ReportPhoto.fromJson(Map<String, dynamic> json) => _$ReportPhotoFromJson(json);
 
 @override final  String id;
-/// URL or local path. Fake photos use 'fake:N' scheme.
-@override final  String url;
+/// URL or local path. Fake photos use 'fake:N' scheme; the server's
+/// photos are `storage:<bucket>/<path>` (`StorageRef`).
+@override@JsonKey(readValue: readStorageUrl) final  String url;
 @override final  String? thumbnailUrl;
 /// When the photo was taken, from the original's EXIF; `null` if the
 /// photo didn't say. A photo taken on another day than the report is
@@ -269,7 +271,7 @@ abstract mixin class _$ReportPhotoCopyWith<$Res> implements $ReportPhotoCopyWith
   factory _$ReportPhotoCopyWith(_ReportPhoto value, $Res Function(_ReportPhoto) _then) = __$ReportPhotoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String url, String? thumbnailUrl, DateTime? takenAt
+ String id,@JsonKey(readValue: readStorageUrl) String url, String? thumbnailUrl, DateTime? takenAt
 });
 
 

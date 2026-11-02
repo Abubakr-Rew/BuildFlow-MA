@@ -1,25 +1,36 @@
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/supabase/supabase_providers.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/chat/presentation/providers/fake_chat_store_provider.dart';
-import 'package:buildflow/features/projects/data/api_project_repository.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
+import 'package:buildflow/features/projects/data/supabase_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
+import 'package:buildflow/features/projects/domain/entities/project_changes.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/projects/domain/repositories/project_repository.dart';
+import 'package:buildflow/features/team/presentation/providers/fake_team_store_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final projectRepositoryProvider = Provider<ProjectRepository>(
-  (ref) => kBackend == Backend.fake
-      ? FakeProjectRepository(
-          // The server keeps each project chat's team in line with the
-          // project; the fake store needs to be told.
-          onProjectChanged: ref.watch(fakeChatStoreProvider).syncProject,
-        )
-      : ApiProjectRepository(),
-);
+final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
+  switch (kBackend) {
+    case Backend.fake:
+      final repo = FakeProjectRepository(
+        // The server keeps each project chat's team in line with the
+        // project; the fake store needs to be told.
+        onProjectChanged: ref.watch(fakeChatStoreProvider).syncProject,
+        teamStore: ref.watch(fakeTeamStoreProvider),
+      );
+      ref.onDispose(repo.dispose);
+      return repo;
+    case Backend.supabase:
+      return SupabaseProjectRepository(
+        gateway: ref.watch(supabaseGatewayProvider),
+      );
+  }
+});
 
 /// Whether [user] can see [project]: directors see everything,
 /// foremen and workers only the projects they are assigned to.
@@ -67,19 +78,26 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     return result;
   }
 
-  Future<Result<Project>> updateProject(Project project) async {
+  /// Sends only [changes], so changes made elsewhere meanwhile survive.
+  Future<Result<Project>> updateProject(
+    String id,
+    ProjectChanges changes,
+  ) async {
     final repo = ref.read(projectRepositoryProvider);
-    final result = await repo.updateProject(project);
+    final result = await repo.updateProject(id, changes);
     if (result.isSuccess) ref.invalidateSelf();
     return result;
   }
 
   Future<Result<Project>> setStatus(Project project, ProjectStatus status) =>
-      updateProject(project.copyWith(status: status));
+      updateProject(project.id, ProjectChanges(status: status));
 
   /// [percent] is clamped to 0–100.
   Future<Result<Project>> setProgress(Project project, int percent) =>
-      updateProject(project.copyWith(progress: percent.clamp(0, 100)));
+      updateProject(
+        project.id,
+        ProjectChanges(progress: percent.clamp(0, 100)),
+      );
 
   Future<Result<Project>> setTeam(
     Project project, {
@@ -87,6 +105,7 @@ class ProjectsNotifier extends AsyncNotifier<List<Project>> {
     required List<String> workerIds,
   }) =>
       updateProject(
-        project.copyWith(foremanIds: foremanIds, workerIds: workerIds),
+        project.id,
+        ProjectChanges(foremanIds: foremanIds, workerIds: workerIds),
       );
 }

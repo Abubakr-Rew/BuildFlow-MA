@@ -16,7 +16,9 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MessageAttachment {
 
- String get id; String get url;/// Photo size in pixels, for laying out before the image loads.
+ String get id;/// A local file or `fake:` in the fake data; the server's files are
+/// `storage:<bucket>/<path>` (`StorageRef`).
+@JsonKey(readValue: readStorageUrl) String get url;/// Photo size in pixels, for laying out before the image loads.
  int? get width; int? get height;/// Voice note length.
  int? get durationMs;/// Voice note loudness, `kVoiceWaveformBars` values 0–100, measured
 /// while recording.
@@ -59,7 +61,7 @@ abstract mixin class $MessageAttachmentCopyWith<$Res>  {
   factory $MessageAttachmentCopyWith(MessageAttachment value, $Res Function(MessageAttachment) _then) = _$MessageAttachmentCopyWithImpl;
 @useResult
 $Res call({
- String id, String url, int? width, int? height, int? durationMs, List<int>? waveform, String? mime
+ String id,@JsonKey(readValue: readStorageUrl) String url, int? width, int? height, int? durationMs, List<int>? waveform, String? mime
 });
 
 
@@ -170,7 +172,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String url,  int? width,  int? height,  int? durationMs,  List<int>? waveform,  String? mime)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(readValue: readStorageUrl)  String url,  int? width,  int? height,  int? durationMs,  List<int>? waveform,  String? mime)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MessageAttachment() when $default != null:
 return $default(_that.id,_that.url,_that.width,_that.height,_that.durationMs,_that.waveform,_that.mime);case _:
@@ -191,7 +193,7 @@ return $default(_that.id,_that.url,_that.width,_that.height,_that.durationMs,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String url,  int? width,  int? height,  int? durationMs,  List<int>? waveform,  String? mime)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(readValue: readStorageUrl)  String url,  int? width,  int? height,  int? durationMs,  List<int>? waveform,  String? mime)  $default,) {final _that = this;
 switch (_that) {
 case _MessageAttachment():
 return $default(_that.id,_that.url,_that.width,_that.height,_that.durationMs,_that.waveform,_that.mime);case _:
@@ -211,7 +213,7 @@ return $default(_that.id,_that.url,_that.width,_that.height,_that.durationMs,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String url,  int? width,  int? height,  int? durationMs,  List<int>? waveform,  String? mime)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(readValue: readStorageUrl)  String url,  int? width,  int? height,  int? durationMs,  List<int>? waveform,  String? mime)?  $default,) {final _that = this;
 switch (_that) {
 case _MessageAttachment() when $default != null:
 return $default(_that.id,_that.url,_that.width,_that.height,_that.durationMs,_that.waveform,_that.mime);case _:
@@ -226,11 +228,13 @@ return $default(_that.id,_that.url,_that.width,_that.height,_that.durationMs,_th
 @JsonSerializable()
 
 class _MessageAttachment implements MessageAttachment {
-  const _MessageAttachment({required this.id, required this.url, this.width, this.height, this.durationMs,  List<int>? waveform, this.mime}): _waveform = waveform;
+  const _MessageAttachment({required this.id, @JsonKey(readValue: readStorageUrl) required this.url, this.width, this.height, this.durationMs,  List<int>? waveform, this.mime}): _waveform = waveform;
   factory _MessageAttachment.fromJson(Map<String, dynamic> json) => _$MessageAttachmentFromJson(json);
 
 @override final  String id;
-@override final  String url;
+/// A local file or `fake:` in the fake data; the server's files are
+/// `storage:<bucket>/<path>` (`StorageRef`).
+@override@JsonKey(readValue: readStorageUrl) final  String url;
 /// Photo size in pixels, for laying out before the image loads.
 @override final  int? width;
 @override final  int? height;
@@ -287,7 +291,7 @@ abstract mixin class _$MessageAttachmentCopyWith<$Res> implements $MessageAttach
   factory _$MessageAttachmentCopyWith(_MessageAttachment value, $Res Function(_MessageAttachment) _then) = __$MessageAttachmentCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String url, int? width, int? height, int? durationMs, List<int>? waveform, String? mime
+ String id,@JsonKey(readValue: readStorageUrl) String url, int? width, int? height, int? durationMs, List<int>? waveform, String? mime
 });
 
 

@@ -8,7 +8,7 @@ part of 'report_photo.dart';
 
 _ReportPhoto _$ReportPhotoFromJson(Map<String, dynamic> json) => _ReportPhoto(
   id: json['id'] as String,
-  url: json['url'] as String,
+  url: readStorageUrl(json, 'url') as String,
   thumbnailUrl: json['thumbnailUrl'] as String?,
   takenAt: json['takenAt'] == null
       ? null

@@ -8,6 +8,7 @@ import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
+import 'package:buildflow/features/projects/domain/entities/project_changes.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_detail_screen.dart';
 import 'package:buildflow/features/projects/presentation/screens/project_list_screen.dart';
@@ -30,10 +31,13 @@ class _GatedProjects extends FakeProjectRepository {
   int updates = 0;
 
   @override
-  Future<Result<Project>> updateProject(Project project) async {
+  Future<Result<Project>> updateProject(
+    String id,
+    ProjectChanges changes,
+  ) async {
     updates++;
     await gate?.future;
-    return super.updateProject(project);
+    return super.updateProject(id, changes);
   }
 }
 

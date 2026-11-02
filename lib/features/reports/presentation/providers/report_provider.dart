@@ -2,17 +2,25 @@ import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
+import 'package:buildflow/core/supabase/supabase_providers.dart';
+import 'package:buildflow/core/supabase/supabase_uploads.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
-import 'package:buildflow/features/reports/data/api_report_repository.dart';
 import 'package:buildflow/features/reports/data/fake_report_repository.dart';
+import 'package:buildflow/features/reports/data/supabase_report_repository.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/repositories/report_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final reportRepositoryProvider = Provider<ReportRepository>(
-  (ref) => kBackend == Backend.fake ? FakeReportRepository() : ApiReportRepository(),
+  (ref) => switch (kBackend) {
+    Backend.fake => FakeReportRepository(),
+    Backend.supabase => SupabaseReportRepository(
+        gateway: ref.watch(supabaseGatewayProvider),
+        uploads: SupabaseUploads(ref.watch(supabaseGatewayProvider)),
+      ),
+  },
 );
 
 /// Reports visible to the current user: everything for a director,

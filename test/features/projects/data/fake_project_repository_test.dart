@@ -1,6 +1,8 @@
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/features/projects/data/fake_project_repository.dart';
+import 'package:buildflow/features/projects/domain/entities/project_changes.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
+import 'package:buildflow/features/team/data/fake_team_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -29,11 +31,11 @@ void main() {
     });
 
     test('changes to an unknown project fail with notFound', () async {
-      final existing = (await repo.getProject('project-1')).value;
-      final ghost = existing.copyWith(id: 'nonexistent');
-
       final results = [
-        await repo.updateProject(ghost),
+        await repo.updateProject(
+          'nonexistent',
+          const ProjectChanges(status: ProjectStatus.paused),
+        ),
         await repo.assignForeman(projectId: 'nonexistent', foremanId: 'f'),
         await repo.removeForeman(projectId: 'nonexistent', foremanId: 'f'),
       ];
@@ -57,13 +59,16 @@ void main() {
       expect(all.value.length, 5);
     });
 
-    test('updateProject modifies existing project', () async {
-      final getResult = await repo.getProject('project-3');
-      final project = getResult.value;
-      final updated = project.copyWith(status: ProjectStatus.active);
-      final result = await repo.updateProject(updated);
+    test('updateProject changes only the given fields', () async {
+      final before = (await repo.getProject('project-3')).value;
+      final result = await repo.updateProject(
+        'project-3',
+        const ProjectChanges(status: ProjectStatus.active),
+      );
       expect(result.isSuccess, isTrue);
       expect(result.value.status, ProjectStatus.active);
+      expect(result.value.progress, before.progress);
+      expect(result.value.foremanIds, before.foremanIds);
     });
 
     test('assignForeman adds foreman to project', () async {
@@ -83,5 +88,26 @@ void main() {
       expect(result.isSuccess, isTrue);
       expect(result.value.foremanIds, isNot(contains('user-foreman-1')));
     });
+  });
+
+  test('a member removed from the company leaves every project', () async {
+    final team = FakeTeamStore();
+    final changed = <String>[];
+    final repo = FakeProjectRepository(
+      teamStore: team,
+      onProjectChanged: (p) => changed.add(p.id),
+    );
+    final workerMember = team.memberByUserId('user-worker-2')!;
+
+    team.removeMember(workerMember.id);
+
+    final projects = (await repo.getProjects()).value;
+    expect(
+      projects.where((p) => p.workerIds.contains('user-worker-2')),
+      isEmpty,
+    );
+    // Only the projects they were on changed (and so their chats).
+    expect(changed, ['project-2', 'project-3']);
+    repo.dispose();
   });
 }
