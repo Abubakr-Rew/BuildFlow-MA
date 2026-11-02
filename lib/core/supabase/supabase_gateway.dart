@@ -196,11 +196,16 @@ class SupabaseGateway {
         };
       });
 
-  /// Downloads [signedUrl] into [savePath].
-  Future<Result<void>> download(String signedUrl, String savePath) =>
-      run(() async {
-        await _dio.download(signedUrl, savePath);
-      });
+  /// Downloads [signedUrl] into [savePath]. The link carries its own
+  /// rights: a refusal is about the link, never the end of the session.
+  Future<Result<void>> download(String signedUrl, String savePath) async {
+    try {
+      await _dio.download(signedUrl, savePath);
+      return const Success(null);
+    } on Object catch (e, stackTrace) {
+      return Err(failureFromSupabase(e, stackTrace: stackTrace));
+    }
+  }
 
   /// A token valid for the next request: refreshed first if expired, e.g.
   /// right after the app comes back from the background.

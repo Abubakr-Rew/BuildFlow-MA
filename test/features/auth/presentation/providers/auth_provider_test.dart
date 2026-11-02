@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/remote_files/remote_files.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
@@ -71,17 +74,41 @@ class _StubAuthRepository implements AuthRepository {
 void main() {
   late _StubAuthRepository repo;
   late ProviderContainer container;
+  late Directory cache;
 
   AuthState state() => container.read(authProvider);
   AuthNotifier notifier() => container.read(authProvider.notifier);
 
-  setUp(() {
+  setUp(() async {
     repo = _StubAuthRepository();
+    cache = await Directory.systemTemp.createTemp('auth_provider_test');
     container = ProviderContainer(
-      overrides: [authRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(repo),
+        remoteFilesProvider.overrideWithValue(
+          RemoteFiles(cacheDir: () async => cache.path),
+        ),
+      ],
     );
-    addTearDown(container.dispose);
+    addTearDown(() async {
+      container.dispose();
+      await cache.delete(recursive: true);
+    });
   });
+
+  /// Waits for the unawaited clear (real file I/O) to delete [file].
+  Future<bool> deleted(File file) async {
+    for (var i = 0; i < 50 && file.existsSync(); i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    return !file.existsSync();
+  }
+
+  /// A downloaded photo of the user signed in now.
+  File downloaded() =>
+      File('${cache.path}/remote/a1.jpg')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('photo');
 
   group('AuthNotifier', () {
     test('starts in the initial status without a user', () {
@@ -189,6 +216,45 @@ void main() {
       await notifier().restoreSession();
       expect(state().status, AuthStatus.unauthenticated);
       expect(state().failure?.code, FailureCode.accountDisabled);
+    });
+
+    group('downloaded files go with the user', () {
+      test('on logout', () async {
+        await notifier().login(email: 'a@b.kg', password: '123456');
+        final file = downloaded();
+
+        await notifier().logout();
+
+        expect(await deleted(file), isTrue);
+      });
+
+      test('when the session ends on its own', () async {
+        await notifier().login(email: 'a@b.kg', password: '123456');
+        final file = downloaded();
+
+        repo.ended.add(const Failure(FailureCode.accountDisabled));
+
+        expect(await deleted(file), isTrue);
+      });
+
+      test('when someone signs in', () async {
+        final file = downloaded();
+
+        await notifier().login(email: 'a@b.kg', password: '123456');
+
+        expect(await deleted(file), isTrue);
+      });
+
+      test('but not on a failed sign-in or a restore', () async {
+        final file = downloaded();
+        repo.result = const Err(Failure(FailureCode.invalidCredentials));
+        await notifier().login(email: 'a@b.kg', password: 'x');
+        repo.result = const Success(_user);
+        await notifier().restoreSession();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+
+        expect(file.existsSync(), isTrue);
+      });
     });
 
     test('currentUserProvider follows the signed-in user', () async {

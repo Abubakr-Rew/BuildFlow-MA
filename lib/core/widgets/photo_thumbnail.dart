@@ -2,7 +2,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:buildflow/app/theme/theme_extensions.dart';
+import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
+import 'package:buildflow/core/remote_files/storage_ref.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Displays a photo thumbnail with Hero animation support.
 /// Handles both fake:// scheme (colored placeholder) and real image URLs.
@@ -43,8 +47,8 @@ class PhotoThumbnail extends StatelessWidget {
 }
 
 /// A photo filling its parent, cropped to cover it by default: a `fake:`
-/// placeholder, a local file or (later) a network image. No hero, no
-/// rounding.
+/// placeholder, a local file or a Storage file (`storage:`, downloaded
+/// once into the cache by `RemoteFiles`). No hero, no rounding.
 ///
 /// Local files are decoded at about the size shown, not at the camera's
 /// 12 MP: a picked original is shown until its compressed copy is sent.
@@ -70,37 +74,119 @@ class PhotoImage extends StatelessWidget {
     if (url.startsWith('fake:')) {
       return _FakePlaceholder(seed: url, iconSize: iconSize);
     }
+    if (StorageRef.tryParse(url) case final ref?) {
+      return _StoragePhoto(storageRef: ref, fit: fit, iconSize: iconSize);
+    }
     // Photos taken on this device are stored as local file paths.
     if (!url.startsWith('http')) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final side = max(constraints.maxWidth, constraints.maxHeight);
-          // A cropped photo needs more than the box's width: twice the
-          // longer side covers photos up to 2:1.
-          final factor = fit == BoxFit.cover ? 2 : 1;
-          final decodeWidth = side.isFinite
-              ? min(
-                  (side * MediaQuery.devicePixelRatioOf(context) * factor)
-                      .round(),
-                  _maxDecodeWidth,
-                )
-              : null;
-          return Image.file(
-            File(url),
-            fit: fit,
-            width: double.infinity,
-            height: double.infinity,
-            cacheWidth: decodeWidth,
-            // The original gives way to its copy without a blank frame.
-            gaplessPlayback: true,
-            errorBuilder: (_, __, ___) =>
-                _FakePlaceholder(seed: url, iconSize: iconSize),
-          );
-        },
-      );
+      return _LocalPhoto(path: url, fit: fit, iconSize: iconSize);
     }
-    // Real images will use CachedNetworkImage in the future
     return _FakePlaceholder(seed: url, iconSize: iconSize);
+  }
+}
+
+/// A photo file on the phone, decoded at about the size shown.
+class _LocalPhoto extends StatelessWidget {
+  const _LocalPhoto({
+    required this.path,
+    required this.fit,
+    required this.iconSize,
+  });
+
+  final String path;
+  final BoxFit fit;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final side = max(constraints.maxWidth, constraints.maxHeight);
+        // A cropped photo needs more than the box's width: twice the
+        // longer side covers photos up to 2:1.
+        final factor = fit == BoxFit.cover ? 2 : 1;
+        final decodeWidth = side.isFinite
+            ? min(
+                (side * MediaQuery.devicePixelRatioOf(context) * factor)
+                    .round(),
+                PhotoImage._maxDecodeWidth,
+              )
+            : null;
+        return Image.file(
+          File(path),
+          fit: fit,
+          width: double.infinity,
+          height: double.infinity,
+          cacheWidth: decodeWidth,
+          // The original gives way to its copy without a blank frame.
+          gaplessPlayback: true,
+          errorBuilder: (_, __, ___) =>
+              _FakePlaceholder(seed: path, iconSize: iconSize),
+        );
+      },
+    );
+  }
+}
+
+/// A photo from Storage: a quiet tile while it downloads, then the file.
+class _StoragePhoto extends ConsumerStatefulWidget {
+  const _StoragePhoto({
+    required this.storageRef,
+    required this.fit,
+    required this.iconSize,
+  });
+
+  final StorageRef storageRef;
+  final BoxFit fit;
+  final double iconSize;
+
+  @override
+  ConsumerState<_StoragePhoto> createState() => _StoragePhotoState();
+}
+
+class _StoragePhotoState extends ConsumerState<_StoragePhoto> {
+  late Future<Result<String>> _file;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_StoragePhoto old) {
+    super.didUpdateWidget(old);
+    if (old.storageRef != widget.storageRef) _load();
+  }
+
+  void _load() =>
+      _file = ref.read(remoteFilesProvider).localPath(widget.storageRef);
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.bfTheme;
+    return FutureBuilder<Result<String>>(
+      future: _file,
+      builder: (context, snapshot) => switch (snapshot.data) {
+        Success(value: final path) =>
+          _LocalPhoto(path: path, fit: widget.fit, iconSize: widget.iconSize),
+        // Didn't download: tap to try again.
+        Err() => GestureDetector(
+            onTap: () => setState(_load),
+            child: ColoredBox(
+              color: t.muted,
+              child: Center(
+                child: Icon(
+                  Icons.refresh_rounded,
+                  size: min(widget.iconSize, 32),
+                  color: t.textTertiary,
+                ),
+              ),
+            ),
+          ),
+        null => ColoredBox(color: t.muted),
+      },
+    );
   }
 }
 

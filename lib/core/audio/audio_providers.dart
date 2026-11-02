@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:buildflow/core/audio/voice_player.dart';
 import 'package:buildflow/core/audio/voice_recorder.dart';
+import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
+import 'package:buildflow/core/remote_files/storage_ref.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -90,7 +93,7 @@ class VoicePlaybackNotifier extends Notifier<VoicePlayback> {
         await _player.pause();
       } else {
         state = state.copyWith(playing: true);
-        await _player.play(url, speed: state.speed, from: state.position);
+        await _play(id, url, state.position);
       }
       return;
     }
@@ -105,8 +108,8 @@ class VoicePlaybackNotifier extends Notifier<VoicePlayback> {
       if (state.playing) {
         await _player.seek(position);
       } else {
-        await _player.play(url, speed: state.speed, from: position);
         state = state.copyWith(playing: true);
+        await _play(id, url, position);
       }
       return;
     }
@@ -121,7 +124,26 @@ class VoicePlaybackNotifier extends Notifier<VoicePlayback> {
       position: from,
       speed: state.speed,
     );
-    await _player.play(url, speed: state.speed, from: from);
+    await _play(id, url, from);
+  }
+
+  /// Plays note [id] from [from]. A note in Storage plays from its
+  /// downloaded file; if it can't be had, the note stops. If the user
+  /// paused or picked another note during the download, nothing plays.
+  Future<void> _play(String id, String url, Duration from) async {
+    var source = url;
+    if (StorageRef.tryParse(url) case final storage?) {
+      final file = await ref.read(remoteFilesProvider).localPath(storage);
+      if (state.activeId != id || !state.playing) return;
+      switch (file) {
+        case Success(:final value):
+          source = value;
+        case Err():
+          state = state.copyWith(playing: false);
+          return;
+      }
+    }
+    await _player.play(source, speed: state.speed, from: from);
   }
 
   /// 1× → 1.5× → 2× → 1×.

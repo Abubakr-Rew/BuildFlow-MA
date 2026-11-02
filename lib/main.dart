@@ -4,6 +4,7 @@ import 'package:buildflow/app/app.dart';
 import 'package:buildflow/app/config_error_app.dart';
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/photos/photo_providers.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
 import 'package:buildflow/core/storage/storage_providers.dart';
 import 'package:buildflow/core/supabase/secure_session_storage.dart';
 import 'package:buildflow/features/profile/presentation/providers/profile_provider.dart';
@@ -77,5 +78,8 @@ Future<void> main() async {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     unawaited(container.read(lostCaptureProvider.notifier).recover());
     unawaited(container.read(photoCompressorProvider).sweep());
+    if (config.backend == Backend.supabase) {
+      unawaited(container.read(remoteFilesProvider).sweep());
+    }
   });
 }

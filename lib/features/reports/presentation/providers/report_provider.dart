@@ -2,6 +2,7 @@ import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
 import 'package:buildflow/core/supabase/supabase_providers.dart';
 import 'package:buildflow/core/supabase/supabase_uploads.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -18,7 +19,11 @@ final reportRepositoryProvider = Provider<ReportRepository>(
     Backend.fake => FakeReportRepository(),
     Backend.supabase => SupabaseReportRepository(
         gateway: ref.watch(supabaseGatewayProvider),
-        uploads: SupabaseUploads(ref.watch(supabaseGatewayProvider)),
+        uploads: SupabaseUploads(
+          ref.watch(supabaseGatewayProvider),
+          // The sent photo is what the server has: no download back.
+          onUploaded: ref.watch(remoteFilesProvider).adopt,
+        ),
       ),
   },
 );
