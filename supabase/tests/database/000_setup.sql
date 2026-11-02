@@ -232,6 +232,19 @@ begin
 end;
 $$;
 
+-- Realtime events of [p_type] sent to the channel of [p_user] in this
+-- transaction, without realtime.send's own `id`.
+create or replace function tests.events(p_user uuid, p_type text)
+returns setof jsonb
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select m.payload - 'id' from realtime.messages m
+  where m.topic = 'user:' || p_user::text and m.event = p_type
+$$;
+
 -- A JSON array of strings, sorted: compares lists whose order doesn't matter.
 create or replace function tests.sorted(p_array jsonb)
 returns jsonb

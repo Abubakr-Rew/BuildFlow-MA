@@ -199,6 +199,61 @@ const notVisible = await storage(`object/sign/${objectPath}`, {
 });
 check('a worker not on the project gets no link', notVisible.status >= 400, notVisible);
 
+// ── Realtime ─────────────────────────────────────────────────
+
+// Joins the private channel `user:<userId>` over the Realtime websocket
+// (Phoenix protocol). Resolves with the join status and collects broadcasts.
+function listen(token, userId) {
+  const ws = new WebSocket(`${url.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${anonKey}&vsn=1.0.0`);
+  const events = [];
+  const joined = new Promise((resolve) => {
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({
+        topic: `realtime:user:${userId}`,
+        event: 'phx_join',
+        payload: { config: { broadcast: { self: false }, presence: { key: '' }, private: true }, access_token: token },
+        ref: '1',
+        join_ref: '1',
+      }));
+    });
+    ws.addEventListener('message', (e) => {
+      const frame = JSON.parse(e.data);
+      if (frame.event === 'phx_reply' && frame.ref === '1') resolve(frame.payload.status);
+      if (frame.event === 'system' && frame.payload?.status === 'error') resolve('error');
+      if (frame.event === 'broadcast') events.push(frame.payload);
+    });
+    ws.addEventListener('error', () => resolve('error'));
+    setTimeout(() => resolve('timeout'), 5000);
+  });
+  return { joined, events, close: () => ws.close() };
+}
+
+async function waitFor(predicate, ms = 5000) {
+  for (let waited = 0; waited < ms; waited += 100) {
+    if (predicate()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return predicate();
+}
+
+const ownerId = (await rpc('get_me', ownerToken)).data.user.id;
+const ownerListener = listen(ownerToken, ownerId);
+check('the owner joins the own private channel', (await ownerListener.joined) === 'ok');
+
+const spy = listen(workerSession.access_token, ownerId);
+check('a worker cannot join the owner\'s channel', (await spy.joined) !== 'ok');
+spy.close();
+
+const projectChat = (await rpc('get_chats', foremanToken)).data.find((c) => c.projectId === project.id);
+const sent = await rpc('send_message', foremanToken, {
+  p_chat_id: projectChat.id, p_client_id: crypto.randomUUID(), p_kind: 'text', p_text: 'Бетон привезли',
+});
+const delivered = await waitFor(() => ownerListener.events.some(
+  (e) => e.event === 'message.created' && e.payload?.message?.id === sent.data?.id,
+));
+check('a message reaches the owner over Realtime as message.created', delivered, ownerListener.events.map((e) => e.event));
+ownerListener.close();
+
 // ── Remove member ────────────────────────────────────────────
 
 const byForeman = await removeMember(foremanToken, worker.id);
@@ -210,7 +265,6 @@ check('the owner removes the worker: 204', removed.status === 204, removed);
 const again = await removeMember(ownerToken, worker.id);
 check('removing again: 404', again.status === 404, again);
 
-const ownerId = (await rpc('get_me', ownerToken)).data.user.id;
 const self = await removeMember(ownerToken, ownerId);
 check('removing yourself: 400', self.status === 400, self);
 
