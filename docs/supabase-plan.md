@@ -1,29 +1,45 @@
-# Бэкенд на Supabase — план
+# Бэкенд на Supabase
 
-Принят 2026-11-02. Контракт, который бэкенд воспроизводит, — [api-contract.md](api-contract.md).
-Код — в [supabase/](../supabase/). Как запустить и прогнать тесты — в разделе «Локальный запуск» в конце.
+План принят 2026-11-02, этапы 1–8 сделаны в тот же день. Работает только локально, клиент пока на Fake.
+Контракт, который бэкенд воспроизводит, — [api-contract.md](api-contract.md). Код — в [supabase/](../supabase/).
+Как запустить и прогнать тесты — в разделе «Локальный запуск» в конце.
 
 ## Решения
 - Клиент будет ходить в Supabase через `supabase_flutter`. Пакет добавим, когда будем подключать клиент.
 - Supabase CLI запускается через `npx supabase@2.122.0`, глобально не ставится. Пока работаем только локально,
   облачный проект привяжем отдельным шагом перед пилотом.
 - Подтверждение email выключено (`[auth.email] enable_confirmations = false`). **Пересмотреть перед пилотом.**
+- Срок access-токена — 15 минут (`[auth] jwt_expiry = 900`).
+- В `auth.users` и `auth.sessions` SQL не пишет. Блокировку входа и выход со всех устройств делает Edge Function
+  `remove-member` через admin API.
 
 **Перед пилотом:**
 - подтверждение email;
 - какой заголовок несёт настоящий IP клиента в Edge Functions облачного проекта (`join` берёт
   `cf-connecting-ip`, иначе последний адрес `X-Forwarded-For`). Если это окажется адрес внутреннего прокси,
   лимит по IP станет общим на всех;
-- привязка облачного проекта и `supabase db push`.
-- Срок access-токена — 15 минут (`[auth] jwt_expiry = 900`).
-- В `auth.users` и `auth.sessions` SQL не пишет. Блокировку входа и выход со всех устройств делает Edge Function
-  `remove-member` через admin API.
+- привязка облачного проекта, `supabase db push` и `supabase functions deploy` (seed в облако не идёт).
+
+## Структура
+```
+supabase/
+  config.toml                 jwt_expiry 900, без подтверждения email, настройки Edge Functions
+  migrations/                 по файлу на этап: foundation, projects, team, reports, chats, realtime
+  functions/join/             POST /auth/join
+  functions/remove-member/    DELETE /team/members/:id
+  functions/_shared/          клиенты supabase-js 2.118.0 и JSON-ответы
+  seed.sql                    демо-данные как в Fake
+  tests/database/*.sql        pgTAP: 000_setup ставит хелперы в схему tests (только в локальной базе)
+  tests/edge/smoke.mjs        сквозная проверка по HTTP и WebSocket на запущенном стеке (Node, без пакетов)
+```
 
 ## Принципы
 - **Источник правды — Postgres.** RLS включён на каждой таблице `public`. У `anon` нет прав ни на одну таблицу,
   у `authenticated` есть только `SELECT`. Всё, что меняет данные, идёт через RPC.
 - **Чтение под RLS.** Функции чтения (`get_*`) выполняются с правами вызывающего (`security invoker`), поэтому
-  видимость задают только политики, и pgTAP проверяет именно их.
+  видимость задают только политики, и pgTAP проверяет именно их. JSON собирают функции `private.*_json`;
+  у сообщений и чатов они принимают зрителя (`status`, `listened`, `unreadCount` зависят от него), и триггеры
+  Realtime собирают ими то же самое для каждого получателя.
 - **Запись через RPC с `security definer`.** Такие функции сами проверяют права и роль и меняют связанные данные
   в одной транзакции: состав чата вместе с составом объекта, системные сообщения, погашение кода приглашения.
 - **Права на функции.** Ни одна функция не выполняется по умолчанию: `alter default privileges` снимает `EXECUTE`
@@ -139,7 +155,11 @@ HTTP-статусы 200/201 у RPC не различаются: PostgREST отв
 - Загрузка: `create_upload`, затем `POST /storage/v1/object/<bucket>/<path>` с JWT пользователя (Dio, прогресс
   по `onSendProgress`). Перезаписи нет: политика `update` на `storage.objects` не задана.
 - Реальное время: приватный канал Realtime `user:<id>` (`RealtimeChannelConfig(private: true)`), события
-  `message.created`, `message.status`, `message.listened`, `chat.updated`, `chat.removed` с телом из контракта.
+  `message.created`, `message.status`, `message.listened`, `chat.updated`, `chat.removed` с телом из контракта
+  (см. «Реальное время»).
+- Отличия JSON от контракта: у фото отчёта и вложений сообщений вместо `url` и `thumbnailUrl` — `bucket` и `path`;
+  у системного сообщения `senderId` — `"system"` (`systemSenderId` клиента); `get_messages` отдаёт объект
+  `{messages, truncated}`, остальные `get_*` — сразу массив или объект без обёртки (`projects`, `reports`…).
 - `kUseMockData` через `--dart-define`.
 
 ## Storage
@@ -155,9 +175,22 @@ HTTP-статусы 200/201 у RPC не различаются: PostgREST отв
 
 ## Реальное время
 Realtime Broadcast из базы: триггеры вызывают `realtime.send(payload, event, 'user:<id>', true)`. Политика
-на `realtime.messages` пускает пользователя только в свой канал `user:<id>`. Это та же модель «одна очередь
-на пользователя», что у STOMP в контракте, и то же тело событий. Переподключение работает как в контракте:
-`get_chats()` и `get_messages(after=…)`.
+на `realtime.messages` пускает пользователя только в свой канал `user:<id>` и только пока он активен в компании.
+Политики на запись нет: клиенты в эти каналы ничего не шлют. Это та же модель «одна очередь на пользователя»,
+что у STOMP в контракте, и то же тело событий. Переподключение работает как в контракте: `get_chats()` и
+`get_messages(after=…)`.
+
+| Событие | Кому |
+|---|---|
+| `message.created` + `chat.updated` | всем активным участникам чата, включая отправителя (его другие устройства) |
+| `message.status` | авторам сообщений, которые только что прочитали; читателю — `chat.updated` с новым `unreadCount` |
+| `message.listened` | автору голосового |
+| `chat.removed` | тому, кого убрали из объекта; остальным — системное сообщение и `chat.updated` |
+| `chat.updated` | обоим при создании личного чата, всем при смене названия объекта |
+
+Кадр в канале — `{"event": "broadcast", "payload": {"event": "message.created", "payload": {...}}}`. Внутреннее
+`payload` — тело из контракта (`{"type": "message.created", "chatId": …, "message": …}`) плюс `id`, который
+добавляет `realtime.send`.
 
 ## Ограничения частоты
 `private.hit_rate_limit`: `join` — 10 в минуту на IP и устройство, `create_upload` — 60 в минуту
@@ -173,6 +206,7 @@ Realtime Broadcast из базы: триггеры вызывают `realtime.se
 - Пути — `/rest/v1/rpc/<функция>` вместо REST-путей контракта. Вместо STOMP — Supabase Realtime.
 
 ## Этапы
+Все сделаны 2026-11-02, по коммиту на этап.
 1. Каркас: схемы, enum'ы, `companies`, `profiles`, триггер регистрации, хелперы, права, `get_me`, хелперы pgTAP.
 2. Объекты и составы, частичный `update_project`.
 3. Команда: приглашения, `join`, `remove_member` и `remove-member`, поиск, ограничения частоты.
@@ -184,6 +218,33 @@ Realtime Broadcast из базы: триггеры вызывают `realtime.se
 
 Клиент (`Api*Repository` поверх `supabase_flutter`) — отдельный план после бэкенда.
 
+## Тесты
+- **pgTAP** (`supabase test db`, 223 проверки) — каждый файл в транзакции с откатом:
+  - `010_privileges` — сверяет с каталогом списки клиентских и служебных функций. Каждую клиентскую функцию
+    вызывает с `null` от `anon` (42501), от `authenticated` без пользователя (`PT401`) и от пользователя без
+    профиля (`PT403 no_profile`); каждую служебную — от обычного пользователя (42501). Проверяет, что RLS включён
+    везде и что у `authenticated` нет записи ни в одну таблицу;
+  - `020_foundation` — регистрация, метаданные (`role` и `company_id` игнорируются), `get_me`, видимость
+    без профиля и после удаления;
+  - `030_projects` … `070_realtime` — по этапам.
+- **Смоук** (`node supabase/tests/edge/smoke.mjs`, 32 проверки) — то, что SQL не проверит: демо-вход через
+  GoTrue, Edge Functions (`join`: 201/404/409/400/429, подделанный `X-Forwarded-For`; `remove-member`: 204/404/403/400/401,
+  отказ в обновлении сессии и во входе после блокировки), загрузка в Storage и подписанные ссылки, подписка
+  на канал Realtime и доставка сообщения. Ждёт `db reset` (демо-данные) и сам создаёт свои данные, поэтому
+  запускается сколько угодно раз. Если лимит `join` исчерпан прошлым запуском, ждёт минуту.
+
+Новую клиентскую функцию добавлять в `client_functions` в `010_privileges.sql`, служебную — в `service_functions`.
+Тестовые пользователи — `tests.new_owner` / `tests.new_member`, вход — `tests.login_as`, ошибка —
+`tests.error_of(sql)` → `'PT403 owner_only'`.
+
+## Демо-данные
+`seed.sql` повторяет Fake: «СтройБишкек», входы `owner@`, `foreman1@`, `foreman2@`, `worker1@`, `worker2@`,
+`worker3@buildflow.kg` с паролем `123456` (директор регистрирует компанию, остальные входят по кодам приглашения),
+четыре объекта с составами, пять отчётов, переписка: «Ала-Тоо» — 66 сообщений, у директора 3 непрочитанных.
+Только текст: фото и голосовым нужны настоящие файлы в Storage. Id постоянные: пользователи
+`a0000000-0000-4000-8000-00000000000N` (1 — директор, 2–3 — прорабы, 4–6 — строители), объекты
+`b0000000-…-00000000000N`, личные чаты `c0000000-…`.
+
 ## Локальный запуск
 Нужны Docker Desktop (запущен) и Node.js. Команды выполняются из корня репозитория.
 
@@ -191,7 +252,8 @@ Realtime Broadcast из базы: триггеры вызывают `realtime.se
 npx supabase@2.122.0 start      # первый раз скачивает образы, несколько минут
 npx supabase@2.122.0 db reset   # пересоздать базу: миграции + seed.sql
 npx supabase@2.122.0 test db    # тесты pgTAP из supabase/tests/database
-node supabase/tests/edge/smoke.mjs   # Edge Functions по HTTP на запущенном стеке
+node supabase/tests/edge/smoke.mjs   # Edge Functions, Storage, Realtime на запущенном стеке
 npx supabase@2.122.0 stop       # остановить
 ```
 `start` печатает адреса и ключи: API `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`.
+Новую Edge Function или изменение `config.toml` стек подхватывает только после `stop` и `start`.

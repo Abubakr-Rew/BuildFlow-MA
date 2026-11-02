@@ -1,6 +1,6 @@
 # BuildFlow — прогресс
 
-Обновлено: 2026-10-29. Правила работы и архитектура — в [CLAUDE.md](CLAUDE.md).
+Обновлено: 2026-11-02. Правила работы и архитектура — в [CLAUDE.md](CLAUDE.md).
 
 ## Как запустить
 ```bash
@@ -38,6 +38,24 @@ flutter test         # 483 теста
 - сжатие фото на iOS: нужна такая же реализация `PhotoCompressor` на Swift (сейчас только Kotlin);
 - черновики отчётов (UI нет);
 - applicationId и подпись Android-релиза.
+
+## Сделано 2026-11-02 — бэкенд на Supabase (локально)
+План, решения и что сделать перед пилотом — [docs/supabase-plan.md](docs/supabase-plan.md). Ветка `feat/supabase-backend`.
+- `3d5eed3` feat(backend): Supabase foundation, registration and privileges — `supabase/`, схема `private`,
+  функции по умолчанию не выполняются, `require_user()` в начале каждой клиентской функции, триггер регистрации
+  без прав из метаданных, токен 15 минут, подтверждение email выключено.
+- `e883557` feat(backend): projects and project teams — видимость как `canSeeProject`, частичный `update_project`.
+- `50e604d` feat(backend): invite codes, joining, member search and removal — Edge Functions `join` (лимит по IP
+  и устройству) и `remove-member` (бан: обновление сессии и вход отвечают `user_banned`), `matchName` в SQL.
+  Нашлось: `admin.createUser` дописывает `app_metadata` после вставки, поэтому триггер регистрации отложен до `COMMIT`;
+  первый адрес `X-Forwarded-For` подставляет клиент — лимит теперь по последнему.
+- `1fbd3f7` feat(backend): uploads, Storage and reports — закрытые бакеты `photos` и `voice`, загрузка только
+  в своё вложение, без перезаписи, ссылки только тем, кто видит отчёт.
+- `3a9cef6` feat(backend): chats — состав чата объекта следует за составом объекта, системные сообщения,
+  идемпотентная отправка, страницы, прочтение, «прослушано», личные чаты (после удаления — только чтение).
+- `5d8f003` feat(backend): chat events over Realtime — приватный канал `user:<id>` на пользователя, события контракта.
+- `4815e2c` feat(backend): demo data — `seed.sql` как Fake: те же входы, объекты, отчёты, переписка (только текст).
+- Тесты: pgTAP — 223 проверки в 8 файлах, смоук по HTTP и WebSocket — 32 проверки.
 
 ## Сделано 2026-10-29 — чат, этап 3: голосовые
 - Пакеты выбраны сравнением сборок (release, arm64): `record` 7.1.2 + `audioplayers` 6.8.1 — +0,41 МБ, без
@@ -261,18 +279,24 @@ flutter test         # 483 теста
   (событие `message.listened` уже в контракте).
 - **Сжатие фото на iOS:** такая же реализация канала `buildflow/photos` на Swift (ImageIO: `CGImageSourceCreateThumbnailAtIndex`
   с `kCGImageSourceCreateThumbnailWithTransform`, JPEG без метаданных). Без неё на iOS любое фото — `photoProcessing`.
-- **Загрузка фото через API:** `POST /uploads` + `PUT` в хранилище с прогрессом по байтам (Dio `onSendProgress`),
-  показ по подписанным ссылкам через `cached_network_image` с ключом кэша по `attachmentId`.
-- **Чат через API:** `ApiChatRepository` поверх REST и STOMP (контракт — в api-contract.md, раздел «Чат»),
-  догрузка `after=` после переподключения. Пакет для STOMP-клиента согласовать отдельно.
+- **Загрузка фото через API:** RPC `create_upload` + `POST /storage/v1/object/<bucket>/<path>` с прогрессом по байтам
+  (Dio `onSendProgress`), показ по подписанным ссылкам (`createSignedUrls`) через `cached_network_image` с ключом
+  кэша по `attachmentId`.
+- **Чат через API:** `ApiChatRepository` поверх RPC и приватного канала Realtime `user:<id>` (события —
+  в supabase-plan.md, «Реальное время»), догрузка `after=` после переподключения. STOMP-клиент больше не нужен.
 1. **README:** запуск, демо-входы, архитектура кратко, ссылка на CLAUDE.md.
 2. **Офлайн-очередь отчётов:** `DraftReport` и `localStorageProvider` уже есть, нужны UI, повторная отправка и `OfflineBanner`. Фото черновиков хранить в `filesDir`, а не в `cacheDir`: кэш чистит и система, и `sweep()` при запуске.
 3. **Android-релиз:** `applicationId` вместо `com.example.buildflow`, подпись release-ключом (сейчас debug).
-4. **Настоящий API.**
-   - Клиент Dio с интерсепторами: при `sessionExpired` — logout. Перевод ответов в `FailureCode` — по таблице в `docs/api-contract.md`.
+4. **Подключение клиента к Supabase** (бэкенд готов локально, см. «Для этапа подключения клиента» в
+   [docs/supabase-plan.md](docs/supabase-plan.md)).
+   - `supabase_flutter`; при `sessionExpired` — logout, 403 с `hint` `account_removed` / `no_profile` — тоже
+     `sessionExpired`. Перевод ответов в `FailureCode` — по таблице в `docs/api-contract.md`.
    - `kUseMockData` через `--dart-define`.
-   - Реализации `Api*Repository`.
-   - `PATCH /projects/:id` для частичных обновлений объекта: статус и состав отправляются отдельно, только изменённые поля. Сейчас `updateProject` шлёт объект целиком, и параллельные изменения (смена статуса и `removeMember`, который чистит составы) могут затереть друг друга. На экране объекта это закрыто блокировкой, в общем случае — нет.
+   - Реализации `Api*Repository` поверх RPC, Storage и Realtime.
+   - Частичное обновление объекта уже на сервере (`update_project`: `null` — «не менять»): статус и состав
+     отправлять отдельно, только изменённые поля. Сейчас `updateProject` шлёт объект целиком, и параллельные изменения
+     могут затереть друг друга. На экране объекта это закрыто блокировкой, в общем случае — нет.
+   - Перед пилотом: облачный проект, подтверждение email, заголовок с IP клиента в Edge Functions.
 5. **Обновление на Riverpod 3.** Legacy-провайдеров уже нет, всё на `Notifier`/`AsyncNotifier`. Проверить `ref.mounted` в мутациях после `await`.
 
 При обновлении Flutter: `app_settings` применяет Kotlin Gradle Plugin, а будущие версии Flutter такие плагины собирать не будут. Перед обновлением проверить его новую версию.

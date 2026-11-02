@@ -3,7 +3,8 @@
 ## О проекте
 Flutter-приложение для ежедневных фото-отчётов со стройки для небольших строительных компаний Бишкека.
 Прораб снимает объект и отправляет отчёт, владелец видит прогресс за день. Интерфейс только на русском.
-Бэкенда пока нет: всё работает на in-memory Fake-репозиториях. Основная цель — Android (тестируем на Xiaomi).
+Приложение пока работает на in-memory Fake-репозиториях. Бэкенд на Supabase готов локально (`supabase/`),
+но клиент к нему ещё не подключён (см. «Бэкенд»). Основная цель — Android (тестируем на Xiaomi).
 
 ## Команды
 ```bash
@@ -16,6 +17,12 @@ flutter test                                              # все тесты
 flutter test test/core/error/result_test.dart             # один файл
 flutter test --plain-name "round-trip"                    # тесты по имени
 flutter build apk --release                               # APK → build/app/outputs/flutter-apk/
+
+# Бэкенд (нужны запущенный Docker Desktop и Node.js; CLI не ставится глобально)
+npx supabase@2.122.0 start                                # локальный стек
+npx supabase@2.122.0 db reset                             # миграции + seed.sql
+npx supabase@2.122.0 test db                              # pgTAP
+node supabase/tests/edge/smoke.mjs                        # Edge Functions, Storage, Realtime по HTTP
 ```
 
 ## Архитектура
@@ -256,6 +263,27 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `Project.progress` — готовность 0–100. Меняет только директор из меню «ещё» на карточке объекта (шаг 5 %,
   `ProjectsNotifier.setProgress`). Смена статуса и готовности блокирует друг друга и редактор состава.
 
+## Бэкенд (Supabase)
+Подробно — [docs/supabase-plan.md](docs/supabase-plan.md): решения, схема, соответствие эндпоинтов функциям, что
+сделать перед пилотом и при подключении клиента. Только локально; клиент пока не подключён (`supabase_flutter`
+добавим тогда же).
+- `supabase/migrations/` — по файлу на этап. Уже закоммиченную миграцию не править, а писать новую
+  (`create or replace`, `drop trigger` …): после `db push` в облако старые миграции не перезапускаются.
+- Чтение — RPC `get_*` с правами вызывающего под RLS. Запись — только RPC с `security definer`, которые сами
+  проверяют роль: у `authenticated` на таблицах только `SELECT`. Первая строка каждой клиентской функции —
+  `private.require_user()` (401 без сессии, 403 `no_profile` / `account_removed`) или `require_owner()`.
+- Новая функция: `revoke execute … from public, anon` и `grant … to authenticated` (клиентская) или
+  `to service_role` (для Edge Functions, первая строка — `private.require_service()`), плюс строка в
+  `client_functions` / `service_functions` в `supabase/tests/database/010_privileges.sql`, иначе тест упадёт.
+- Хелперы, триггеры и служебные таблицы — в схеме `private` (не публикуется). Ошибки — `private.fail(404, 'not_found')`
+  → HTTP 404 с машинным `hint`.
+- Права никогда не берутся из `user_metadata`: роль и компания — только из `profiles`. Триггер регистрации читает
+  `name`, `company_name` и `invite_code` (последний — из `app_metadata`, её ставит только Edge Function `join`).
+- В `auth.users` и `auth.sessions` SQL не пишет: бан и выход — admin API в Edge Function `remove-member`.
+- Подводные камни: триггер регистрации отложен до `COMMIT` (`admin.createUser` дописывает `app_metadata` вторым
+  запросом); у отчётов и сообщений одной транзакции одинаковый `now()`, в тестах порядок задавать явно;
+  `stable`-функция в том же `select`, что и мутация, видит снимок до неё.
+
 ## Соглашения
 - Файлы в snake_case. Классы: `XxxScreen`, `XxxRepository` (интерфейс), `FakeXxxRepository` / `ApiXxxRepository`,
   `XxxNotifier`, `xxxProvider`. Приватные виджеты `_Xxx` лежат в том же файле. Разделители секций: `// ── Title ───`.
@@ -451,7 +479,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 (сохраняется между запусками), три роли, чат этапов 1–3 (чаты объектов и личные, текст, фото, голосовые, статусы, непрочитанные),
 сжатие фото на устройстве (Android), общий полноэкранный просмотр фото.
 Визуальный стиль — см. «Дизайн-токены и компоненты».
-Заглушки и пробелы: Api-репозитории (все пять — заглушки), WebSocket-клиент чата, клиент Dio, загрузка в хранилище
+Бэкенд на Supabase (локально): схема, RLS, RPC всех пяти фич, Storage, Realtime, Edge Functions `join` и
+`remove-member`, демо-данные, тесты pgTAP и смоук — см. «Бэкенд (Supabase)».
+Заглушки и пробелы: Api-репозитории (все пять — заглушки, к Supabase не подключены), клиент Realtime, клиент Dio, загрузка в хранилище
 по `POST /uploads`, показ сетевых фото (cached_network_image), сжатие фото на iOS, черновики отчётов (`DraftReport`
 есть в репозитории, но UI нет), applicationId и подпись Android-релиза.
 Подробности и этапы — в [PROGRESS.md](PROGRESS.md); он отстаёт от кода, сверяйся с кодом.
@@ -459,6 +489,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 ## Правила работы
 - После изменений запускать `flutter analyze` и `flutter test`. Не завершать задачу с ошибками анализатора
   или упавшими тестами.
+- После изменений в `supabase/` — `npx supabase@2.122.0 db reset`, `test db` и `node supabase/tests/edge/smoke.mjs`
+  (после новой Edge Function или правки `config.toml` — сначала `stop` и `start`).
 - Если задача затрагивает нативный код (`android/`), плагины (pubspec.yaml, pubspec.lock) или хранилище
   (`shared_preferences`, secure storage), перед её завершением проверить release-сборку на устройстве
   (`flutter run --release`): тесты и debug не проходят через R8, и такие ошибки видны только в release.

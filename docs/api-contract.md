@@ -1,7 +1,11 @@
 # BuildFlow API Contract
 
 > Этот документ описывает контракт REST API, на который рассчитаны `ApiXxxRepository`-скелеты.
-> Пока бэкенд не готов, приложение работает на `FakeXxxRepository` с демо-данными.
+> Пока бэкенд не подключён, приложение работает на `FakeXxxRepository` с демо-данными.
+>
+> Бэкенд реализован на Supabase ([supabase/](../supabase/), пока только локально). Правила этого документа он
+> соблюдает, но пути другие: RPC `/rest/v1/rpc/<функция>`, две Edge Functions, Storage и Realtime вместо STOMP.
+> Соответствие эндпоинтов функциям и отличия JSON — в [supabase-plan.md](supabase-plan.md).
 
 ## Base URL
 
