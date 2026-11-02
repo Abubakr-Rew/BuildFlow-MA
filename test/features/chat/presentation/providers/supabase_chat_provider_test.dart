@@ -12,6 +12,8 @@ import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/chat/presentation/providers/chat_provider.dart';
+import 'package:buildflow/features/team/data/supabase_team_repository.dart';
+import 'package:buildflow/features/team/presentation/providers/team_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,6 +93,9 @@ void main() {
           RemoteFiles(cacheDir: () async => cache.path),
         ),
         chatRepositoryProvider.overrideWith(supabaseChatRepository),
+        teamRepositoryProvider.overrideWith(
+          (ref) => SupabaseTeamRepository(gateway: supabase.gateway),
+        ),
         chatEventsFactoryProvider.overrideWithValue(
           (userId) => FakeChatEvents()
             ..let((events) => (channels[userId] ??= []).add(events)),
@@ -117,6 +122,58 @@ void main() {
     container.listen(chatsProvider, (_, __) {});
     await pumpEventQueue();
   }
+
+  test('started offline, chats and names come back with the connection',
+      () async {
+    final offline = <String>{'get_chats', 'get_members'};
+    for (final name in offline) {
+      supabase.on('POST', '/rest/v1/rpc/$name', (_) {
+        if (offline.contains(name)) throw const SocketException('offline');
+        return FakeReply(200, name == 'get_chats'
+            ? [
+                {
+                  'id': 'c1',
+                  'type': 'direct',
+                  'projectId': null,
+                  'title': '',
+                  'participantIds': ['u1', 'u2'],
+                  'updatedAt': '2026-11-02T10:00:00Z',
+                  'unreadCount': 1,
+                  'lastMessage': null,
+                },
+              ]
+            : [
+                {
+                  'id': 'u2',
+                  'userId': 'u2',
+                  'name': 'Бакыт Касымов',
+                  'email': 'foreman1@buildflow.kg',
+                  'role': 'foreman',
+                  'companyId': 'c1',
+                  'assignedProjectIds': <String>[],
+                },
+              ]);
+      });
+    }
+    await signIn('u1');
+    container
+      ..listen(chatListProvider, (_, __) {})
+      ..listen(totalUnreadProvider, (_, __) {});
+    await pumpEventQueue();
+    expect(container.read(chatsProvider).hasError, isTrue);
+    expect(container.read(membersProvider).hasError, isTrue);
+
+    // The connection is back; the channel joins and the chats reload with
+    // nobody tapping «Повторить».
+    offline.clear();
+    channels['u1']!.single.rejoin();
+    await pumpEventQueue();
+    await pumpEventQueue();
+
+    final chats = container.read(chatListProvider).value!;
+    expect(chats.single.title, 'Бакыт Касымов');
+    expect(container.read(totalUnreadProvider), 1);
+  });
 
   test("signing out leaves the user's channel", () async {
     await signIn('u1');

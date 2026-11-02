@@ -265,7 +265,8 @@ class SupabaseChatRepository implements ChatRepository {
       do {
         _catchUpAgain = false;
         await Future.wait([
-          if (_chats != null) _loadChats(),
+          // Also a list whose first load failed, e.g. started offline.
+          if (_chats != null || _chatsChanged.hasListener) _loadChats(),
           for (final feed in [..._feeds.values]) _catchUpFeed(feed),
         ]);
       } while (_catchUpAgain);

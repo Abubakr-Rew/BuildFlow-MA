@@ -282,6 +282,29 @@ void main() {
       await sub.cancel();
     });
 
+    test('chats that failed to load (started offline) load when back online',
+        () async {
+      supabase.on(
+        'POST',
+        '/rest/v1/rpc/get_chats',
+        (_) => throw const SocketException('offline'),
+      );
+      final lists = <List<Chat>>[];
+      final errors = <Object>[];
+      final sub = repo.watchChats().listen(lists.add, onError: errors.add);
+      await pumpEventQueue();
+      expect(errors.single, isA<Failure>().having((f) => f.code, 'code', FailureCode.network));
+
+      supabase.rpc('get_chats', [_chat('c1')]);
+      events
+        ..drop()
+        ..rejoin();
+      await pumpEventQueue();
+
+      expect(lists.single.single.id, 'c1');
+      await sub.cancel();
+    });
+
     group('back from the background', () {
       late StreamSubscription<List<Chat>> chats;
       late StreamSubscription<List<Message>> messages;

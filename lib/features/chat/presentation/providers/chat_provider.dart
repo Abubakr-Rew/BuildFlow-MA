@@ -89,7 +89,15 @@ class ChatsNotifier extends StreamNotifier<List<Chat>> {
   Stream<List<Chat>> build() {
     final user = ref.watch(currentUserProvider);
     if (user == null) return Stream.value(const []);
-    return ref.watch(chatRepositoryProvider).watchChats();
+    return ref.watch(chatRepositoryProvider).watchChats().map((chats) {
+      // Started without a connection, the members failed to load too:
+      // with the chats back, so are the names of authors and peers.
+      final members = ref.read(membersProvider);
+      if (members.hasError && !members.isLoading) {
+        ref.invalidate(membersProvider);
+      }
+      return chats;
+    });
   }
 
   /// The direct chat with [userId], created on first use. The chat list

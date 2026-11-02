@@ -129,7 +129,8 @@ class SupabaseChatEvents implements ChatEvents {
   RealtimeChannel? _channel;
   bool _joined = false;
 
-  /// Joined at least once: a later join is a rejoin.
+  /// Joined at least once, or failed to join (started offline): the next
+  /// join is a rejoin, and what was missed meanwhile gets loaded.
   bool _wasJoined = false;
   bool _disposed = false;
 
@@ -163,6 +164,7 @@ class SupabaseChatEvents implements ChatEvents {
               RealtimeSubscribeStatus.closed ||
               RealtimeSubscribeStatus.timedOut:
           _joined = false;
+          _wasJoined = true;
           if (error != null) debugPrint('Chat channel: $status $error');
       }
     });
