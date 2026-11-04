@@ -571,3 +571,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - Новый код следует существующей архитектуре (feature / data / domain / presentation) и возвращает `Result<T>` из репозиториев.
 - Тексты UI добавлять в `app_ru.arb`, затем запускать `flutter gen-l10n`.
 - Отвечать на русском.
+
+## Git
+- Никогда не делать `git push --force` / `--force-with-lease` и не удалять ветки на GitHub.
+- Не переписывать историю уже запушенных коммитов (rebase, reset, amend).
+- Если кажется, что это нужно, — остановиться и спросить.
