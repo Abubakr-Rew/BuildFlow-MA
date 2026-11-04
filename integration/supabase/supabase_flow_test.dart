@@ -304,6 +304,8 @@ void main() {
         .value;
     final reports = (await director.reports.getReports()).value;
     final seenReport = reports.firstWhere((r) => r.id == report.id);
+    // The server's time arrives as a UTC moment; screens make it local.
+    expect(seenReport.createdAt.isUtc, isTrue);
     expect(seenReport.photos.single.takenAt, DateTime.utc(2026, 11, 2, 6));
     expect(seenReport.photos.single.url, startsWith('storage:photos/'));
     expect(

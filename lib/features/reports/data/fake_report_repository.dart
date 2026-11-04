@@ -8,6 +8,9 @@ import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/entities/report_photo.dart';
 import 'package:buildflow/features/reports/domain/repositories/report_repository.dart';
 
+/// [ago] back from now in UTC: the fake's times are what the server sends.
+DateTime _ago(Duration ago) => DateTime.now().toUtc().subtract(ago);
+
 /// In-memory fake report repository with seeded demo data.
 class FakeReportRepository implements ReportRepository {
   FakeReportRepository({this.companyId = 'company-1'});
@@ -30,20 +33,20 @@ class FakeReportRepository implements ReportRepository {
         ReportPhoto(
           id: 'photo-1',
           url: 'fake:foundation-1',
-          takenAt: DateTime.now().subtract(
+          takenAt: _ago(
             const Duration(hours: 3, minutes: 40),
           ),
         ),
         ReportPhoto(
           id: 'photo-2',
           url: 'fake:foundation-2',
-          takenAt: DateTime.now().subtract(
+          takenAt: _ago(
             const Duration(hours: 3, minutes: 25),
           ),
         ),
         const ReportPhoto(id: 'photo-3', url: 'fake:foundation-3'),
       ],
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+      createdAt: _ago(const Duration(hours: 3)),
     ),
     Report(
       id: 'report-2',
@@ -57,7 +60,7 @@ class FakeReportRepository implements ReportRepository {
         ReportPhoto(
           id: 'photo-4',
           url: 'fake:brickwork-1',
-          takenAt: DateTime.now().subtract(
+          takenAt: _ago(
             const Duration(hours: 5, minutes: 20),
           ),
         ),
@@ -65,10 +68,10 @@ class FakeReportRepository implements ReportRepository {
         ReportPhoto(
           id: 'photo-5',
           url: 'fake:brickwork-2',
-          takenAt: DateTime.now().subtract(const Duration(days: 3, hours: 2)),
+          takenAt: _ago(const Duration(days: 3, hours: 2)),
         ),
       ],
-      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+      createdAt: _ago(const Duration(hours: 5)),
     ),
     Report(
       id: 'report-3',
@@ -84,7 +87,7 @@ class FakeReportRepository implements ReportRepository {
         const ReportPhoto(id: 'photo-8', url: 'fake:rebar-3'),
         const ReportPhoto(id: 'photo-9', url: 'fake:rebar-4'),
       ],
-      createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 2)),
+      createdAt: _ago(const Duration(days: 1, hours: 2)),
     ),
     Report(
       id: 'report-4',
@@ -98,7 +101,7 @@ class FakeReportRepository implements ReportRepository {
         const ReportPhoto(id: 'photo-10', url: 'fake:lumber-1'),
         const ReportPhoto(id: 'photo-11', url: 'fake:lumber-2'),
       ],
-      createdAt: DateTime.now().subtract(const Duration(days: 1, hours: 6)),
+      createdAt: _ago(const Duration(days: 1, hours: 6)),
     ),
     Report(
       id: 'report-5',
@@ -111,7 +114,7 @@ class FakeReportRepository implements ReportRepository {
       photos: [
         const ReportPhoto(id: 'photo-12', url: 'fake:plaster-1'),
       ],
-      createdAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
+      createdAt: _ago(const Duration(days: 2, hours: 4)),
     ),
   ];
 
@@ -160,7 +163,7 @@ class FakeReportRepository implements ReportRepository {
     required List<CompressedPhoto> photos,
   }) async {
     await _simulateLatency();
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final report = Report(
       id: 'report-${DateTime.now().millisecondsSinceEpoch}',
       projectId: projectId,
@@ -177,7 +180,7 @@ class FakeReportRepository implements ReportRepository {
             id: 'photo-${now.millisecondsSinceEpoch}-'
                 '${_random.nextInt(100000)}',
             url: photo.path,
-            takenAt: photo.takenAt,
+            takenAt: photo.takenAt?.toUtc(),
           ),
         if (photos.isEmpty)
           ReportPhoto(

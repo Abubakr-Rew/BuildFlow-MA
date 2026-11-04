@@ -1,3 +1,4 @@
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
 import 'package:buildflow/features/chat/domain/entities/message.dart';
 
@@ -38,9 +39,8 @@ List<TimelineItem> buildTimeline(List<Message> messages) {
     final m = messages[i];
     final prev = i > 0 ? messages[i - 1] : null;
     final next = i + 1 < messages.length ? messages[i + 1] : null;
-    if (prev == null || !_sameDay(prev.createdAt, m.createdAt)) {
-      final local = m.createdAt.toLocal();
-      items.add(DayDivider(DateTime(local.year, local.month, local.day)));
+    if (prev == null || !DateFormatter.isSameDay(prev.createdAt, m.createdAt)) {
+      items.add(DayDivider(DateFormatter.toDateOnly(m.createdAt)));
     }
     items.add(
       MessageEntry(
@@ -53,17 +53,11 @@ List<TimelineItem> buildTimeline(List<Message> messages) {
   return items;
 }
 
-bool _sameDay(DateTime a, DateTime b) {
-  final x = a.toLocal();
-  final y = b.toLocal();
-  return x.year == y.year && x.month == y.month && x.day == y.day;
-}
-
 bool _grouped(Message? a, Message? b) =>
     a != null &&
     b != null &&
     a.kind != MessageKind.system &&
     b.kind != MessageKind.system &&
     a.senderId == b.senderId &&
-    _sameDay(a.createdAt, b.createdAt) &&
+    DateFormatter.isSameDay(a.createdAt, b.createdAt) &&
     b.createdAt.difference(a.createdAt) <= messageGroupGap;

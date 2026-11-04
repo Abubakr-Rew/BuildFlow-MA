@@ -5,6 +5,7 @@ import 'package:buildflow/core/photos/compressed_photo.dart';
 import 'package:buildflow/core/remote_files/remote_files_providers.dart';
 import 'package:buildflow/core/supabase/supabase_providers.dart';
 import 'package:buildflow/core/supabase/supabase_uploads.dart';
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
@@ -115,9 +116,6 @@ class ReportsNotifier extends AsyncNotifier<List<Report>> {
 
 // ── Today ─────────────────────────────────────────────────────
 
-bool _isToday(DateTime date, DateTime now) =>
-    date.year == now.year && date.month == now.month && date.day == now.day;
-
 /// Time of today's latest report for a project, or `null` if there is none.
 final todayReportTimeProvider = Provider.family<DateTime?, String>((
   ref,
@@ -127,7 +125,9 @@ final todayReportTimeProvider = Provider.family<DateTime?, String>((
   final now = DateTime.now();
   DateTime? latest;
   for (final r in reports) {
-    if (r.projectId != projectId || !_isToday(r.createdAt, now)) continue;
+    if (r.projectId != projectId || !DateFormatter.isSameDay(r.createdAt, now)) {
+      continue;
+    }
     if (latest == null || r.createdAt.isAfter(latest)) latest = r.createdAt;
   }
   return latest;
@@ -152,7 +152,9 @@ final daySummaryProvider = Provider<AsyncValue<DaySummary>>((ref) {
   if (reports == null) return const AsyncLoading();
   return projects.whenData((list) {
     final now = DateTime.now();
-    final today = reports.where((r) => _isToday(r.createdAt, now)).toList();
+    final today = reports
+        .where((r) => DateFormatter.isSameDay(r.createdAt, now))
+        .toList();
     final reported = today.map((r) => r.projectId).toSet();
     final active = list.where((p) => p.status.isActive);
     return (

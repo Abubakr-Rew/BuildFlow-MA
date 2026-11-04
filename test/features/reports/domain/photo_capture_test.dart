@@ -1,3 +1,4 @@
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/features/reports/domain/entities/report_photo.dart';
 import 'package:buildflow/features/reports/domain/photo_capture.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,5 +33,18 @@ void main() {
 
   test('a photo without a capture time is not flagged', () {
     expect(takenOnAnotherDay(takenAt(null), reportedAt), isFalse);
+  });
+
+  test('the day boundary follows the phone time zone', () {
+    addTearDown(() => DateFormatter.debugUtcOffset = null);
+    final photo = takenAt(DateTime.utc(2026, 11, 3, 17, 59));
+    final sent = DateTime.utc(2026, 11, 3, 18);
+
+    // 23:59 and 00:00 of the next day.
+    DateFormatter.debugUtcOffset = const Duration(hours: 6);
+    expect(takenOnAnotherDay(photo, sent), isTrue);
+    // 12:59 and 13:00 of one day.
+    DateFormatter.debugUtcOffset = const Duration(hours: -5);
+    expect(takenOnAnotherDay(photo, sent), isFalse);
   });
 }

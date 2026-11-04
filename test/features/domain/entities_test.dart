@@ -2,10 +2,14 @@ import 'dart:convert';
 
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
+import 'package:buildflow/features/chat/domain/entities/chat.dart';
+import 'package:buildflow/features/chat/domain/entities/chat_enums.dart';
+import 'package:buildflow/features/chat/domain/entities/message.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/reports/domain/entities/report.dart';
 import 'package:buildflow/features/reports/domain/entities/report_photo.dart';
+import 'package:buildflow/features/team/domain/entities/invite_code.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -130,5 +134,67 @@ void main() {
       expect(photos.last['takenAt'], '2024-06-15T04:12:00.000Z');
       expect(photos.first['takenAt'], isNull);
     });
+  });
+
+  group('times from the server', () {
+    final moment = DateTime.utc(2026, 11, 4, 5, 47);
+
+    for (final text in const [
+      '2026-11-04T05:47:00Z',
+      '2026-11-04T05:47:00+00:00',
+      '2026-11-04T11:47:00+06:00',
+      '2026-11-04T00:47:00-05:00',
+    ]) {
+      test('$text is one moment in UTC in every entity', () {
+        final report = Report.fromJson({
+          'id': 'r',
+          'projectId': 'p',
+          'projectName': 'Объект',
+          'authorId': 'u',
+          'authorName': 'Имя',
+          'text': '',
+          'photos': <Object>[],
+          'createdAt': text,
+        });
+        final photo = ReportPhoto.fromJson({
+          'id': 'ph',
+          'url': 'fake:x',
+          'takenAt': text,
+        });
+        final message = Message.fromJson({
+          'id': 'm',
+          'clientId': 'm',
+          'chatId': 'c',
+          'senderId': 'u',
+          'kind': MessageKind.text.name,
+          'createdAt': text,
+        });
+        final chat = Chat.fromJson({
+          'id': 'c',
+          'type': ChatType.direct.name,
+          'participantIds': <String>[],
+          'updatedAt': text,
+        });
+        final invite = InviteCode.fromJson({
+          'code': 'ABC234',
+          'companyId': 'co',
+          'role': UserRole.worker.name,
+          'createdAt': text,
+          'expiresAt': text,
+        });
+
+        for (final time in [
+          report.createdAt,
+          photo.takenAt!,
+          message.createdAt,
+          chat.updatedAt,
+          invite.createdAt,
+          invite.expiresAt!,
+        ]) {
+          expect(time, moment);
+          expect(time.isUtc, isTrue);
+        }
+      });
+    }
   });
 }

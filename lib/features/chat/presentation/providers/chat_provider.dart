@@ -316,7 +316,7 @@ class ChatThreadNotifier
       senderId: userId,
       kind: MessageKind.text,
       text: trimmed,
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
       status: MessageStatus.sending,
     );
     _outbox[clientId] = pending;
@@ -364,7 +364,7 @@ class ChatThreadNotifier
       kind: MessageKind.photo,
       text: trimmed.isEmpty ? null : trimmed,
       attachments: [for (final p in outgoing) p.preview],
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
       status: MessageStatus.sending,
     );
     _outbox[clientId] = pending;
@@ -398,7 +398,7 @@ class ChatThreadNotifier
           mime: VoiceNote.mime,
         ),
       ],
-      createdAt: DateTime.now(),
+      createdAt: DateTime.now().toUtc(),
       status: MessageStatus.sending,
     );
     _outbox[clientId] = pending;

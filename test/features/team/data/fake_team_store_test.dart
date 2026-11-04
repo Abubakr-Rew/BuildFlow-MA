@@ -41,7 +41,9 @@ void main() {
           store.createInvite(companyId: 'company-1', role: UserRole.foreman);
       expect(invite.role, UserRole.foreman);
       expect(invite.companyId, 'company-1');
-      expect(invite.expiresAt, now.add(const Duration(days: 7)));
+      expect(invite.expiresAt, now.add(const Duration(days: 7)).toUtc());
+      expect(invite.createdAt.isUtc, isTrue);
+      expect(invite.expiresAt!.isUtc, isTrue);
       expect(invite.isUsed, isFalse);
     });
 

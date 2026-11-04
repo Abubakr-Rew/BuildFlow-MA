@@ -324,7 +324,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final l10n = AppLocalizations.of(context);
     final names = ref.read(memberNamesProvider);
     final time = DateFormatter.reportDateTime(
-      message.createdAt.toLocal(),
+      message.createdAt,
       today: l10n.today,
       yesterday: l10n.yesterday,
     );

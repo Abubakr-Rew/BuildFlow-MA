@@ -40,7 +40,8 @@ class FakeChatStore {
     DateTime Function()? now,
     Random? random,
   })  : _team = teamStore,
-        _now = now ?? DateTime.now,
+        // Times leave in UTC, as the server sends them.
+        _now = (() => (now ?? DateTime.now)().toUtc()),
         _random = random ?? Random() {
     for (final project in projects) {
       _createProjectChat(project);
@@ -406,7 +407,7 @@ class FakeChatStore {
     List<MessageAttachment> attachments = const [],
   }) {
     final id = 'msg-${++_seq}';
-    final createdAt = at ?? _now();
+    final createdAt = (at ?? _now()).toUtc();
     chat.messages.add(
       Message(
         id: id,
@@ -567,7 +568,8 @@ class FakeChatStore {
   // ── Demo history ───────────────────────────────────────────
 
   void _seedDemo() {
-    final now = _now();
+    // The demo history is laid out on the phone's calendar.
+    final now = _now().toLocal();
     final today = DateTime(now.year, now.month, now.day);
     DateTime ago(int minutes) => now.subtract(Duration(minutes: minutes));
     DateTime dayAt(int daysAgo, int hour, int minute) =>

@@ -1,6 +1,7 @@
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/core/photos/compressed_photo.dart';
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
@@ -106,6 +107,84 @@ void main() {
       expect((await submit(c)).failure.code, FailureCode.timeout);
     });
   });
+  group("today on the phone's clock", () {
+    tearDown(() => DateFormatter.debugUtcOffset = null);
+
+    Report at(String id, DateTime time, {int photos = 0}) => Report(
+          id: id,
+          projectId: 'project-1',
+          projectName: 'ЖК «Ала-Тоо Резиденс»',
+          authorId: 'user-foreman-1',
+          authorName: 'Бакыт Касымов',
+          text: id,
+          photos: [
+            for (var i = 0; i < photos; i++)
+              ReportPhoto(id: '$id-$i', url: 'fake:$id-$i'),
+          ],
+          createdAt: time,
+        );
+
+    /// The moment today began on the phone's clock, [offset] from UTC.
+    DateTime midnight(Duration offset) {
+      final clock = DateFormatter.local(DateTime.now());
+      return DateTime.utc(clock.year, clock.month, clock.day).subtract(offset);
+    }
+
+    for (final (name, offset) in const [
+      ('+6', Duration(hours: 6)),
+      ('-5', Duration(hours: -5)),
+    ]) {
+      test('at $name the night hours count as today', () async {
+        DateFormatter.debugUtcOffset = offset;
+        final start = midnight(offset);
+        final latest = start.add(const Duration(hours: 5, minutes: 59));
+        final c = container(
+          overrides: [
+            reportRepositoryProvider.overrideWithValue(
+              _FixedReports([
+                at('early', latest, photos: 2),
+                at('midnight', start, photos: 1),
+                at(
+                  'yesterday',
+                  start.subtract(const Duration(minutes: 1)),
+                  photos: 5,
+                ),
+              ]),
+            ),
+          ],
+        );
+
+        await c.read(projectsProvider.future);
+        await c.read(reportsProvider.future);
+
+        expect(c.read(todayReportTimeProvider('project-1')), latest);
+        final summary = c.read(daySummaryProvider).requireValue;
+        expect(summary.reportsSent, 1);
+        expect(summary.newPhotos, 3);
+      });
+
+      test("at $name a minute before midnight isn't today", () async {
+        DateFormatter.debugUtcOffset = offset;
+        final c = container(
+          overrides: [
+            reportRepositoryProvider.overrideWithValue(
+              _FixedReports([
+                at(
+                  'yesterday',
+                  midnight(offset).subtract(const Duration(minutes: 1)),
+                ),
+              ]),
+            ),
+          ],
+        );
+
+        await c.read(reportsProvider.future);
+
+        expect(c.read(todayReportTimeProvider('project-1')), isNull);
+      });
+    }
+  });
+
   group('projectCoverProvider', () {
     test('is the last photo of the latest report with photos', () async {
       final now = DateTime.now();
