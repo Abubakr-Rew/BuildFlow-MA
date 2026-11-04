@@ -57,6 +57,19 @@ local.properties
 key.properties
 *.jks
 *.keystore
+*.pem
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+
+# Build outputs and reports outside build/
+*.apk
+*.aab
+coverage/
+
+# JVM heap dumps (HeapDumpOnOutOfMemoryError in android/gradle.properties)
+java_pid*.hprof
 
 # Firebase config and environment secrets
 google-services.json
