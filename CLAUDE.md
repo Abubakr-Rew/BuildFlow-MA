@@ -370,7 +370,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   `showPhotoViewer` / `PhotoViewer` (полноэкранный просмотр: свайп вбок, зум щипком и двойным тапом через
   `InteractiveViewer`, свайп вниз закрывает, внизу подпись, автор, время и бейдж `warning`; одна реализация для
   отчётов и чата), `PhotoDraftTile` (выбранное фото: спиннер, красная метка, крестик), `showRetryDeleteSheet`
-  («Повторить / Удалить» для неотправленного сообщения и несжатого фото), `DateFormatter` (ru; время отчёта —
+  («Повторить / Удалить» для неотправленного сообщения и несжатого фото), `DateFormatter` (ru, сам переводит моменты в локальное время; время отчёта —
   `reportDateTime`: «Сегодня, 11:47», «Вчера, …», «Пн, …», «27 октября, …», год только не текущий; в списке чатов
   `chatListTime`: «14:05», «Вчера», «Пн», «27 окт.»; разделитель дня в чате — `chatDay`), `Validators`, `Haptics`.
 - Тесты в `test/` повторяют структуру `lib/`. Покрыты Fake-репозитории (включая коды ошибок), `Result` и `Failure`,
@@ -473,6 +473,15 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - После любой правки freezed- или json-модели обязательно запускать build_runner. `*.g.dart` и `*.freezed.dart` лежат в git.
 - Демо-входы (пароль у всех `123456`): `owner@buildflow.kg`, `foreman1@`, `foreman2@`, `worker1@`, `worker2@`, `worker3@buildflow.kg`
   (Азамат Асанов есть для демо поиска: «асан» находит и его, и директора Асана Бековича; работает на «Байтике»).
+  Кнопки на экране входа зависят только от бэкенда (`demoLoginEnabled`, `demoLoginEnabledProvider` в auth_provider.dart):
+  при `Backend.fake` есть в любой сборке, включая демо-APK, при Supabase их нет ни в какой.
+- Время: сущности хранят моменты в UTC (сервер отдаёт `timestamptz`, `DateTime.parse` со смещением даёт UTC; Fake отдаёт
+  так же, новые моменты на клиенте — `DateTime.now().toUtc()`). Показ и сравнение дней только через `DateFormatter`:
+  `DateFormat` сам в локальное время не переводит, поэтому `toLocal()` и `.day` на моменте в экранах не использовать.
+  `local()` даёт момент на часах телефона, `isSameDay()` сравнивает дни, `toDateOnly()` даёт календарный день, который
+  идёт в `relative` и `chatDay` как есть. `DateTime` с разными флагами UTC не равны (`==`), даже если момент один.
+  В тестах смещение задаёт `DateFormatter.debugUtcOffset` (сбрасывать в `tearDown`, в release не действует); весь набор
+  можно прогнать и под настоящим поясом: `TZ=UTC-6 flutter test` (знак в `TZ` обратный) или `TZ=EST5 flutter test`.
 - Secure storage — только через `SecureStorageService`: в нём таймауты, потому что на Xiaomi/MIUI KeyStore может зависнуть.
   Напрямую `FlutterSecureStorage` не вызывать. Сплэш тоже страхуется таймаутом (`forceUnauthenticated`).
 - `FakeReportRepository` добавляет фото `fake:demo-<ts>` в отчёт без фото.
