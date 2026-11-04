@@ -328,6 +328,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   после (070_realtime). У отчётов и сообщений одной транзакции одинаковый `now()`, в тестах порядок задавать явно;
   `stable`-функция в том же `select`, что и мутация, видит снимок до неё.
 - Лимит `join` — 10 в минуту с IP: смоук-тест его выбирает, интеграционный тест после него ждёт минуту (иначе 429).
+- После перезапуска Docker контейнер Edge Functions может не подняться: остальной стек работает, но `join` отвечает 503,
+  а в `supabase status` он в «Stopped services». Лечится: `npx supabase@2.122.0 stop`, затем `start`.
 
 ## Соглашения
 - Файлы в snake_case. Классы: `XxxScreen`, `XxxRepository` (интерфейс), `FakeXxxRepository` / `SupabaseXxxRepository`,
