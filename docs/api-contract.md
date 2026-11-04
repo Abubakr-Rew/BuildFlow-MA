@@ -1,7 +1,7 @@
 # BuildFlow API Contract
 
-> Этот документ описывает контракт REST API, на который рассчитаны `ApiXxxRepository`-скелеты.
-> Пока бэкенд не подключён, приложение работает на `FakeXxxRepository` с демо-данными.
+> Этот документ описывает контракт API. Клиент реализует его в `SupabaseXxxRepository` (сборка `BACKEND=supabase`)
+> и в `FakeXxxRepository` с демо-данными (`BACKEND=fake`).
 >
 > Бэкенд реализован на Supabase ([supabase/](../supabase/), пока только локально). Правила этого документа он
 > соблюдает, но пути другие: RPC `/rest/v1/rpc/<функция>`, две Edge Functions, Storage и Realtime вместо STOMP.
@@ -332,7 +332,8 @@ Authorization: Bearer <token>
 Клиент после 204 только перезагружает объекты и участников, отдельных запросов к объектам не шлёт.
 Повторный `DELETE` уже удалённого участника → 404 (`notFound`).
 
-Удалённый участник больше не может войти: `POST /auth/login` отвечает ему 401 (`invalidCredentials`). Его выданные
+Удалённый участник больше не может войти: клиент показывает `accountDisabled` («Доступ закрыт»; Supabase отвечает
+`user_banned`). Его выданные
 токены сервер отзывает, и следующий запрос с таким токеном, включая `POST /auth/restore`, получает 401
 (`sessionExpired`). Клиент в ответ разлогинивает пользователя. В Fake-режиме это не реализовано: удалённый участник
 по-прежнему входит.
@@ -688,7 +689,7 @@ Authorization: Bearer <token>
 ### Коды ошибок клиента
 
 Текст из `error` клиент пользователю не показывает: он попадает только в `Failure.message` для логов.
-Что увидит пользователь, решает `FailureCode` (`lib/core/error/failures.dart`). `Api*Repository` выводит его
+Что увидит пользователь, решает `FailureCode` (`lib/core/error/failures.dart`). `Supabase*Repository` выводит его
 из HTTP-статуса и эндпоинта:
 
 | Ответ | `FailureCode` |
@@ -698,6 +699,8 @@ Authorization: Bearer <token>
 | 400 | `validation` |
 | 401 на `POST /auth/login` | `invalidCredentials` |
 | 401 на остальных запросах | `sessionExpired` |
+| Вход удалённого участника: Supabase Auth `user_banned`, 403 `account_removed` на входе и при восстановлении сессии | `accountDisabled` |
+| 403 `account_removed` / `no_profile` на остальных запросах | `sessionExpired` (клиент выходит из сессии) |
 | 403 (в том числе чат, где пользователь больше не участник, и чужое или уже прикреплённое вложение) | `forbidden` |
 | 404 на `POST /auth/join` (код неизвестен, использован или истёк) | `invalidInviteCode` |
 | 404 на остальных запросах | `notFound` |

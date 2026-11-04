@@ -85,14 +85,69 @@ flutter run
 Новый сотрудник сразу появляется в списке команды у владельца. Демо-данные живут в памяти и сбрасываются
 при перезапуске приложения.
 
+## Запуск с сервером на компьютере
+
+По умолчанию приложение работает на демо-данных в памяти. Чтобы запустить его с настоящим сервером, поднимите
+Supabase на компьютере, а телефон подключите по USB.
+
+**Один раз:** установите [Docker Desktop](https://www.docker.com/products/docker-desktop/) и
+[Node.js](https://nodejs.org/). На телефоне включите «Отладку по USB» (Настройки → Для разработчиков).
+
+**Каждый раз:**
+
+1. Запустите Docker Desktop и дождитесь, пока он загрузится.
+2. Поднимите сервер (команды — из корня проекта; первый запуск скачивает образы, несколько минут):
+   ```bash
+   npx supabase@2.122.0 start
+   npx supabase@2.122.0 db reset   # чистая база с демо-данными: owner@buildflow.kg и остальные, пароль 123456
+   ```
+3. Создайте файл с адресом и ключом сервера (он не попадает в git):
+   ```bash
+   node tool/local_env.mjs          # пишет env/local.env
+   ```
+4. Подключите телефон по USB и пробросьте порт сервера на телефон:
+   ```bash
+   adb devices                      # телефон в списке как «device»
+   adb reverse tcp:54321 tcp:54321  # 127.0.0.1:54321 на телефоне → сервер на компьютере
+   ```
+   После переподключения кабеля или перезагрузки телефона `adb reverse` нужно выполнить снова.
+5. Запустите приложение:
+   ```bash
+   flutter run --dart-define-from-file=env/local.env             # debug
+   flutter run --release --dart-define-from-file=env/local.env   # release
+   ```
+
+Студия базы — http://127.0.0.1:54323. Остановить сервер: `npx supabase@2.122.0 stop`.
+
+Эмулятор Android видит компьютер по адресу `10.0.2.2`: замените `127.0.0.1` на `10.0.2.2` в `env/local.env`,
+`adb reverse` тогда не нужен.
+
+**Режимы сборки** задаются через `--dart-define`: `BACKEND=fake` (демо-данные) или `BACKEND=supabase` с
+`SUPABASE_URL` и `SUPABASE_ANON_KEY`. Без `BACKEND` debug-сборка работает на демо-данных, а release-сборка
+не запускается и показывает, чего не хватает: release нужно собирать либо с сервером, либо явно с
+`--dart-define=BACKEND=fake` (демо-сборка).
+
+Если что-то не работает:
+- «Нет подключения» на телефоне — не выполнен `adb reverse` или не запущен сервер (`npx supabase@2.122.0 status`);
+- экран «Сборка настроена неверно» — запуск без `--dart-define-from-file=env/local.env`;
+- «Слишком много попыток» при входе по коду — сервер разрешает 10 попыток в минуту, подождите минуту.
+
 ## Тестирование
 
 ```bash
 # Статический анализ
 flutter analyze
 
-# Юнит-тесты
+# Юнит- и виджет-тесты (сервер не нужен)
 flutter test
+
+# Сквозной тест против локального Supabase (сервер запущен, база после db reset)
+node tool/local_env.mjs
+flutter test integration/supabase --dart-define-from-file=env/local.env
+
+# Тесты сервера
+npx supabase@2.122.0 test db
+node supabase/tests/edge/smoke.mjs
 ```
 
 ## Технологии
@@ -105,15 +160,14 @@ flutter test
 | json_annotation | ^4.12.0 | JSON сериализация |
 | flutter_secure_storage | ^9.2.0 | Безопасное хранение токенов |
 | shared_preferences | ^2.3.0 | Локальное хранилище (черновики) |
-| cached_network_image | ^3.4.0 | Кэширование изображений |
+| supabase_flutter | ^2.18.3 | Сервер: вход, RPC, файлы, Realtime |
 | very_good_analysis | ^6.0.0 | Строгий линтер |
 
-## Переключение на реальный API
+## Сервер
 
-В `lib/app/app.dart` замените `FakeAuthRepository` на `ApiAuthRepository`
-и аналогично для `ProjectRepository`, `TeamRepository`, `ReportRepository`.
-
-API-контракт описан в [`docs/api-contract.md`](docs/api-contract.md).
+Бэкенд — Supabase ([`supabase/`](supabase/)), устройство и решения — в [`docs/supabase-plan.md`](docs/supabase-plan.md),
+контракт — в [`docs/api-contract.md`](docs/api-contract.md). Репозиторий для каждой фичи выбирает её провайдер:
+`Fake*Repository` или `Supabase*Repository`.
 
 ## Дизайн для стройки
 

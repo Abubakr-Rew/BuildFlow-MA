@@ -325,7 +325,7 @@ class _Meta extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            DateFormatter.time(message.createdAt.toLocal()),
+            DateFormatter.time(message.createdAt),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: quiet,
               fontWeight: FontWeight.w500,

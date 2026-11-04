@@ -9,7 +9,7 @@ import 'package:buildflow/core/widgets/loading_shimmer.dart';
 import 'package:buildflow/core/widgets/screen_header.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
-import 'package:buildflow/features/reports/domain/entities/report.dart';
+import 'package:buildflow/features/reports/domain/report_days.dart';
 import 'package:buildflow/features/reports/presentation/providers/report_provider.dart';
 import 'package:buildflow/features/reports/presentation/widgets/report_card.dart';
 import 'package:flutter/material.dart';
@@ -53,8 +53,7 @@ class ReportListScreen extends ConsumerWidget {
                         title: l10n.noReports,
                       );
                     }
-                    // Group by date
-                    final grouped = _groupByDate(list, l10n);
+                    final days = groupReportsByDay(list);
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
                         AppTheme.screenPadding,
@@ -62,9 +61,9 @@ class ReportListScreen extends ConsumerWidget {
                         AppTheme.screenPadding,
                         AppTheme.spacing24,
                       ),
-                      itemCount: grouped.length,
+                      itemCount: days.length,
                       itemBuilder: (context, index) {
-                        final group = grouped[index];
+                        final day = days[index];
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -76,14 +75,18 @@ class ReportListScreen extends ConsumerWidget {
                                 bottom: AppTheme.spacing8,
                               ),
                               child: Text(
-                                group.dateLabel,
+                                DateFormatter.relative(
+                                  day.day,
+                                  today: l10n.today,
+                                  yesterday: l10n.yesterday,
+                                ),
                                 style: Theme.of(context).textTheme.labelMedium
                                     ?.copyWith(
                                       color: context.bfTheme.textSecondary,
                                     ),
                               ),
                             ),
-                            ...group.reports.map(
+                            ...day.reports.map(
                               (report) => Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: AppTheme.cardGap,
@@ -104,30 +107,4 @@ class ReportListScreen extends ConsumerWidget {
       ),
     );
   }
-
-  List<_DateGroup> _groupByDate(List<Report> reports, AppLocalizations l10n) {
-    final groups = <DateTime, List<Report>>{};
-    for (final report in reports) {
-      final dateKey = DateFormatter.toDateOnly(report.createdAt);
-      groups.putIfAbsent(dateKey, () => []).add(report);
-    }
-
-    final sortedKeys = groups.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    return sortedKeys.map((date) {
-      final label = DateFormatter.relative(
-        date,
-        today: l10n.today,
-        yesterday: l10n.yesterday,
-      );
-      return _DateGroup(dateLabel: label, reports: groups[date]!);
-    }).toList();
-  }
-}
-
-class _DateGroup {
-  const _DateGroup({required this.dateLabel, required this.reports});
-
-  final String dateLabel;
-  final List<Report> reports;
 }

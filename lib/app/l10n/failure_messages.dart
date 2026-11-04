@@ -20,6 +20,7 @@ extension FailureMessages on AppLocalizations {
         FailureCode.emailTaken => errorEmailTaken,
         FailureCode.invalidInviteCode => errorInvalidInviteCode,
         FailureCode.sessionExpired => errorSessionExpired,
+        FailureCode.accountDisabled => errorAccountDisabled,
         FailureCode.forbidden => errorForbidden,
         FailureCode.notFound => errorNotFound,
         FailureCode.validation => errorValidation,

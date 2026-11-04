@@ -207,7 +207,7 @@ class _ReportBody extends ConsumerWidget {
 /// «Снято 11:42», with the date when it isn't the report's day; the time
 /// the report was sent for a photo that doesn't say.
 String _shotTime(AppLocalizations l10n, Report report, ReportPhoto photo) {
-  final taken = photo.takenAt?.toLocal();
+  final taken = photo.takenAt;
   if (taken == null) {
     return DateFormatter.reportDateTime(
       report.createdAt,

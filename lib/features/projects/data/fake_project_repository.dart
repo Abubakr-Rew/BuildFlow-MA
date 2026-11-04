@@ -3,15 +3,22 @@ import 'dart:math';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
+import 'package:buildflow/features/projects/domain/entities/project_changes.dart';
 import 'package:buildflow/features/projects/domain/entities/project_status.dart';
 import 'package:buildflow/features/projects/domain/repositories/project_repository.dart';
+import 'package:buildflow/features/team/data/fake_team_store.dart';
+import 'package:buildflow/features/team/domain/entities/member.dart';
 
 /// In-memory fake project repository with seeded demo data.
 class FakeProjectRepository implements ProjectRepository {
   FakeProjectRepository({
     this.companyId = 'company-1',
     this.onProjectChanged,
-  });
+    this.teamStore,
+  }) {
+    _memberIds = _currentMemberIds();
+    teamStore?.addMembersListener(_onMembersChanged);
+  }
 
   final String companyId;
 
@@ -19,6 +26,11 @@ class FakeProjectRepository implements ProjectRepository {
   /// updates the project chat: the provider passes
   /// `FakeChatStore.syncProject`.
   final void Function(Project project)? onProjectChanged;
+
+  /// The company's members. Someone removed from the company leaves every
+  /// project, as on the server (`DELETE /team/members/:id`).
+  final FakeTeamStore? teamStore;
+  Set<String> _memberIds = const {};
   final _random = Random();
 
   late final List<Project> _projects = [...seed];
@@ -110,14 +122,18 @@ class FakeProjectRepository implements ProjectRepository {
   }
 
   @override
-  Future<Result<Project>> updateProject(Project project) async {
+  Future<Result<Project>> updateProject(
+    String id,
+    ProjectChanges changes,
+  ) async {
     await _simulateLatency();
-    final index = _projects.indexWhere((p) => p.id == project.id);
+    final index = _projects.indexWhere((p) => p.id == id);
     if (index == -1) {
-      return Err(_notFound(project.id));
+      return Err(_notFound(id));
     }
-    _projects[index] = project;
-    return Success(_changed(project));
+    final updated = changes.applyTo(_projects[index]);
+    _projects[index] = updated;
+    return Success(_changed(updated));
   }
 
   @override
@@ -163,4 +179,32 @@ class FakeProjectRepository implements ProjectRepository {
     onProjectChanged?.call(project);
     return project;
   }
+
+  Set<String> _currentMemberIds() => {
+        for (final m in teamStore?.membersOf(companyId) ?? const <Member>[])
+          m.userId,
+      };
+
+  void _onMembersChanged() {
+    final current = _currentMemberIds();
+    final removed = _memberIds.difference(current);
+    _memberIds = current;
+    if (removed.isEmpty) return;
+    for (var i = 0; i < _projects.length; i++) {
+      final project = _projects[i];
+      final kept = ProjectChanges(
+        foremanIds: [
+          for (final id in project.foremanIds)
+            if (!removed.contains(id)) id,
+        ],
+        workerIds: [
+          for (final id in project.workerIds)
+            if (!removed.contains(id)) id,
+        ],
+      ).applyTo(project);
+      if (kept != project) _projects[i] = _changed(kept);
+    }
+  }
+
+  void dispose() => teamStore?.removeMembersListener(_onMembersChanged);
 }

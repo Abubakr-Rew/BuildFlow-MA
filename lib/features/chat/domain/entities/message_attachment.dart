@@ -1,3 +1,4 @@
+import 'package:buildflow/core/remote_files/storage_ref.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'message_attachment.freezed.dart';
@@ -8,7 +9,10 @@ part 'message_attachment.g.dart';
 abstract class MessageAttachment with _$MessageAttachment {
   const factory MessageAttachment({
     required String id,
-    required String url,
+
+    /// A local file or `fake:` in the fake data; the server's files are
+    /// `storage:<bucket>/<path>` (`StorageRef`).
+    @JsonKey(readValue: readStorageUrl) required String url,
 
     /// Photo size in pixels, for laying out before the image loads.
     int? width,

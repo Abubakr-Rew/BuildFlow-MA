@@ -389,6 +389,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errorSessionExpired => 'Сессия истекла. Войдите снова';
 
   @override
+  String get errorAccountDisabled =>
+      'Доступ закрыт. Обратитесь к директору компании';
+
+  @override
   String get errorForbidden => 'Недостаточно прав для этого действия';
 
   @override
@@ -407,6 +411,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get errorUnknown => 'Что-то пошло не так';
+
+  @override
+  String get configErrorTitle => 'Сборка настроена неверно';
+
+  @override
+  String get configErrorHint =>
+      'Соберите приложение заново с адресом сервера. Подробности для разработчика:';
 
   @override
   String get offlineBanner => 'Нет подключения к интернету';
@@ -873,4 +884,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get voiceUploading => 'Голосовое загружается';
+
+  @override
+  String get voiceDownloading => 'Голосовое скачивается';
 }

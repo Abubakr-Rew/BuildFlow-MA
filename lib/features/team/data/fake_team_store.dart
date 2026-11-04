@@ -11,7 +11,8 @@ import 'package:buildflow/features/team/domain/entities/member.dart';
 /// Created only by `fakeTeamStoreProvider`; tests may create their own.
 class FakeTeamStore {
   FakeTeamStore({DateTime Function()? now, Random? random})
-      : _now = now ?? DateTime.now,
+      // Times leave in UTC, as the server sends them.
+      : _now = (() => (now ?? DateTime.now)().toUtc()),
         _random = random ?? Random();
 
   final DateTime Function() _now;

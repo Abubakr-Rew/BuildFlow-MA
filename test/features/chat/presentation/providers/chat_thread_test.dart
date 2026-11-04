@@ -194,6 +194,15 @@ void main() {
     expect(messages().map((m) => m.id), ['m-1', 'm-2']);
   });
 
+  test('a message waiting to be sent keeps its time in UTC', () async {
+    final done = notifier().send('Бетон привезли');
+    expect(messages().last.createdAt.isUtc, isTrue);
+
+    final (_, reply) = repo.sends.single;
+    reply.complete(Success(serverCopy(messages().last, 'm-2')));
+    await done;
+  });
+
   test('a failed message is marked and retried with the same clientId',
       () async {
     final first = notifier().send('Нужен щебень');

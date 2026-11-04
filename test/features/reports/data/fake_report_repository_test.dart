@@ -81,6 +81,38 @@ void main() {
       expect(result.value.photos.single.url, startsWith('fake:demo-'));
     });
 
+    test('times are in UTC, as the server sends them', () async {
+      final seeded = (await repo.getReports()).value;
+      for (final report in seeded) {
+        expect(report.createdAt.isUtc, isTrue);
+        for (final photo in report.photos) {
+          expect(photo.takenAt?.isUtc ?? true, isTrue);
+        }
+      }
+
+      final sent = await repo.submitReport(
+        projectId: 'project-1',
+        projectName: 'ЖК «Ала-Тоо Резиденс»',
+        authorId: 'user-foreman-1',
+        authorName: 'Бакыт Касымов',
+        text: 'Тест',
+        photos: [
+          CompressedPhoto(
+            path: '/cache/photos/1.jpg',
+            width: 1600,
+            height: 1200,
+            bytes: 1,
+            // EXIF without an offset: the phone's wall clock.
+            takenAt: DateTime(2026, 11, 4, 11, 42),
+          ),
+        ],
+      );
+      expect(sent.value.createdAt.isUtc, isTrue);
+      final taken = sent.value.photos.single.takenAt!;
+      expect(taken, DateTime(2026, 11, 4, 11, 42).toUtc());
+      expect(taken.isUtc, isTrue);
+    });
+
     test('saveDraft and getDrafts work correctly', () async {
       final draft = DraftReport(
         id: 'draft-1',

@@ -1,21 +1,24 @@
 import 'package:buildflow/core/config.dart';
-import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/supabase/supabase_providers.dart';
 import 'package:buildflow/features/auth/presentation/providers/auth_provider.dart';
 import 'package:buildflow/features/projects/domain/entities/project.dart';
 import 'package:buildflow/features/projects/presentation/providers/project_provider.dart';
-import 'package:buildflow/features/team/data/api_team_repository.dart';
 import 'package:buildflow/features/team/data/fake_team_repository.dart';
+import 'package:buildflow/features/team/data/supabase_team_repository.dart';
 import 'package:buildflow/features/team/domain/entities/member.dart';
 import 'package:buildflow/features/team/domain/repositories/team_repository.dart';
 import 'package:buildflow/features/team/presentation/providers/fake_team_store_provider.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final teamRepositoryProvider = Provider<TeamRepository>(
-  (ref) => kUseMockData
-      ? FakeTeamRepository(store: ref.watch(fakeTeamStoreProvider))
-      : ApiTeamRepository(),
+  (ref) => switch (kBackend) {
+    Backend.fake =>
+      FakeTeamRepository(store: ref.watch(fakeTeamStoreProvider)),
+    Backend.supabase => SupabaseTeamRepository(
+        gateway: ref.watch(supabaseGatewayProvider),
+      ),
+  },
 );
 
 final membersProvider =
@@ -37,37 +40,17 @@ class MembersNotifier extends AsyncNotifier<List<Member>> {
     );
   }
 
-  /// Removes the member from the company, then from every project.
-  ///
-  /// The result is the removal itself: the project cleanup is best effort,
-  /// since project pages only list current members anyway. With the real
-  /// API the server does the cleanup (docs/api-contract.md,
-  /// `DELETE /team/members/:id`), and this loop goes away.
+  /// Removes the member from the company. The server (in the fake, the
+  /// project repository) also takes them off every project and chat, so
+  /// the projects reload too (docs/api-contract.md,
+  /// `DELETE /team/members/:id`).
   Future<Result<void>> removeMember(Member member) async {
     final repo = ref.read(teamRepositoryProvider);
     final result = await repo.removeMember(member.id);
     if (result.isFailure) return result;
-
-    try {
-      final projectsNotifier = ref.read(projectsProvider.notifier);
-      final projects = await ref.read(projectsProvider.future);
-      for (final project in projects) {
-        if (project.foremanIds.contains(member.userId) ||
-            project.workerIds.contains(member.userId)) {
-          await projectsNotifier.setTeam(
-            project,
-            foremanIds:
-                project.foremanIds.where((id) => id != member.userId).toList(),
-            workerIds:
-                project.workerIds.where((id) => id != member.userId).toList(),
-          );
-        }
-      }
-    } on Failure catch (f) {
-      debugPrint('Project cleanup after removing ${member.id} failed: $f');
-    }
-
-    ref.invalidateSelf();
+    ref
+      ..invalidate(projectsProvider)
+      ..invalidateSelf();
     return result;
   }
 }

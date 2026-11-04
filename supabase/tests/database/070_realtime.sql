@@ -1,6 +1,6 @@
 -- Realtime: who gets which chat event, and who may listen to a channel.
 begin;
-select plan(18);
+select plan(20);
 
 select tests.new_owner('owner@a.kg', 'Асан', 'А') as owner \gset
 select tests.company_of(:'owner') as company \gset
@@ -116,6 +116,31 @@ select ok(
   exists (select 1 from tests.events(:'f1', 'chat.updated') e
           where e -> 'chat' ->> 'title' = 'ЖК «Ала-Тоо Резиденс»'),
   'renaming the project updates the chat title'
+);
+
+-- ── Events at commit ─────────────────────────────────────────
+-- send_message links the photos after inserting the message: the events go
+-- out at commit, from the finished message. tests.create_user left the
+-- constraints immediate; a real transaction starts deferred.
+
+reset role;
+select tests.photo(:'f1') as ph1 \gset
+set constraints all deferred;
+select tests.login_as(:'f1');
+select public.send_message(:'c1', gen_random_uuid(), 'photo', null, array[:'ph1'::uuid]) ->> 'id' as photo_m \gset
+reset role;
+select is(
+  (select count(*)::int from tests.events(:'owner', 'message.created') e where e -> 'message' ->> 'id' = :'photo_m'),
+  0,
+  'message.created waits for the commit'
+);
+-- What COMMIT does.
+set constraints all immediate;
+select is(
+  (select e -> 'message' -> 'attachments' -> 0 ->> 'id' from tests.events(:'owner', 'message.created') e
+   where e -> 'message' ->> 'id' = :'photo_m'),
+  :'ph1',
+  'message.created of a photo message carries the photo'
 );
 
 -- ── Channel access ───────────────────────────────────────────

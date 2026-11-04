@@ -129,4 +129,160 @@ void main() {
       expect(day(DateTime(2025, 12, 31)), '31 декабря 2025');
     });
   });
+
+  group('time zones', () {
+    tearDown(() => DateFormatter.debugUtcOffset = null);
+
+    const bishkek = Duration(hours: 6);
+    const newYork = Duration(hours: -5);
+
+    DateTime utc(int day, int hour, [int minute = 0]) =>
+        DateTime.utc(2026, 11, day, hour, minute);
+
+    // Wednesday, 4 November, noon on the phone's clock.
+    final noonBishkek = utc(4, 6);
+    final noonNewYork = utc(4, 17);
+
+    String report(DateTime at, DateTime now) => DateFormatter.reportDateTime(
+          at,
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          now: now,
+        );
+
+    test('a moment is shown on the phone clock', () {
+      final at = utc(4, 5, 47);
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(DateFormatter.time(at), '11:47');
+      DateFormatter.debugUtcOffset = newYork;
+      expect(DateFormatter.time(at), '00:47');
+    });
+
+    test("dates are the phone's dates", () {
+      final at = utc(3, 20, 30);
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(DateFormatter.dayMonth(at), '4 ноября');
+      expect(DateFormatter.dayMonthYear(at), '4 ноября 2026');
+      expect(DateFormatter.full(at), '4 ноября 2026, 02:30');
+      DateFormatter.debugUtcOffset = newYork;
+      expect(DateFormatter.dayMonth(at), '3 ноября');
+      expect(DateFormatter.dayMonthYear(at), '3 ноября 2026');
+      expect(DateFormatter.full(at), '3 ноября 2026, 15:30');
+    });
+
+    test('at +6 the hours 00:00–05:59 are already the new day', () {
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(report(utc(3, 18), noonBishkek), 'Сегодня, 00:00');
+      expect(report(utc(3, 23, 59), noonBishkek), 'Сегодня, 05:59');
+      expect(report(utc(3, 17, 59), noonBishkek), 'Вчера, 23:59');
+    });
+
+    test('at -5 the same boundary is at 05:00 UTC', () {
+      DateFormatter.debugUtcOffset = newYork;
+      expect(report(utc(4, 5), noonNewYork), 'Сегодня, 00:00');
+      expect(report(utc(4, 10, 59), noonNewYork), 'Сегодня, 05:59');
+      expect(report(utc(4, 4, 59), noonNewYork), 'Вчера, 23:59');
+      // Moments that are already «today» in Bishkek.
+      expect(report(utc(3, 18), noonNewYork), 'Вчера, 13:00');
+      expect(report(utc(3, 23, 59), noonNewYork), 'Вчера, 18:59');
+    });
+
+    test('the weekday is the local one', () {
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(report(utc(1, 20), noonBishkek), 'Пн, 02:00');
+      DateFormatter.debugUtcOffset = newYork;
+      expect(report(utc(1, 20), noonNewYork), 'Вс, 15:00');
+    });
+
+    test('chat list time', () {
+      String list(DateTime now) => DateFormatter.chatListTime(
+            utc(3, 20, 30),
+            yesterday: 'Вчера',
+            now: now,
+          );
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(list(noonBishkek), '02:30');
+      DateFormatter.debugUtcOffset = newYork;
+      expect(list(noonNewYork), 'Вчера');
+    });
+
+    test('toDateOnly, relative and chatDay use the local day', () {
+      final at = utc(3, 20, 30);
+      String relative(DateTime now) => DateFormatter.relative(
+            DateFormatter.toDateOnly(at),
+            today: 'Сегодня',
+            yesterday: 'Вчера',
+            now: now,
+          );
+      String chatDay(DateTime now) => DateFormatter.chatDay(
+            DateFormatter.toDateOnly(at),
+            today: 'Сегодня',
+            yesterday: 'Вчера',
+            now: now,
+          );
+
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(DateFormatter.toDateOnly(at), DateTime(2026, 11, 4));
+      expect(relative(noonBishkek), 'Сегодня');
+      expect(chatDay(noonBishkek), 'Сегодня');
+
+      DateFormatter.debugUtcOffset = newYork;
+      expect(DateFormatter.toDateOnly(at), DateTime(2026, 11, 3));
+      expect(relative(noonNewYork), 'Вчера');
+      expect(chatDay(noonNewYork), 'Вчера');
+    });
+
+    test('an older day label keeps its own date', () {
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(
+        DateFormatter.relative(
+          DateTime(2026, 11, 2),
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          now: noonBishkek,
+        ),
+        '2 ноября',
+      );
+      expect(
+        DateFormatter.chatDay(
+          DateTime(2025, 12, 31),
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          now: noonBishkek,
+        ),
+        '31 декабря 2025',
+      );
+    });
+
+    test("isSameDay compares the phone's days", () {
+      DateFormatter.debugUtcOffset = bishkek;
+      expect(DateFormatter.isSameDay(utc(3, 17, 59), utc(3, 18)), isFalse);
+      expect(DateFormatter.isSameDay(utc(3, 18), utc(4, 17, 59)), isTrue);
+      DateFormatter.debugUtcOffset = newYork;
+      expect(DateFormatter.isSameDay(utc(3, 17, 59), utc(3, 18)), isTrue);
+      expect(DateFormatter.isSameDay(utc(4, 4, 59), utc(4, 5)), isFalse);
+    });
+
+    test('without the test offset it is the real time zone', () {
+      final at = utc(4, 5, 47);
+      final clock = at.toLocal();
+      String two(int n) => n.toString().padLeft(2, '0');
+      expect(DateFormatter.local(at), clock);
+      expect(DateFormatter.time(at), '${two(clock.hour)}:${two(clock.minute)}');
+    });
+
+    test('a parsed server time shows the same however it was written', () {
+      DateFormatter.debugUtcOffset = bishkek;
+      for (final text in const [
+        '2026-11-04T05:47:00Z',
+        '2026-11-04T05:47:00.123456+00:00',
+        '2026-11-04T11:47:00+06:00',
+        '2026-11-04T00:47:00-05:00',
+      ]) {
+        final parsed = DateTime.parse(text);
+        expect(parsed.isUtc, isTrue, reason: text);
+        expect(DateFormatter.time(parsed), '11:47', reason: text);
+      }
+    });
+  });
 }

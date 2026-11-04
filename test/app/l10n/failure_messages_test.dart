@@ -16,6 +16,7 @@ void main() {
     FailureCode.emailTaken: l10n.errorEmailTaken,
     FailureCode.invalidInviteCode: l10n.errorInvalidInviteCode,
     FailureCode.sessionExpired: l10n.errorSessionExpired,
+    FailureCode.accountDisabled: l10n.errorAccountDisabled,
     FailureCode.forbidden: l10n.errorForbidden,
     FailureCode.notFound: l10n.errorNotFound,
     FailureCode.validation: l10n.errorValidation,

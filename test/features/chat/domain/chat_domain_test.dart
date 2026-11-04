@@ -1,3 +1,4 @@
+import 'package:buildflow/core/utils/date_formatter.dart';
 import 'package:buildflow/features/chat/domain/chat_search.dart';
 import 'package:buildflow/features/chat/domain/chat_timeline.dart';
 import 'package:buildflow/features/chat/domain/entities/chat.dart';
@@ -70,6 +71,21 @@ void main() {
         _m('a3', 'a', day1.add(const Duration(minutes: 13))),
       ]);
       expect(describe(items), ['day 27', 'a1 FL', 'a2 FL', 's FL', 'a3 FL']);
+    });
+
+    test('the day dividers follow the phone time zone', () {
+      addTearDown(() => DateFormatter.debugUtcOffset = null);
+      List<String> around() => describe(buildTimeline([
+            _m('a1', 'a', DateTime.utc(2026, 11, 3, 17, 59)),
+            _m('a2', 'a', DateTime.utc(2026, 11, 3, 18)),
+          ]));
+
+      // 23:59 and 00:00 of the next day.
+      DateFormatter.debugUtcOffset = const Duration(hours: 6);
+      expect(around(), ['day 3', 'a1 FL', 'day 4', 'a2 FL']);
+      // 12:59 and 13:00 of one day.
+      DateFormatter.debugUtcOffset = const Duration(hours: -5);
+      expect(around(), ['day 3', 'a1 F-', 'a2 -L']);
     });
 
     test('is empty without messages', () {

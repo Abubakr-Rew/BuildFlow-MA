@@ -29,6 +29,10 @@ class FakeAuthRepository implements AuthRepository {
   final _random = Random();
   User? _currentUser;
 
+  /// The fake session never ends on its own.
+  @override
+  Stream<Failure> get sessionEnded => const Stream.empty();
+
   // ── Seeded data ──────────────────────────────────────────
   static const _companyId = 'company-1';
 

@@ -291,6 +291,43 @@ void main() {
     });
   });
 
+  group('times', () {
+    test('every time is in UTC, as the server sends it', () {
+      final demo = createStore(demoHistory: true);
+      addTearDown(demo.dispose);
+
+      void check(String userId) {
+        for (final chat in demo.chatsFor(userId).value) {
+          expect(chat.updatedAt.isUtc, isTrue, reason: chat.id);
+          expect(chat.lastMessage?.createdAt.isUtc ?? true, isTrue);
+          for (final m in demo.messagesFor(chat.id, userId).value) {
+            expect(m.createdAt.isUtc, isTrue, reason: m.id);
+          }
+        }
+      }
+
+      check(_owner);
+      final chat = demo.chatsFor(_owner).value.first;
+      final sent = demo.send(chat.id, _owner, text: 'Тест', clientId: 'c');
+      expect(sent.value.createdAt.isUtc, isTrue);
+      check(_owner);
+    });
+
+    test('a clock in local time still gives UTC', () {
+      final clocked = FakeChatStore(
+        teamStore: team,
+        projects: FakeProjectRepository.seed,
+        demoHistory: false,
+        now: () => DateTime(2026, 11, 4, 11, 47),
+      );
+      addTearDown(clocked.dispose);
+      final chat = clocked.chatsFor(_owner).value.first;
+
+      expect(chat.updatedAt, DateTime(2026, 11, 4, 11, 47).toUtc());
+      expect(chat.updatedAt.isUtc, isTrue);
+    });
+  });
+
   group('photos', () {
     String upload(String userId, String path) => store
         .registerUpload(userId, url: path, width: 1600, height: 1200)

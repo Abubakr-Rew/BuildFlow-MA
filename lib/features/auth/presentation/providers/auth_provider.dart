@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:buildflow/core/config.dart';
 import 'package:buildflow/core/error/failures.dart';
 import 'package:buildflow/core/error/result.dart';
+import 'package:buildflow/core/remote_files/remote_files_providers.dart';
 import 'package:buildflow/core/storage/storage_providers.dart';
-import 'package:buildflow/features/auth/data/api_auth_repository.dart';
+import 'package:buildflow/core/supabase/supabase_providers.dart';
 import 'package:buildflow/features/auth/data/fake_auth_repository.dart';
+import 'package:buildflow/features/auth/data/supabase_auth_repository.dart';
 import 'package:buildflow/features/auth/domain/entities/user.dart';
 import 'package:buildflow/features/auth/domain/entities/user_role.dart';
 import 'package:buildflow/features/auth/domain/repositories/auth_repository.dart';
@@ -14,12 +18,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // ── DI providers ─────────────────────────────────────────────
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => kUseMockData
-      ? FakeAuthRepository(
-          secureStorage: ref.watch(secureStorageProvider),
-          teamStore: ref.watch(fakeTeamStoreProvider),
-        )
-      : ApiAuthRepository(),
+  (ref) => switch (kBackend) {
+    Backend.fake => FakeAuthRepository(
+        secureStorage: ref.watch(secureStorageProvider),
+        teamStore: ref.watch(fakeTeamStoreProvider),
+      ),
+    Backend.supabase => SupabaseAuthRepository(
+        gateway: ref.watch(supabaseGatewayProvider),
+        localStorage: ref.watch(localStorageProvider),
+      ),
+  },
+);
+
+/// Whether the login screen offers the demo accounts: only over the fake
+/// backend, whose accounts they are. A demo APK (release with
+/// `BACKEND=fake`) keeps them; a build with a real server never has them.
+bool demoLoginEnabled(Backend backend) => backend == Backend.fake;
+
+final demoLoginEnabledProvider = Provider<bool>(
+  (ref) => demoLoginEnabled(kBackend),
 );
 
 // ── Auth state ───────────────────────────────────────────────
@@ -67,7 +84,15 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     // A different repository starts a fresh session state.
-    ref.watch(authRepositoryProvider);
+    final repo = ref.watch(authRepositoryProvider);
+    // The session ended without a logout (expired, account removed): back
+    // to the login screen, which says why. The router follows the state.
+    final ended = repo.sessionEnded.listen((failure) {
+      if (state.user == null) return;
+      _forgetFiles();
+      state = AuthState(status: AuthStatus.unauthenticated, failure: failure);
+    });
+    ref.onDispose(() => unawaited(ended.cancel()));
     return const AuthState();
   }
 
@@ -82,8 +107,11 @@ class AuthNotifier extends Notifier<AuthState> {
           status: AuthStatus.authenticated,
           user: user,
         ),
-        failure: (_) => const AuthState(
+        // A removed account is told so; any other failure just shows the
+        // login screen.
+        failure: (f) => AuthState(
           status: AuthStatus.unauthenticated,
+          failure: f.code == FailureCode.accountDisabled ? f : null,
         ),
       );
     } catch (_) {
@@ -148,6 +176,8 @@ class AuthNotifier extends Notifier<AuthState> {
         Failure(FailureCode.unknown, message: '$e', stackTrace: stackTrace),
       );
     }
+    // The files of whoever used the phone before aren't for this user.
+    if (result.isSuccess) _forgetFiles();
     state = result.when(
       success: (user) => AuthState(status: AuthStatus.authenticated, user: user),
       failure: (failure) => state.copyWith(isLoading: false, failure: failure),
@@ -155,8 +185,14 @@ class AuthNotifier extends Notifier<AuthState> {
     return result;
   }
 
+  /// Downloaded photos and voice notes go with the user; the repository
+  /// forgets the cached profile, and the chat provider, bound to the user,
+  /// leaves the realtime channel.
+  void _forgetFiles() => unawaited(ref.read(remoteFilesProvider).clear());
+
   Future<void> logout() async {
     await _repo.logout();
+    _forgetFiles();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 }
