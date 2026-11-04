@@ -171,53 +171,74 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: () => context.go(Routes.join),
                       child: Text(l10n.haveInviteCode),
                     ),
-                    const SizedBox(height: AppTheme.spacing32),
-                    BfCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.quickLogin,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: t.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: AppTheme.spacing8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final (role, email) in _demoAccounts)
-                                BfChip(
-                                  icon: role.icon,
-                                  label: role.label(l10n),
-                                  onTap: _submitting
-                                      ? null
-                                      : () => _quickLogin(email),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: AppTheme.spacing8),
-                          Text(
-                            [
-                              for (final (role, email) in _demoAccounts)
-                                '${role.label(l10n)}: $email',
-                              '${l10n.password}: $_demoPassword',
-                            ].join('\n'),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: t.textTertiary,
-                              fontFeatures: AppTextTheme.tabular,
-                            ),
-                          ),
-                        ],
+                    if (ref.watch(demoLoginEnabledProvider)) ...[
+                      const SizedBox(height: AppTheme.spacing32),
+                      _DemoLogin(
+                        onLogin: _submitting ? null : _quickLogin,
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The demo accounts with their password, one tap per role. Only for the
+/// fake backend ([demoLoginEnabledProvider]).
+class _DemoLogin extends StatelessWidget {
+  const _DemoLogin({required this.onLogin});
+
+  /// Signs in with an email; `null` while a sign-in is running.
+  final ValueChanged<String>? onLogin;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final t = context.bfTheme;
+    final login = onLogin;
+
+    return BfCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.quickLogin,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: t.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacing8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final (role, email) in _demoAccounts)
+                BfChip(
+                  icon: role.icon,
+                  label: role.label(l10n),
+                  onTap: login == null ? null : () => login(email),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacing8),
+          Text(
+            [
+              for (final (role, email) in _demoAccounts)
+                '${role.label(l10n)}: $email',
+              '${l10n.password}: $_demoPassword',
+            ].join('\n'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: t.textTertiary,
+              fontFeatures: AppTextTheme.tabular,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -30,6 +30,15 @@ final authRepositoryProvider = Provider<AuthRepository>(
   },
 );
 
+/// Whether the login screen offers the demo accounts: only over the fake
+/// backend, whose accounts they are. A demo APK (release with
+/// `BACKEND=fake`) keeps them; a build with a real server never has them.
+bool demoLoginEnabled(Backend backend) => backend == Backend.fake;
+
+final demoLoginEnabledProvider = Provider<bool>(
+  (ref) => demoLoginEnabled(kBackend),
+);
+
 // ── Auth state ───────────────────────────────────────────────
 
 enum AuthStatus { initial, authenticated, unauthenticated }
