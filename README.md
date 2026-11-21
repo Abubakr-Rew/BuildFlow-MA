@@ -114,7 +114,7 @@ Supabase на компьютере, а телефон подключите по 
 5. Запустите приложение:
    ```bash
    flutter run --dart-define-from-file=env/local.env             # debug
-   flutter run --release --dart-define-from-file=env/local.env   # release
+   flutter run --release --dart-define-from-file=env/local.env   # release, нужен ключ (ниже)
    ```
 
 Студия базы — http://127.0.0.1:54323. Остановить сервер: `npx supabase@2.122.0 stop`.
@@ -131,6 +131,37 @@ Supabase на компьютере, а телефон подключите по 
 - «Нет подключения» на телефоне — не выполнен `adb reverse` или не запущен сервер (`npx supabase@2.122.0 status`);
 - экран «Сборка настроена неверно» — запуск без `--dart-define-from-file=env/local.env`;
 - «Слишком много попыток» при входе по коду — сервер разрешает 10 попыток в минуту, подождите минуту.
+
+## Release-ключ
+
+Release-сборка (`flutter build apk --release`, `flutter run --release`) подписывается своим ключом из
+`android/key.properties`. Без этого файла она падает с ошибкой «Release signing: …» и debug-ключом не подписывается.
+Debug-сборкам ключ не нужен.
+
+**Один раз** создайте ключ (`keytool` входит в JDK; команды работают и в PowerShell, и в Git Bash):
+```bash
+mkdir "$HOME/keys"
+keytool -genkey -v -keystore "$HOME/keys/buildflow-upload.jks" -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+`keytool` спросит пароль и данные владельца. Пароль ключа у такого хранилища совпадает с паролем хранилища.
+
+Затем скопируйте `android/key.properties.example` в `android/key.properties` (он не попадает в git) и заполните:
+```properties
+storeFile=~/keys/buildflow-upload.jks
+storePassword=<пароль>
+keyAlias=upload
+keyPassword=<тот же пароль>
+```
+`storeFile` — абсолютный путь, путь от `android/app` или от домашней папки через `~/`. Обратные слэши в этом
+файле не работают: на Windows пишите `C:/Users/<вы>/keys/buildflow-upload.jks`.
+
+**Важно:**
+- храните keystore **вне репозитория** (`*.jks` и `key.properties` в `.gitignore`, но в папке проекта им не место);
+- **сделайте резервную копию** keystore и паролей (второй диск, менеджер паролей). Обновление ставится поверх
+  установленного приложения, только если подписано тем же ключом. Потеряете ключ — новые версии придётся ставить
+  как другое приложение, у всех пользователей пропадут вход и данные на телефоне;
+- у каждого нового APK должен расти номер сборки в `pubspec.yaml` (`version: 1.0.0+N`), иначе Android не обновит
+  приложение.
 
 ## Тестирование
 

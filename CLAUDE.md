@@ -18,7 +18,7 @@ flutter analyze                                           # цель: "No issues
 flutter test                                              # все тесты
 flutter test test/core/error/result_test.dart             # один файл
 flutter test --plain-name "round-trip"                    # тесты по имени
-flutter build apk --release                               # APK → build/app/outputs/flutter-apk/
+flutter build apk --release                               # APK → build/app/outputs/flutter-apk/ (нужен android/key.properties)
 
 # Бэкенд (нужны запущенный Docker Desktop и Node.js; CLI не ставится глобально)
 npx supabase@2.122.0 start                                # локальный стек
@@ -530,7 +530,10 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
 - AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.abubakr.buildflow` (до ноября 2026 был `com.example.buildflow`: старая установка
-  на телефоне — другое приложение, его удалить), release подписан debug-ключом.
+  на телефоне — другое приложение, его удалить). Release подписывается ключом из `android/key.properties`
+  (не в git, образец — `key.properties.example`, keystore вне репозитория, README «Release-ключ»). Без файла,
+  с неполным файлом или без keystore release падает сразу (`compileFlutterBuildRelease` / `preReleaseBuild`)
+  с «Release signing: …»: debug-ключом release не подписывается никогда. Debug-сборкам ключ не нужен.
   `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`, `localhost` и `10.0.2.2` (локальный
   Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
 - Тесты репозиториев Supabase — настоящий `SupabaseClient` поверх `MockClient` (`FakeSupabase` в test/helpers:

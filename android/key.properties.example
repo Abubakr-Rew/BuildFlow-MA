@@ -1,0 +1,10 @@
+# Release signing. Copy to android/key.properties (not in git) and fill in.
+# How to create the key: README, section «Release-ключ».
+# Without key.properties a release build fails; debug builds don't need it.
+
+# Keystore outside the repository. Absolute path, relative to android/app, or ~/ for the home folder.
+# On Windows use forward slashes: C:/Users/<you>/keys/buildflow-upload.jks
+storeFile=~/keys/buildflow-upload.jks
+storePassword=
+keyAlias=upload
+keyPassword=
