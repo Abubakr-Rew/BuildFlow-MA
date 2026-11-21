@@ -131,7 +131,7 @@ Text(l10n.failureMessage(error))                                             // 
 **Фото** (`lib/core/photos/`, общее для отчётов и чата):
 - `PhotoCompressor` (`photoCompressorProvider`) — `compress(sourcePath)` → `Result<CompressedPhoto>` (путь копии,
   размеры, байты, `takenAt`), `delete(paths)`, `sweep()`. Реализация `PlatformPhotoCompressor` — канал
-  `buildflow/photos` к [PhotoCompressor.kt](android/app/src/main/kotlin/com/example/buildflow/PhotoCompressor.kt):
+  `buildflow/photos` к [PhotoCompressor.kt](android/app/src/main/kotlin/com/abubakr/buildflow/PhotoCompressor.kt):
   декод с `inSampleSize`, поворот по EXIF в пиксели, масштаб длинной стороны до `kPhotoMaxSide` (1600) с фильтрацией,
   JPEG с качеством из `kPhotoQualitySteps` (82 → 74 → 66), пока не влезет в `kPhotoTargetBytes` (450 КБ), иначе
   последнее. `Bitmap.compress` не пишет EXIF: GPS, модель и серийники не уходят; назад читается только
@@ -529,7 +529,8 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   догружает); объекты и отчёты — по «Повторить» или потягиванию вниз.
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
-- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
+- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.abubakr.buildflow` (до ноября 2026 был `com.example.buildflow`: старая установка
+  на телефоне — другое приложение, его удалить), release подписан debug-ключом.
   `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`, `localhost` и `10.0.2.2` (локальный
   Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
 - Тесты репозиториев Supabase — настоящий `SupabaseClient` поверх `MockClient` (`FakeSupabase` в test/helpers:

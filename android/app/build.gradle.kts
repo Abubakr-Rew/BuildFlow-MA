@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.buildflow"
+    namespace = "com.abubakr.buildflow"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +15,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.buildflow"
+        // Changing it makes a separate app: phones keep the old one, with its session and data.
+        applicationId = "com.abubakr.buildflow"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
