@@ -4,7 +4,7 @@
     <!-- Voice messages in the chat; asked on the first press of the microphone. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-        android:label="buildflow"
+        android:label="BuildFlow"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config">
