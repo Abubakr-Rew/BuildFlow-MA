@@ -12,6 +12,7 @@ Flutter-приложение для ежедневных фото-отчётов
 flutter pub get                                           # зависимости
 dart run build_runner build --delete-conflicting-outputs  # freezed / json_serializable
 flutter gen-l10n                                          # после правки app_ru.arb
+dart run flutter_launcher_icons                           # после правки assets/icon/ (см. «Подводные камни»)
 flutter run                                               # на подключённом устройстве, демо-данные
 flutter run --dart-define-from-file=env/local.env         # с локальным Supabase (README: adb reverse, env)
 flutter analyze                                           # цель: "No issues found!" (~2 мин)
@@ -529,13 +530,21 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   догружает); объекты и отчёты — по «Повторить» или потягиванию вниз.
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
-- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.abubakr.buildflow` (до ноября 2026 был `com.example.buildflow`: старая установка
-  на телефоне — другое приложение, его удалить). Release подписывается ключом из `android/key.properties`
-  (не в git, образец — `key.properties.example`, keystore вне репозитория, README «Release-ключ»). Без файла,
-  с неполным файлом или без keystore release падает сразу (`compileFlutterBuildRelease` / `preReleaseBuild`)
-  с «Release signing: …»: debug-ключом release не подписывается никогда. Debug-сборкам ключ не нужен.
-  `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`, `localhost` и `10.0.2.2` (локальный
-  Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
+- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.abubakr.buildflow` (до ноября 2026 был
+  `com.example.buildflow`: старая установка на телефоне — другое приложение, его удалить). Release подписывается
+  ключом из `android/key.properties` (не в git, образец — `key.properties.example`, keystore вне репозитория, README
+  «Release-ключ»). Без файла, с неполным файлом или без keystore release падает сразу
+  (`compileFlutterBuildRelease` / `preReleaseBuild`) с «Release signing: …»: debug-ключом release не подписывается
+  никогда. Debug-сборкам ключ не нужен. `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`,
+  `localhost` и `10.0.2.2` (локальный Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
+- Значок: `assets/icon/app_icon.png` (исходник) и `app_icon_foreground.png` (передний слой адаптивной иконки Android:
+  знак — 40 % слоя, фон `#F4F2EE` из исходника), конфиг `flutter_launcher_icons` — в pubspec.yaml. В приложение
+  `assets/icon/` не входит. После правки — `dart run flutter_launcher_icons`, затем
+  `git checkout -- ios/Runner.xcodeproj/project.pbxproj`: пакет (0.14.4) пишет `AppIcon` вместо `YES` в
+  `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`, а нужных правок в этом файле нет.
+  - `adaptive_icon_foreground_inset: 0` не убирать: по умолчанию 16 %, и знак ужмётся до 27 % слоя.
+  - Под прозрачными пикселями слоя лежит цвет знака, а не чёрный: пакет уменьшает картинку, усредняя RGB без учёта
+    прозрачности, и чёрный дал бы тёмную кайму по краям.
 - Тесты репозиториев Supabase — настоящий `SupabaseClient` поверх `MockClient` (`FakeSupabase` в test/helpers:
   `rpc` / `rpcFails` / `function` / `on`, `FakeReply.auth` для ошибок GoTrue, `signIn(userId)` кладёт сессию; Dio
   Storage идёт в те же обработчики). PostgREST читает `response.request`, поэтому `http.Response` отдаётся с `request:`.

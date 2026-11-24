@@ -58,6 +58,21 @@ dev_dependencies:
   build_runner: ^2.4.14
   freezed: ^4.0.0
   json_serializable: ^6.9.0
+  # Generates the launcher icons; not part of the app
+  flutter_launcher_icons: 0.14.4
+
+# After a change in assets/icon/: dart run flutter_launcher_icons, then
+# git checkout -- ios/Runner.xcodeproj/project.pbxproj (the package breaks it, and it needs no change)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/icon/app_icon.png
+  remove_alpha_ios: true
+  # Background of app_icon.png. The mark takes 40 % of the foreground layer, so round launcher
+  # masks don't cut it; the default inset (16 %) would shrink it to 27 %.
+  adaptive_icon_background: "#F4F2EE"
+  adaptive_icon_foreground: assets/icon/app_icon_foreground.png
+  adaptive_icon_foreground_inset: 0
 
 flutter:
   generate: true
