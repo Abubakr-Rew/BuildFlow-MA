@@ -53,16 +53,16 @@ flutter test         # 635 тестов
   `FakeReportRepository`, пересмотреть отчёты без фото в `seed.sql` и тесты, отправляющие `photos: const []`.
 
 ## Сделано 2026-11-25 — Android-сборка для установки у других людей
-Ветка `chore/android-release`, пункт 4 раздела 8 отчёта о состоянии.
-- `a6db981` chore: application id com.abubakr.buildflow — Android (`applicationId`, `namespace`, Kotlin в новом пакете),
+Ветка `chore/android-release-pr`, пункт 4 раздела 8 отчёта о состоянии.
+- `4abdb31` chore: application id com.abubakr.buildflow — Android (`applicationId`, `namespace`, Kotlin в новом пакете),
   iOS, macOS, Linux, Windows. Имена каналов прежние. Для телефона это новое приложение: старое `com.example.buildflow`
   удалить, вход и тема не переносятся.
-- `f6b66f1` chore: app name BuildFlow on Android and iOS.
-- `53d610a` chore: sign release with the key from android/key.properties — без файла, с неполным файлом или без keystore
+- `e3b2ccd` chore: app name BuildFlow on Android and iOS.
+- `86e48cd` chore: sign release with the key from android/key.properties — без файла, с неполным файлом или без keystore
   release сразу падает с «Release signing: …», debug-ключом не подписывается. Как создать ключ — README, «Release-ключ»
-  (правки раздела — `9613e20`, `c8c3288`).
-- `d69fdd2` feat: BuildFlow launcher icon on Android and iOS — `flutter_launcher_icons` 0.14.4 (dev), адаптивная иконка:
-  знак 40 % слоя, фон `#F4F2EE`. `e7b053c` fix: even edges of the launcher icon mark — в исходнике были выемки до 1,4 px
+  (правки раздела — `753b197`, `f39a333`).
+- `e2ffed7` feat: BuildFlow launcher icon on Android and iOS — `flutter_launcher_icons` 0.14.4 (dev), адаптивная иконка:
+  знак 40 % слоя, фон `#F4F2EE`. `eb3e84e` fix: even edges of the launcher icon mark — в исходнике были выемки до 1,4 px
   на стыке фигур. Как пересобирать и чего не забыть — CLAUDE.md, «Подводные камни».
 - **Проверено на Xiaomi 2311DRK48G** (Android 16, release со своим ключом, локальный Supabase через `adb reverse`,
   2026-11-25):
