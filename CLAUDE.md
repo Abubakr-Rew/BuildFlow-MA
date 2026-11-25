@@ -12,13 +12,14 @@ Flutter-приложение для ежедневных фото-отчётов
 flutter pub get                                           # зависимости
 dart run build_runner build --delete-conflicting-outputs  # freezed / json_serializable
 flutter gen-l10n                                          # после правки app_ru.arb
+dart run flutter_launcher_icons                           # после правки assets/icon/ (см. «Подводные камни»)
 flutter run                                               # на подключённом устройстве, демо-данные
 flutter run --dart-define-from-file=env/local.env         # с локальным Supabase (README: adb reverse, env)
 flutter analyze                                           # цель: "No issues found!" (~2 мин)
 flutter test                                              # все тесты
 flutter test test/core/error/result_test.dart             # один файл
 flutter test --plain-name "round-trip"                    # тесты по имени
-flutter build apk --release                               # APK → build/app/outputs/flutter-apk/
+flutter build apk --release                               # APK → build/app/outputs/flutter-apk/ (нужен android/key.properties)
 
 # Бэкенд (нужны запущенный Docker Desktop и Node.js; CLI не ставится глобально)
 npx supabase@2.122.0 start                                # локальный стек
@@ -131,7 +132,7 @@ Text(l10n.failureMessage(error))                                             // 
 **Фото** (`lib/core/photos/`, общее для отчётов и чата):
 - `PhotoCompressor` (`photoCompressorProvider`) — `compress(sourcePath)` → `Result<CompressedPhoto>` (путь копии,
   размеры, байты, `takenAt`), `delete(paths)`, `sweep()`. Реализация `PlatformPhotoCompressor` — канал
-  `buildflow/photos` к [PhotoCompressor.kt](android/app/src/main/kotlin/com/example/buildflow/PhotoCompressor.kt):
+  `buildflow/photos` к [PhotoCompressor.kt](android/app/src/main/kotlin/com/abubakr/buildflow/PhotoCompressor.kt):
   декод с `inSampleSize`, поворот по EXIF в пиксели, масштаб длинной стороны до `kPhotoMaxSide` (1600) с фильтрацией,
   JPEG с качеством из `kPhotoQualitySteps` (82 → 74 → 66), пока не влезет в `kPhotoTargetBytes` (450 КБ), иначе
   последнее. `Bitmap.compress` не пишет EXIF: GPS, модель и серийники не уходят; назад читается только
@@ -467,7 +468,7 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 - `HighlightedText(text, ranges)` — текст с подсветкой совпадений `matchHighlight` (поиск людей и чатов).
 - `VoiceWaveform(bars, progress, playedColor, color, onSeek)` — полосы голосового, проигранная часть своим цветом,
   нажатие и протягивание — перемотка.
-- `AppLogo` — знак приложения на сплэше и экранах входа.
+- `AppLogo` — знак приложения на сплэше и экранах входа (пока старый, со значком не совпадает).
 
 ## Подводные камни
 - `explicit_to_json: true` включён глобально в [build.yaml](build.yaml): вложенные модели (`Report.photos`) сериализуются
@@ -529,9 +530,21 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
   догружает); объекты и отчёты — по «Повторить» или потягиванию вниз.
 - `flutter build apk` предупреждает, что `app_settings` применяет Kotlin Gradle Plugin, и будущие версии Flutter
   такие плагины собирать не будут. Перед обновлением Flutter проверь его новую версию.
-- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.example.buildflow`, release подписан debug-ключом.
-  `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`, `localhost` и `10.0.2.2` (локальный
-  Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
+- AndroidManifest: `INTERNET`, `CAMERA` и `RECORD_AUDIO`. `applicationId = com.abubakr.buildflow` (до ноября 2026 был
+  `com.example.buildflow`: старая установка на телефоне — другое приложение, его удалить). Release подписывается
+  ключом из `android/key.properties` (не в git, образец — `key.properties.example`, keystore вне репозитория, README
+  «Release-ключ»). Без файла, с неполным файлом или без keystore release падает сразу
+  (`compileFlutterBuildRelease` / `preReleaseBuild`) с «Release signing: …»: debug-ключом release не подписывается
+  никогда. Debug-сборкам ключ не нужен. `network_security_config.xml` пускает открытый HTTP только на `127.0.0.1`,
+  `localhost` и `10.0.2.2` (локальный Supabase через `adb reverse` или эмулятор), остальное — только HTTPS.
+- Значок: `assets/icon/app_icon.png` (исходник) и `app_icon_foreground.png` (передний слой адаптивной иконки Android:
+  знак — 40 % слоя, фон `#F4F2EE` из исходника), конфиг `flutter_launcher_icons` — в pubspec.yaml. В приложение
+  `assets/icon/` не входит. После правки — `dart run flutter_launcher_icons`, затем
+  `git checkout -- ios/Runner.xcodeproj/project.pbxproj`: пакет (0.14.4) пишет `AppIcon` вместо `YES` в
+  `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`, а нужных правок в этом файле нет.
+  - `adaptive_icon_foreground_inset: 0` не убирать: по умолчанию 16 %, и знак ужмётся до 27 % слоя.
+  - Под прозрачными пикселями слоя лежит цвет знака, а не чёрный: пакет уменьшает картинку, усредняя RGB без учёта
+    прозрачности, и чёрный дал бы тёмную кайму по краям.
 - Тесты репозиториев Supabase — настоящий `SupabaseClient` поверх `MockClient` (`FakeSupabase` в test/helpers:
   `rpc` / `rpcFails` / `function` / `on`, `FakeReply.auth` для ошибок GoTrue, `signIn(userId)` кладёт сессию; Dio
   Storage идёт в те же обработчики). PostgREST читает `response.request`, поэтому `http.Response` отдаётся с `request:`.
@@ -555,7 +568,9 @@ UI-хелперы — `label(l10n)`, `icon`, `color`, `RoleBadge` — в [role_l
 `remove-member`, демо-данные, тесты pgTAP и смоук — см. «Бэкенд (Supabase)». Клиент подключён: `Supabase*Repository`,
 сессия, загрузки и подписанные ссылки, Realtime с догрузом, интеграционный тест.
 Заглушки и пробелы: облачный проект Supabase (только локальный стек), пуши, сжатие фото на iOS, черновики отчётов
-(`DraftReport` есть в репозитории, но UI нет), applicationId и подпись Android-релиза.
+(`DraftReport` есть в репозитории, но UI нет).
+Android-сборка: свой ID, название, значок, release-подпись (проверено на Xiaomi 2026-11-25). APK с `env/local.env` ходит
+на `127.0.0.1` через `adb reverse`; на чужих телефонах заработает только сборка с облачным проектом (или демо `BACKEND=fake`).
 Подробности и этапы — в [PROGRESS.md](PROGRESS.md); он отстаёт от кода, сверяйся с кодом.
 
 ## Правила работы
